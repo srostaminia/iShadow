@@ -1,0 +1,132 @@
+% Change to use the correct class file for your paper.
+\documentclass{sig-alternate-10pt}
+
+%\pagenumbering{arabic}
+
+\usepackage{amsfonts}
+\usepackage{array}
+\usepackage{booktabs}
+\usepackage{color}
+\usepackage{colortbl}
+\usepackage{endnotes}
+\usepackage{graphicx}    % For importing graphics
+\usepackage{hyperref}    % Creates hyperlinks from ref/cite 
+\usepackage{multirow}
+\hypersetup{pdfstartview=FitH}
+%\usepackage{subfig}
+\usepackage{subfigure}
+\usepackage{tabularx}
+\usepackage{url}         %
+\usepackage{xspace}
+%\usepackage[bf,skip=5pt]{caption}
+\usepackage[skip=5pt]{caption}
+\usepackage{comment}
+\DeclareCaptionType{copyrightbox}
+
+\newlength\SUBSIZE
+
+\renewcommand{\arraystretch}{1.2} % Space out rows in tables
+
+\newcommand{\projname}{Super Super Sweet (S$^3$) Project Name\xspace}
+\newcommand{\ra}{$\rightarrow$\xspace}
+
+\setlength\paperheight {11in}
+\setlength\paperwidth {8.5in}
+
+% Set the graphics path
+\graphicspath{{../figs/}{../images/build/}}
+
+% No space between bibliography items:
+\let\oldthebibliography=\thebibliography
+  \let\endoldthebibliography=\endthebibliography
+  \renewenvironment{thebibliography}[1]{%
+    \begin{oldthebibliography}{#1}%
+      \setlength{\parskip}{0ex}%
+      \setlength{\itemsep}{0ex}%
+  }%
+  {%
+    \end{oldthebibliography}%
+  }
+\setlength{\parindent}{5mm}
+
+\begin{document}
+
+\title{InSight: Seeing the World Through Your Own Eyes}
+
+% AUTHOR STYLE 1
+\author{
+ \alignauthor{Russ Bielawski, Joe Romeo, Justin Paupore, Pat Pannuto, Prabal Dutta}\\
+ \affaddr{Electrical Engineering and Computer Science Department}\\
+ \affaddr{University of Michigan}\\
+ \affaddr{Ann Arbor, MI 48109}\\
+ \email{\{jbielaws,jromeo,jpaupore,ppannuto,prabal\}@umich.edu}}
+
+% AUTHOR STYLE 2
+\begin{comment}
+\author{
+\begin{tabular}{cc}
+  \multicolumn{2}{c}{Author 1$^\dagger$, Author 2$^\dagger$, Author 3$^\dagger$, Author 4$^\ddagger$, and Author 5$^\dagger$\vspace{0.3cm}} \\
+  \affaddr{$^\dagger$Computer Science \& Engineering Division} & \affaddr{$^\ddagger$Electrical and Computer Engineering Dept} \\ 
+  \affaddr{University of Michigan} & \affaddr{Diff School}\\
+  \affaddr{Ann Arbor, MI 48109} & \affaddr{Diff Address}\\
+  \affaddr{\{u1,u2,u3,u4\}@eecs.umich.edu} & \affaddr{diffemail@email.com} \\
+\end{tabular}
+}
+\end{comment}
+
+
+\conferenceinfo{Submitted to: Mobisys'12,} {June 26--29, 2012, Low Wood Bay, Lake District, UK.}
+\CopyrightYear{2012}
+\crdata{XXX-X-XXXXX-XXX-X}
+
+\maketitle
+
+\begin{abstract}
+\input{abstract}
+\end{abstract}
+
+
+\category{B.4.2}{HARDWARE}{Input/Output and Data
+  Communications}[Input/Output Devices]
+\category{C.3}{COM\-PU\-TER-COM\-MU\-NICATION
+  NET\-WORKS}{Spe\-cial-Purpose and App\-li\-cation-Based Systems}
+\terms{Design, Experimentation, Measurement, Performance}
+\keywords{Mobile phones, Energy harvesting, Phone peripherals, Audio
+  communications, Participatory sensing}
+
+\newpage
+
+% page limit          % 14.0 pg
+% abstract            %  0.5 pg
+\vfill\eject
+\input{intro}         % 1.5 pg
+%\clearpage
+\input{background}       % 2.0 pg
+%\clearpage
+\input{overview}
+%\clearpage
+\input{design}         % 3.0 pg
+%\clearpage
+\input{implementation}
+%\clearpage
+\input{eval}          % 4.0 pg
+%\clearpage
+\input{disc}          % 0.5 pg
+%\clearpage
+\input{conc}          % 0.25 pg
+\input{ack}           % 0.25 pg
+
+%Uncomment this line if your paper has / uses end notes
+%\theendnotes
+
+{%\footnotesize
+\raggedright
+\bibliographystyle{abbrv}
+\bibliography{bib}
+}
+
+
+
+
+\end{document}
+

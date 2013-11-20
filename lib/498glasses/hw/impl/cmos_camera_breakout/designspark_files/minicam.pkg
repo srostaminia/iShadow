@@ -1,0 +1,26 @@
+VER=1
+
+///////////////////////////////////////////////////////////////////////////////
+
+NAME=TCM8230MD Camera
+STYLE=Shape
+HEIGHT=4.5
+INSIDE=1.3
+ORIENT=H
+PINS=Wire,0
+PINOFFSET=0
+PINCOLOUR=176,196,222
+STANDOFF=0
+SHAPEINSIDE=0
+COLOUR=Charcoal
+MATERIAL=Metal
+MOUNTS=0
+TOPCLOSED=1
+TOPCOLOURED=0
+STRIPED=1
+STRIPEPIN1=1
+STRIPECOLOUR=50,50,50
+ROUNDEDENDS=0
+
+///////////////////////////////////////////////////////////////////////////////
+

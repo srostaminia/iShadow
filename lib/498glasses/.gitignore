@@ -1,0 +1,14 @@
+.playground
+.metadata
+*.sw[op]
+*.o
+*.d
+*.hex
+*.elf
+CMakeCache.txt
+CMakeFiles
+cmake_install.cmake
+.svn
+*#[0123456789]*
+*##*
+

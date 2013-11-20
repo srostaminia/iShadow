@@ -1,0 +1,8 @@
+﻿Time to collect full image: 72 ms (13 Hz)
+Time to collect 1072 pixels: 10 ms (100 Hz)
+Time to perform mask operations over 1072 pixels: 18 ms
+
+
+Voltage from programmer (set at 3.25V in IDE): 3.040 V
+Power w/ camera: 384 mW
+Power w/out camera (full image collection): 368 mW

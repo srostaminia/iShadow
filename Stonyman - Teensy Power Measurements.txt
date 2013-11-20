@@ -1,0 +1,14 @@
+﻿Current draw w/ two cameras and analog on, capturing: 1.898mA
+Current draw w/ two cameras and analog on, not capturing: 1.898mA
+Voltage: 3.3V
+Power with one camera: 3.13mW
+Collect time for 69 pixels: 2.70 ms
+Collect time for full array: 184 ms
+
+
+Current draw w/ two cameras and analog off: 0.025 uA, increasing
+Power with one camera: 0.041 uW
+
+
+Time for pixel to reach maximum output from off state: ~10us
+Time for pixel to reach off state from on state: ~1.5us*

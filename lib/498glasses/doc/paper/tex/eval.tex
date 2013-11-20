@@ -1,0 +1,98 @@
+\begin{center}
+\begin{table}[t!]
+   \centering
+   \begin{tabular}{|l|l|l|l|l|l|l|l|}
+      \hline
+      \bf Trial & \bf Samples & \bf Correctly Predicted (\%) \\
+      \hline
+      1 & 266 & 98.11 \\ % russ_long_training
+      \hline
+      2 & 685 & 99.27 \\ % russ_long_training_2
+      \hline
+      3 & 995 & 97.91 \\ % (androbin)
+      \hline
+      4 & 1385 & 97.47 \\ % (ddevec)
+      \hline
+      5 & 1095 & 97.26 \\ % (jhalderm)
+      \hline
+      6 & 965 & 97.41 \\ % (jromeoo)
+      \hline
+      7 & 1074 & 95.33 \\ % (ppannuto)
+      \hline
+      8 & 942 & 97.34 \\ % (samkuo)
+      \hline
+      9 & 1130 & 95.58 \\ % (sdebruin)
+      \hline
+      10 & 540 & 97.22 \\ % (expo1 - russ)
+      \hline
+      11 & 540 & 97.22 \\ % (expo2 - romeo)
+      \hline
+      12 & 540 & 98.15 \\ % (expo3 - romeo)
+      \hline
+      13 & 540 & 95.37 \\ % (expo4 - russ)
+      \hline
+      14 & 540 & 98.15 \\ % (expo5 - brehob)
+      \hline
+      15 & 540 & 98.15 \\ % (expo6)
+      \hline
+      16 & 540 & 97.78 \\ % (expo7)
+      \hline
+      17 & 225 & 100.0 \\ % (expo8)
+      \hline
+      18 & 225 & 95.56 \\ % (expo9)
+      \hline
+      19 & 225 & 100.0 \\ % (expo10)
+      \hline
+      20 & 225 & 97.78 \\ % (expo11)
+      \hline
+      21 & 315 & 100.0 \\ % (expo12)
+      \hline
+      22 & 315 & 98.41 \\ % (expo13)
+      \hline
+      23 & 315 & 96.83 \\ % (expo14)
+      \hline
+      24 & 315 & 96.83 \\ % (expo15)
+      \hline
+      25 & 315 & 96.83 \\ % (expo16)
+      \hline
+      26 & 540 & 100.0 \\ % (expo17 - tricia)
+      \hline
+      27 & 315 & 100.0 \\ % (expo18)
+      \hline
+      28 & 540 & 99.07 \\ % (expo19 - russ)
+      \hline
+   \end{tabular}
+   \label{tab:gaze-individual}
+   \caption{Gaze Tracking Results: Intra-trial Evalation.  In this table, we list each of the 28 trial data sets we captured along with the number of data points (eye image and gaze label pairs) and the percent accuracy with which InSight is able track the wearer's gaze.  We see that in the worst trials, InSight still achieves an accuracy of over 95\%, and in the best trials, InSight correctly predicts the wearer's gaze in all of the test data points.  Averaging over all trials, InSight attains a 97.83\% accuracy.  After initial training, InSight is able to coarsely rack the wearer's gaze with very high accuracy.}
+\end{table}
+\end{center}
+\section{Evaluation}
+\label{sec:eval}
+
+% success
+% start with what you CAN do!
+% FIXME: quantify success!
+We now present the evaulation of our InSight wireless, gaze tracking glasses.  We evaluate Insignt on three objectives: accurate gaze tracking, suitable battery life and acceptable weight and balance.  Our experimental results show that with InSight, after a short training session (less than three minutes), we are able to track the wearer's gaze with over 95\% accuracy in all trials.  Measuring the power draw of our system, we show that we are able to achieve X hrs of continuous use.  Finally, our glasses weight in at 85g including all circuity, a lithium battery, two cameras, sunglasses chassis and 3-D printed plastic enclosures.
+
+\subsection{Gaze Tracking}
+
+We evaluate the accuracy of gaze tracking using the InSight glasses with a data set of 28 trials comprising 23 unique individuals.  Each trial contains a minimum of 225 sample points (eye image, gaze location pairs) with 18 of the 28 trials comprising 540 or more sample points.  Our trials include varying eye colors and shapes and a few different indoor lighting environments.  In a couple of trials, the user was also wearing corrective lenses underneath the InSight glasses.  All eye images are captured at natural illumination.
+
+Although the number of samples collected for each participant in our study is varied, the basic experiment was always the same.  Users were instructed to place their focus on a particular point on a wall or computer screen while eye image and scene image matched pairs were recorded.  In the case of using marks on a wall, a laser pointer was used so that we could later mark the user's gaze coordinates manually.  The laser pointer shows up in the scene images, telling us which gaze location the user was holding.  Users were instructed to blink normally.
+
+For evaluation, in all gaze tracking experiments, we followed the same methodology.  First, we randomized the sample points within the data set under experimentation.  Next, the data set was split 80/20 into training and test data.  Finally, we ran our k-Nearest Neighbors machine learning algorithm over the data set using the training data for training and the test data for testing the classifier's accuracy.  Tracking the gaze position to 9 disctinct gaze "bins", InSight achieves over 95\% accuracy in all experiments.
+
+\subsubsection{Intra-trial Results}
+
+Initially, we evaluated InSight's gaze tracking accuracy by testing the classifier results against test data using only data from within the same trial.  For each of the 28 trials, we randomized and split the data set 80/20 into training and test data.  We the measured the performance as a percent accuracy by dividing the number of test labels returned which predicted the correct gaze location bin by the total number of test labels.  The correct gaze location is predicted when the label prediction agrees with the ground truth label.
+
+In table ~\ref{tab:gaze-individual}, we show each of the 28 trial data sets we captured along with the number of data points (eye image and gaze label pairs) and the percent accuracy with which InSight is able predict the wearer's gaze.  We see that in the worst performing trials InSight still achieves an accuracy of over 95\%, and in the best trials, InSight predicts the wearer's gaze with 100\% accuracy.  Averaging over all trials, InSight attains a 97.83\% accuracy.  We can see from these results, after initial training, InSight is successfully able to coarsely rack the wearer's gaze with very high accuracy.
+
+\subsubsection{Results of All Trials Together}
+
+
+\subsection{Battery Life}
+
+
+
+

@@ -1,0 +1,41 @@
+\section{Discussion}
+\label{sec:disc}
+\subsection{Battery Life}
+
+\subsection{Performance}
+
+In speaking of performance in this section, we will constrain the discussion to the framerate performance of the InSight glasses.  The low framerate of the InSight glasses is an obstacle to seamless gaze tracking.  At 4.5 FPS per camera, 2.25 FPS when both camera's images together are taken as a frame, the image capture rate of the InSight glasses is quite low.  There are 444ms between each frame, which is not an imperceptable time.  In addition the human eye can initiate motion almost 5x faster than that [CITATION NEEDED].  We have teased apart the causes of the low frame rate and attacked them one at a time.
+
+We have calculated the theoretical maximum framerate of one CentEye Stonyman camera.  The camera requires that images are sampled pixel-by-pixel with an analog-to-digital conversion performed outside of the imager.  This teqnique is allows for low-power operation, especially when the possibility of subsampling is on the table.  But, it comes with a certain tradeoff, namely speed.
+
+For low voltage operation (operation at voltages roughly <4V), the camera requires the use of an internal preamplifier.  This preamplifier must be operated for each pixel captured.  Operation of this preamplifier adds a constant overhead of 2us to \textit{each} pixel capture.  Given the camera's full resolution of 112x112 pixels, merely operating the amplifier adds 25ms to each frame.  In addition capturing a frame without the preamplifier circuit requires on the order of 20-30ms.  Therefore, operating at low voltage requires 45-55ms per full Stonyman frame.  This leads to a theoretical maximum framerate of 18.18 - 22.22 FPS.  This value is respectable, but not great.
+
+The Stonyman's theoretical framerate of ~20 frames per second is still a way off from the InSight glasses' framerate of 4.5 FPS per camera.  We examined the causes of the low frame rate in the InSight system.  The two major causes of our low frame rate were the relatively low bandwidth bluetooth link and the lack of multiplexing in the microprocessor, which we will discuss further later.  First let's start with the wireless bandwidth.
+
+d\subsubsection{Wireless}
+
+Our choice of bluetooth as the wireless technology of the InSight gaze tracking glasses was primarily for the ease of interfacing with reasonable devices like PCs and cell phones.  That choice, however, constrained the speed of the insight system.
+
+The maximum theoretical datarate of a bluetooth link in one direction is 1.5Mbps.  Our bluetooth module interfaced with our microcontroller via UART ran at a maximum of 921.6kbps.  A quick and dirty calculation of maximum framerate as constrained by the bluetooth module is to divide our maximum datarate by the size of a frame in pixels, which we'll assume can be represented as a single byte.  921600bps / (112*112*8)bits per frame = 9.18 FPS, which barely half of the theoretical framerate of the stonyman camera.  This is an extremely crude calculation, neglecting all overhead both timing wise and data wise, meaning the actual theoretical framerate should be a bit lower.
+
+WiFi represents a promising technology for glasses such as these.  Since operation of the radio represends the largest energy cost, we ought to send data as little as possible.  Using wifi would allow better something or other...
+
+FIXME: finish this writeup!
+
+\subsubsection{Lack of Multitasking}
+
+Perhaps a more fundamental performance limitation of the InSight wireless glasses design was the lack of simple multitasking.  The embedded system basically has 2 goals:
+
+  * Capture data from the image sensor
+  * Transmit that data back to the device (PC, phone, tablet)
+
+With 2 threads of execution, this problem is a simple one.  Put one thread to work capturing data and the other thread to work transmitting captured image data over the Bluetooth link.  In our InSight system, we don't handle this problem.  When imager data is being captured, we are not transmitting data, and when we are transmitting data, we are doing nothing with this camera.
+
+For example, digitizing pixels is a large chunk of the time it takes to capture a single frame, accounting for roughly 25-33\% of the entire capture, and during that time, the processor is idle, waiting on the ADC.  The same is true when the aplifier is operated, except that pulsing the preamplifier represents an even larger chunk of the pie at 45-55\% of the total time to capture a single-full-frame.  At minimum, 60\% of the time spent capturing images the processor is idle, waiting.
+
+There are a few ways we can meet the need for multitasking in an embedded system.  The traditional solution is to use interrupts.  Interrupts would let control flow back and forth between the camera control and capture code and the data transmission code.  Interrupts could be triggered on events (such as an ADC conversion completition), or external timers for fixed duration delays.  Given that our problem is basically that we meed to move data from one buffer to another, DMA could potentially provide a workable source of multitasking.
+
+Interrupts?  DMA?  Are these good solutions?  Fundamentally, the microcontroller is a poor fit for the task of capturing this image data and tramsitting it again.  An FPGA, however, can give us natural parallelism and strict and efficient timing of short delays as well.  These are the solutions we need to in crease performance.
+
+We have recreated the dual camera configuration of the InSight glasses on an FPGA and evaluated its performace as a benchmark of possible performance the system could achieve.
+

@@ -1,0 +1,8 @@
+abSerial_RefGuide.pdf - Amp'ed RF abSerial firmware reference
+DM00048919.pdf - DS8907: Bluetooth® technology class-2 module
+DM00055990.pdf - UM1547: Using the firmware of the AT command set
+DM00057135.pdf - DB1673: USB dongle for the Bluetooth® class 2 SPBT2632C2A.AT2 module
+DM00057420.pdf - AN4127: Demonstration board for Bluetooth® module class 2 SBT2632C2A.AT2
+DM00057425.pdf - DB1678: USB dongle for the Bluetooth® class 1 SPBT2632C1A.AT2 module
+DM00057436.pdf - AN4128: Demonstration board for Bluetooth® module class 1 SBT2632C1A.AT2
+flblue0609.pdf - ST Bluetooth micro-sized modules flyer

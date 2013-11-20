@@ -1,0 +1,28 @@
+\section{implementation}
+\label{sec:implementation}
+
+% FIXME cite Teensy
+We present the design of our sensing eyeglasses in this section.  These eyeglasses represent a first prototype proving the feasability of all day, gaze tracking eyeglasses.  To interface with our imagers and the send data back to a host PC or android phone, we connected our image sensors to a relatively low-power and low-processing-power microcontroller.  We used the Teensy 3.0 for prototyping these glasses.  The Teensy 3.0 prototyping board uses a Freescale Kinetis K20 ARM Cortex-M4 microcontroller running at 48MHz and housing 16KB of RAM, a modest enough processor in most respects.  We have mounted our electronics on a sunglasses chassis, a pair of knock-off Ray Ban's.  The evolution of the glasses prototype is show in Figure/Picture X.  Finally, our InSight glasses prototype contain the Trustfilre 600mAh battery shown in table ~\ref{tab:batteries}.
+% FIXME: make a picture
+
+% we chose to use the stonyman camera
+As detailed in the design section, we have chosen to use the CentEye Stonyman embedded vision chip.  Actually, our glasses use breakout boards containing full cameras with lenses and all.  These embedded cameras can be purchased directly from CentEye on their website and cost around fifty dollars.  Our InSight glasses use two Stonyman cameras, one inward facing on the user's eye and one outward facing, capturing the scene in the wearer's gaze.
+
+% FIXME does gaze tracking need a cite here?
+We have designed the camera configuration on the InSight glasses for the purpose of gaze tracking.  Gaze tracking determines a user's gaze by taking pictures of the user's eye.  With a camera in the front and a camera in the rear, we envision our system could potentially output a picture of what the wearer sees and a gaze location at regular intervals or on demand.
+
+
+% we chose bluetooth as the wireless technology
+We have chosen bluetooth for the transmission of data off of the InSight glasses primarily due to it's ubiquity and ease of setup procedure.  The Bluetooth module that we used, the ST SPBT2632, consumes roughly 30mW in active mode.
+
+\subsection{Gaze Tracking}
+
+% we used machine learning in natural light
+% we chose a k-nearest neighbors algorithm for simplicity
+In order to track the user's gaze with our InSight system, we have employed a machine learning algorithm on a host device.  We have chosen to employ a k-Nearest Neighbor classification to determine the user's gaze in one of nine squares of the scene.  Both width and height of the scene pictures are split into thirds giving nine squares in total.  Machine learning is a promising technique for low-power devices because it works more effectively in natural lighting (i.e. without the addition of an IRED), and because after an initial training, often the cost of predicition is quite cheap.
+
+Choosing features is an important part of designing a machine learning algorithm.  The feature set we chose for each eye image was merely the raw pixels from the image.  Feeding raw pixel values to a machine learning algorithm has been done by Baluja in \cite{gaze-neural-net}.  This simplistic choice of features has the advantage of being easy to compute, in fact it costs nothing more thancapturing the image.    This is promising for running on the embedded device, because it does not cost anything to compute.  The disadvantage to this simplistic choice of features is robustness and flexibility.
+
+
+% we tracked the gaze of the wearer in 9 discrete positions
+
