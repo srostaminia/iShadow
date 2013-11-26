@@ -11,7 +11,7 @@ pkg load statistics;
 %   last column needs to be appended column of 1's. 
 % * Out: scene image data in (n x 12544) matrix with one row per image
 % * gout: gaze coordinates in (n x 2) matrix
-gaze_data_file = 'addison1_data_10';
+gaze_data_file = 'addison1_data_100';
 
 %Regularization parameter range.  
 %Must go from low to high values
@@ -33,7 +33,7 @@ params(1).init   = 'strips';
 params(1).subset = 'l1';
 
 %Max number of neural network training epochs/function evals
-params(1).maxiter = 50;
+params(1).maxiter = 100;
 
 %Run all results from scratch
 %Set to 0 to continue a partial run

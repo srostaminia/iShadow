@@ -4,10 +4,10 @@ graphics_toolkit('fltk')
 %data_path = '../data/addison1_adjusted'
 %X=load([data_path, '/addison1.csv'])
 
-data_path = '../eye_exper/addison1'
+data_path = '/Users/ammayber/Desktop/eye_exper/addison1'
 
 % Number of random samples to choose
-N=10;
+N=100;
 
 % Index to start choosing from
 start_N = 100;

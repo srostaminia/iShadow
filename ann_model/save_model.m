@@ -10,7 +10,7 @@ function save_model(W_groupSparse,params,mdir)
       count = nVars*nHidden;
       Wih = reshape(W_groupSparse(1:count),[nVars,nHidden]);
       Who = reshape(W_groupSparse((count+1):end),[nHidden,nTargets]);
-      mask = reshape(sum(abs(Wih(1:end-1,:)),2)>0,[112,112]);
+      mask = reshape(sum(abs(Wih(1:end-1,:)),2)>0,[111,112]);
       nnz(mask)
       
       %[col,row,val]=find(mask);
