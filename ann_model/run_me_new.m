@@ -48,8 +48,6 @@ seed = 136824521;
 %-----------------------------------
 fprintf('Loading data...');
 load(gaze_data_file); %load data file
-X
-%load('X')
 fprintf('Done.\n');
 rand('seed',seed); %set rand seed
 randn('seed',seed); %set randn seed
@@ -181,6 +179,7 @@ for c=[1]
     caxis([-cm,cm]);
     fname = sprintf('results/%s/weights_rep%d.png',local_suffix,r);
     % exportfig(gcf,fname,'width',3,'height',2,'format','png','color','cmyk','Resolution',300);
+    print(fname,'-dpng','-S900,600');
 
     figure;
     mask = sum(abs(Wih),2)==0;
@@ -190,6 +189,7 @@ for c=[1]
     title(sprintf('Pixels = %d',nnz(mask(1:end-1)==0) ));
     fname = sprintf('results/%s/pixel_masks_rep%d.pdf',local_suffix,r);
     % exportfig(gcf,fname,'width',4,'height',3,'format','pdf','color','cmyk'); 
+    print(fname,'-dpdf','-S1200,900');
 
     figure;
     hist(results(l,r).dist_test,1:100);
@@ -200,6 +200,7 @@ for c=[1]
     ylabel('Frequency')
     %pretty_graph(gcf,gca);
     % exportfig(gcf,fname,'width',4,'height',3,'format','pdf','color','cmyk'); 
+    print(fname,'-dpdf','-S1200,900');
 
     figure;
     hist(results(l,r).dist_train,1:100);
@@ -209,6 +210,7 @@ for c=[1]
     ylabel('Frequency') 
     drawnow;
     % exportfig(gcf,fname,'width',4,'height',3,'format','pdf','color','cmyk'); 
+    print(fname,'-dpdf','-S1200,900');
     
     %Plot Results
     for n=1:4
