@@ -7,7 +7,7 @@ graphics_toolkit('fltk')
 data_path = '/Users/ammayber/Desktop/eye_exper/addison1'
 
 % Number of random samples to choose
-N=100;
+N=1000;
 
 % Index to start choosing from
 start_N = 100;

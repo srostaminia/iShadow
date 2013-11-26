@@ -226,6 +226,8 @@ for c=[1]
       axis off;
       colormap(gray);
       drawnow;
+      fname = sprintf('results/%s/train_error_hist_img%d.pdf',local_suffix,n);
+      print(fname,'-dpng');
     end
   end
 end

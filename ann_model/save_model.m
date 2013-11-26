@@ -24,7 +24,7 @@ function save_model(W_groupSparse,params,mdir)
       player1 = Wih(1:end-1,2:end);
       player1S=[];
       for i = 1:size(maskL,1)
-        player1S(i,:) = player1(sub2ind([112,122],maskL(i,1),maskL(i,2)),:); 
+        player1S(i,:) = player1(sub2ind([111,112],maskL(i,1),maskL(i,2)),:); 
       end      
       player2 = Who(2:end,:);
 
