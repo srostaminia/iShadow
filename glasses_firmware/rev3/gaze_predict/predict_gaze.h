@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-#define NUM_SUBSAMPLE 605
+#define NUM_SUBSAMPLE 12430
 #define NUM_HIDDEN 6
 
 void predict_gaze();

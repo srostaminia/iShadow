@@ -1962,6 +1962,9 @@
   <group>
     <name>Stonyman</name>
     <file>
+      <name>$PROJ_DIR$\gaze_params.c</name>
+    </file>
+    <file>
       <name>$PROJ_DIR$\libstony.c</name>
     </file>
     <file>
@@ -1969,6 +1972,9 @@
     </file>
     <file>
       <name>$PROJ_DIR$\predict_gaze.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\predict_gaze.h</name>
     </file>
   </group>
   <file>
