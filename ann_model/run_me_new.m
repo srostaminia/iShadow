@@ -11,13 +11,13 @@ pkg load statistics;
 %   last column needs to be appended column of 1's. 
 % * Out: scene image data in (n x 12544) matrix with one row per image
 % * gout: gaze coordinates in (n x 2) matrix
-gaze_data_file = 'addison1_data_100';
+gaze_data_file = 'addison1_data_1000';
 
 %Regularization parameter range.  
 %Must go from low to high values
 %Larger values give sparser models
-%params(1).lambdas = [logspace(-4,-1,10)]; 
-params(1).lambdas = [logspace(-4,-1,2)]; 
+params(1).lambdas = [logspace(-4,-1,10)]
+%params(1).lambdas = [logspace(-4,-1,2)]; 
 %params(1).lambdas = [0.000215]
 
 %Number of hidden units. nHidden-1 will be real hidden units
@@ -33,11 +33,11 @@ params(1).init   = 'strips';
 params(1).subset = 'l1';
 
 %Max number of neural network training epochs/function evals
-params(1).maxiter = 100;
+params(1).maxiter = 500;
 
 %Run all results from scratch
 %Set to 0 to continue a partial run
-from_scratch = 0;
+from_scratch = 1;
 
 
 %Set randomization seed
@@ -99,7 +99,7 @@ for c=[1]
 
 
   for l=1:length(params(c).lambdas) 
-    lambda = params(c).lambdas(l);        
+    lambda = params(c).lambdas(l)        
     local_suffix=sprintf('subset_%s_init_%s_k%d_lambda%f',params(c).subset,params(c).init,params(c).nHidden,lambda);
     [foo1,foo2,foo3]=mkdir(['results/',local_suffix]);
     fname = sprintf('results/%s/rep%d.mat',local_suffix,r);
