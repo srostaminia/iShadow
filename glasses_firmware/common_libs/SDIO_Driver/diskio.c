@@ -134,7 +134,7 @@ DRESULT disk_write_fast (
   BYTE count         /* Number of sectors to write (1..255) */
 )
 {
-  uint32_t Counter = 0;
+//  uint32_t Counter = 0;
   uint32_t buffer_adr =0 , sector_adr = 0;
   
   buffer_adr = (uint32_t)(buff);
