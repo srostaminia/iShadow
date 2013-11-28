@@ -29,10 +29,13 @@ int main()
   
   config_ms_timer();
   
-  start = TIM4->CNT;
-//  stony_image_single();
-  stony_image_subsample();
-  total = TIM4->CNT - start;
+  while(1) {
+    // TODO: Try taking a full image on the eye-facing, then doing prediction on it here and offline to verify that we're pulling the right pixel data
+    if (stony_image_single() != 0)
+      while (1);
+    if (stony_image_subsample() != 0)
+      while (1);
+  }
   
   return total;
 }

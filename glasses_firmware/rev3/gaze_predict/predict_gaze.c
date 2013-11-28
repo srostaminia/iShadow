@@ -3,11 +3,22 @@
 extern unsigned short val[112*112];
 volatile unsigned short pred[2];
 
-extern float bh[NUM_HIDDEN];
-extern float bo[NUM_HIDDEN];
-extern unsigned short mask[NUM_SUBSAMPLE][2];
-extern float who[NUM_HIDDEN][2];
-extern float wih[NUM_SUBSAMPLE][NUM_HIDDEN];
+float who[6][2] = {
+	{ -0.0566863510696858224902073, -0.5543932712224074466078605 },
+	{ 0.0213654411347054887237995, -0.5302890843191919723054184 },
+	{ -0.0047227247895910377112338, -0.5014113396789882104442881 },
+	{ -0.5988328723331284297870525, 0.0600920434755130572490600 },
+	{ -0.5117480810296710647122609, 0.0285187822604458206254829 },
+	{ -0.6228449794600631195251594, -0.0479594178105109611442991 },
+};
+
+float bo[2] = { 0.4916175623927135918123099, 0.4770237171656129260277623 };
+
+//extern float bh[NUM_HIDDEN];
+//extern float bo[2];
+//extern unsigned short mask[NUM_SUBSAMPLE][2];
+//extern float who[NUM_HIDDEN][2];
+//extern float wih[NUM_SUBSAMPLE][NUM_HIDDEN];
 
 float tanh_values[] = {
 -0.999909204263 ,
@@ -113,37 +124,37 @@ float tanh_values[] = {
 0.999909204263 ,
 };
 
-void predict_gaze()
-{
-    int i, j;
-    float ah[6];
-    float x, x_val, y_val;
-
-    for (i = 0; i < NUM_HIDDEN; i++)  {
-        ah[i] = bh[i] / 255;
-    }
-
-    for (i = 0; i < NUM_SUBSAMPLE; i++) {
-        // val = global containing subsampled pixel data
-        x = (float)(val[i]) / 255;
-
-        for (j = 0; j < NUM_HIDDEN; j++) {
-            ah[j] += x * wih[i][j];
-        }
-    }
-
-    x_val = bo[0];
-    y_val = bo[1];
-
-    for (i = 0; i < NUM_HIDDEN; i++) {
-        x_val += who[i][0] * tanh_approx(ah[i]);
-        y_val += who[i][1] * tanh_approx(ah[i]);
-    }
-
-    // pred = global for storing prediction values
-    pred[0] = (unsigned short)((x_val * 112) + 0.5);
-    pred[1] = (unsigned short)((y_val * 112) + 0.5);
-}
+//void predict_gaze()
+//{
+//    int i, j;
+//    float ah[6];
+//    float x, x_val, y_val;
+//
+//    for (i = 0; i < NUM_HIDDEN; i++)  {
+//        ah[i] = bh[i] / 255;
+//    }
+//
+//    for (i = 0; i < NUM_SUBSAMPLE; i++) {
+//        // val = global containing subsampled pixel data
+//        x = (float)(val[i]) / 255;
+//
+//        for (j = 0; j < NUM_HIDDEN; j++) {
+//            ah[j] += x * wih[i][j];
+//        }
+//    }
+//
+//    x_val = bo[0];
+//    y_val = bo[1];
+//
+//    for (i = 0; i < NUM_HIDDEN; i++) {
+//        x_val += who[i][0] * tanh_approx(ah[i]);
+//        y_val += who[i][1] * tanh_approx(ah[i]);
+//    }
+//
+//    // pred = global for storing prediction values
+//    pred[0] = (unsigned short)((x_val * 112) + 0.5);
+//    pred[1] = (unsigned short)((y_val * 112) + 0.5);
+//}
 
 void finish_predict(float ah[6])
 {

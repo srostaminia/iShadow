@@ -31,6 +31,7 @@ extern unsigned int bo_offset;
 extern unsigned int mask_offset;
 extern unsigned int who_offset;
 extern unsigned int wih_offset;
+extern unsigned int fpn_offset;
 
 extern unsigned short model_data[];
 
@@ -99,19 +100,19 @@ inline static void pulse_incp(uint8_t cam)
   }
 }
 
-inline static void pulse_inph(unsigned short time, uint8_t cam)
-{
-  if (cam == CAM1) {
-    CAM1_INPH_BANK->ODR |= CAM1_INPH_PIN;
-    delay_us(time);
-    CAM1_INPH_BANK->ODR &= ~CAM1_INPH_PIN;
-  }
-  else {
-    CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
-    delay_us(time);
-    CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
-  }
-}
+//inline static void pulse_inph(unsigned short time, uint8_t cam)
+//{
+//  if (cam == CAM1) {
+//    CAM1_INPH_BANK->ODR |= CAM1_INPH_PIN;
+//    delay_us(time);
+//    CAM1_INPH_BANK->ODR &= ~CAM1_INPH_PIN;
+//  }
+//  else {
+//    CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
+//    delay_us(time);
+//    CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
+//  }
+//}
 
 // clear_values
 // Resets the value of all registers to zero
@@ -408,6 +409,7 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
   mask_offset = bo_offset + 4;
   who_offset = mask_offset + num_subsample * 2;
   wih_offset = who_offset + num_hidden * 2 * 2;
+  fpn_offset = wih_offset + (num_hidden * num_subsample * 2);
   
   short config;
   char flagUseAmplifier;
@@ -688,7 +690,6 @@ int stony_read_pixel()
 
 int stony_image_dual()
 {
-  UINT num_written;
   // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, 2 cameras
   // Double-buffered (2-dim array)
   uint8_t buf8[2][112 * TX_ROWS * 2 * 2];
@@ -797,7 +798,6 @@ int stony_image_dual()
 
 int stony_image_single()
 {
-  UINT num_written;
   // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row
   // Double-buffered (2-dim array)
   uint8_t buf8[2][112 * TX_ROWS * 2];
@@ -888,8 +888,8 @@ int stony_image_subsample()
   ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
   ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
   
-  set_pointer_value(REG_ROWSEL, MASK(0, 0), CAM1);
-  set_pointer_value(REG_COLSEL, 0, CAM1);
+  set_pointer_value(REG_ROWSEL, MASK(0, 0), CAM2);
+  set_pointer_value(REG_COLSEL, 0, CAM2);
   
   lastRow = MASK(0, 0);
   lastCol = 0;
@@ -899,26 +899,26 @@ int stony_image_subsample()
       {
         char diff = MASK(pixel, 0) - lastRow;
         
-        inc_pointer_value(REG_ROWSEL, diff, CAM1);
+        inc_pointer_value(REG_ROWSEL, diff, CAM2);
         
         lastRow = MASK(pixel, 0);
 
-        set_pointer_value(REG_COLSEL, MASK(pixel, 1), CAM1);
+        set_pointer_value(REG_COLSEL, MASK(pixel, 1), CAM2);
         
         lastCol = MASK(pixel, 1);
         
         asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
         asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       } else {
-        inc_value(MASK(pixel, 1) - lastCol, CAM1);
+        inc_value(MASK(pixel, 1) - lastCol, CAM2);
         
         lastCol = MASK(pixel, 1);
       }
       
-      CAM1_INPH_BANK->ODR |= CAM1_INPH_PIN;
+      CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      CAM1_INPH_BANK->ODR &= ~CAM1_INPH_PIN;
+      CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
@@ -939,7 +939,7 @@ int stony_image_subsample()
         asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       }
       
-      subsamples[pixel] = adc_values[adc_idx];
+      subsamples[pixel] = adc_values[adc_idx] - FPN(pixel);
       adc_idx = !adc_idx;
   }
   
@@ -949,7 +949,9 @@ int stony_image_subsample()
       ah[i] += x * WIH(num_subsample - 1, i);
   }
   
-  finish_predict(ah);
+  if (finish_predict(ah) != 0)  return -1;
+  
+  predict_gaze(subsamples);
   
   return 0;
 }

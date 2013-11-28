@@ -3,8 +3,8 @@
 
 #include "stm32l1xx.h"
 
-#define CAM1                 0
-#define CAM2                 1
+#define CAM1                 1
+#define CAM2                 2
 
 #define CAM_AHB         RCC_AHBPeriph_GPIOA | RCC_AHBPeriph_GPIOB | RCC_AHBPeriph_GPIOC
 

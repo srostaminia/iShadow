@@ -1,7 +1,10 @@
 #include "predict_gaze.h"
+#include "diskio.h"
+#include "stm32l152d_eval_sdio_sd.h"
+#include "predict_gaze.h"
 
 extern unsigned short val[112*112];
-volatile unsigned short pred[2];
+unsigned short pred[2];
 
 unsigned short num_subsample;
 unsigned short num_hidden;
@@ -10,8 +13,10 @@ unsigned int bo_offset;
 unsigned int mask_offset;
 unsigned int who_offset;
 unsigned int wih_offset;
+unsigned int fpn_offset;
 
 extern unsigned short model_data[];
+extern uint32_t sd_ptr;
 
 //extern float bh[NUM_HIDDEN];
 //extern float bo[2];
@@ -123,39 +128,42 @@ float tanh_values[] = {
 0.999909204263 ,
 };
 
-//void predict_gaze()
-//{
-//    int i, j;
-//    float ah[6];
-//    float x, x_val, y_val;
-//
-//    for (i = 0; i < NUM_HIDDEN; i++)  {
-//        ah[i] = bh[i] / 255;
-//    }
-//
-//    for (i = 0; i < NUM_SUBSAMPLE; i++) {
-//        // val = global containing subsampled pixel data
-//        x = (float)(val[i]) / 255;
-//
-//        for (j = 0; j < NUM_HIDDEN; j++) {
-//            ah[j] += x * wih[i][j];
-//        }
-//    }
-//
-//    x_val = bo[0];
-//    y_val = bo[1];
-//
-//    for (i = 0; i < NUM_HIDDEN; i++) {
-//        x_val += who[i][0] * tanh_approx(ah[i]);
-//        y_val += who[i][1] * tanh_approx(ah[i]);
-//    }
-//
-//    // pred = global for storing prediction values
-//    pred[0] = (unsigned short)((x_val * 112) + 0.5);
-//    pred[1] = (unsigned short)((y_val * 112) + 0.5);
-//}
+void predict_gaze(uint16_t subsamples[])
+{
+    int i, j;
+    float ah[6];
+    float x, x_val, y_val;
 
-void finish_predict(float ah[6])
+    for (i = 0; i < NUM_HIDDEN; i++)  {
+        ah[i] = BH(i) / 255;
+    }
+
+    for (i = 0; i < NUM_SUBSAMPLE; i++) {
+        // val = global containing subsampled pixel data
+        int temp = subsamples[i];
+        x = (float)(subsamples[i]) / 255;
+
+        for (j = 0; j < NUM_HIDDEN; j++) {
+            ah[j] += x * WIH(i, j);
+        }
+    }
+
+    x_val = BO(0);
+    y_val = BO(1);
+
+    for (i = 0; i < NUM_HIDDEN; i++) {
+        x_val += WHO(i, 0) * tanh_approx(ah[i]);
+        y_val += WHO(i, 1) * tanh_approx(ah[i]);
+    }
+
+    // pred = global for storing prediction values
+    pred[0] = (unsigned short)((x_val * 112) + 0.5);
+    pred[1] = (unsigned short)((y_val * 112) + 0.5);
+    
+    return;
+}
+
+int finish_predict(float ah[6])
 {
 //    float ah[6];
     float x_val, y_val;
@@ -184,6 +192,12 @@ void finish_predict(float ah[6])
     // pred = global for storing prediction values
     pred[0] = (unsigned short)((x_val * 112) + 0.5);
     pred[1] = (unsigned short)((y_val * 112) + 0.5);
+      
+    if (disk_write_fast(0, (uint8_t *)pred, sd_ptr, 1) != RES_OK)      return -1;
+    
+    sd_ptr += 1;
+    
+    return 0;
 }
 
 float tanh_approx(float input)

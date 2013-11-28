@@ -19,10 +19,11 @@ extern "C" {
 #define BO(X)           *((float*)(model_data + bo_offset + ((X) * 2)))
 #define MASK(X, Y)      model_data[mask_offset + ((X) * 2) + (Y)]
 #define WHO(X, Y)       *((float*)(model_data + who_offset + ((X) * 4) + ((Y) * 2)))
-#define WIH(X, Y)       *((float*)(model_data + wih_offset + ((X) * 12) + ((Y) * 2)))
+#define WIH(X, Y)       *((float*)(model_data + wih_offset + ((X) * num_hidden * 2) + ((Y) * 2)))
+#define FPN(X)          model_data[fpn_offset + (X)]
   
-void predict_gaze();
-void finish_predict(float ah[6]);
+void predict_gaze(unsigned short subsamples[]);
+int finish_predict(float ah[6]);
 
 float tanh_approx(float input);
 

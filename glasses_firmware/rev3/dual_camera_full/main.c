@@ -29,10 +29,12 @@ int main()
   
   config_ms_timer();
   
-  start = TIM4->CNT;
-  if (stony_image_dual())
-    while(1);
-  total = TIM4->CNT - start;
+  while(1) {
+//    start = TIM4->CNT;
+    if (stony_image_dual())
+      while(1);
+//    total = TIM4->CNT - start;
+  }
   
   return total;
 }

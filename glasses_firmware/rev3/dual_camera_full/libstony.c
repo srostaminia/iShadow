@@ -13,6 +13,11 @@
 #if (112 % TX_ROWS != 0)
 #define CAM2_MOD_OFFSET (112 % TX_ROWS) * 112
 #define TX_MOD_BLOCKS   ((112 % TX_ROWS) * 112 * 4 ) / 512
+
+#if ((112 % TX_ROWS) * 112 * 4 ) % 512 != 0
+#error TX_ROWS invalid, does not align to 512B boundary
+#endif
+
 #endif
 
 extern __IO  uint32_t Receive_length ;
@@ -665,10 +670,8 @@ int stony_image_dual()
   uint16_t *buf16 = (uint16_t *)buf8[0];
   
   uint16_t cam2_offset = CAM2_OFFSET;
-  uint16_t start, total;
+  volatile uint16_t start, total;
   uint8_t buf_idx = 0;
-  
-//  uint16_t data_val = 0xAAAA;
   
   set_pointer_value(REG_ROWSEL, 0, CAM1);
   set_pointer_value(REG_ROWSEL, 0, CAM2);
@@ -692,8 +695,6 @@ int stony_image_dual()
       
       if (col != 0) {
         buf16[(data_cycle * 112) + cam2_offset + (col - 1)] = adc_values[1];
-//        buf16[(data_cycle * 112) + cam2_offset + (col - 1)] = data_val + 1;
-        start = (data_cycle * 112) + cam2_offset + (col - 1);
       }
       
       // Do conversion for CAM1
@@ -712,7 +713,6 @@ int stony_image_dual()
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
       buf16[(data_cycle * 112) + col] = adc_values[0];
-//      buf16[(data_cycle * 112) + col] = data_val;
       
       // Do conversion for CAM2
       ADC_SoftwareStartConv(ADC1);
@@ -727,7 +727,6 @@ int stony_image_dual()
     asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
     
     buf16[(data_cycle * 112) + cam2_offset + 111] = adc_values[1];
-//    buf16[(data_cycle * 112) + cam2_offset + 111] = data_val + 1;
     
     inc_pointer_value(REG_ROWSEL, 1, CAM1);
     inc_pointer_value(REG_ROWSEL, 1, CAM2);
@@ -738,7 +737,6 @@ int stony_image_dual()
       }
       
       if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, TX_BLOCKS) != RES_OK)      return -1;
-//      f_finish_write();
       
       buf_idx = !buf_idx;
       buf16 = (uint16_t *)buf8[buf_idx];
@@ -764,6 +762,7 @@ int stony_image_dual()
   f_finish_write();
   
   if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, TX_MOD_BLOCKS) != RES_OK)      return -1;
+  sd_ptr += TX_MOD_BLOCKS;
 #endif
   
   f_finish_write();

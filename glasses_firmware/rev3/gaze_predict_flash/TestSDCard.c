@@ -11,9 +11,9 @@
 int TestSDCard( )
 {
   uint8_t buffer[512 * 7];//, buffer2[512 * 7];
-  uint32_t sector_adr, buffer_adr;
-  
-  uint8_t Counter = 1, sector = 0;
+//  uint32_t sector_adr, buffer_adr;
+//  
+//  uint8_t Counter = 1, sector = 0;
   
   for (int i = 0; i < 512 * 7; i++)
     buffer[i] = i;
@@ -24,10 +24,10 @@ int TestSDCard( )
   if (disk_initialize(0) != SD_OK) {
     return -1;
   }
-  else if (disk_write(0, (uint8_t *)buffer, 0, 7) != SD_OK) {
+  else if (disk_write(0, (uint8_t *)buffer, 0, 7) != RES_OK) {
     return -2;
   }
-//  else if (disk_read(0, (uint8_t *)buffer2, 0, 7) != SD_OK) {
+//  else if (disk_read(0, (uint8_t *)buffer2, 0, 7) != RES_OK) {
 //    return -3;
 //  }
 //  else if (buffer2[1] != 1) {

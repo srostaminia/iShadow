@@ -8,6 +8,7 @@
 #include "stm32l152d_eval_sdio_sd.h"
 #include "diskio.h"
 
+extern int xsvf[];
 static __IO uint32_t TimingDelay;
 
 int main()
@@ -21,6 +22,8 @@ int main()
   
   config_us_delay();
   
+  xsvf[0] = 1;
+
   stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3,
             SMH_GAIN_3V3, SMH_SELAMP_3V3);
   
@@ -30,6 +33,7 @@ int main()
   config_ms_timer();
   
   start = TIM4->CNT;
+  stony_image_single();
   stony_image_subsample();
   total = TIM4->CNT - start;
   
