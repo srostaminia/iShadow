@@ -12,7 +12,7 @@
 extern "C" {
 #endif
 
-#define NUM_SUBSAMPLE 1003
+#define NUM_SUBSAMPLE 1001
 #define NUM_HIDDEN 6
 
 #define BH(X)           *((float*)(model_data + bh_offset + ((X) * 2)))  

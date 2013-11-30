@@ -135,19 +135,19 @@ void predict_gaze(uint16_t subsamples[])
     float x, x_val, y_val;
 
     for (i = 0; i < NUM_HIDDEN; i++)  {
-        ah[i] = BH(i) / 255;
+        ah[i] = BH(i) / 1000;
     }
 
     for (i = 0; i < NUM_SUBSAMPLE; i++) {
         // val = global containing subsampled pixel data
-        int temp = subsamples[i];
-        x = (float)(subsamples[i]) / 255;
+//        int temp = subsamples[i];
+        x = (float)(subsamples[i]) / 1000;
 
         for (j = 0; j < NUM_HIDDEN; j++) {
             ah[j] += x * WIH(i, j);
         }
     }
-
+    
     x_val = BO(0);
     y_val = BO(1);
 
@@ -188,14 +188,15 @@ int finish_predict(float ah[6])
         x_val += WHO(i, 0) * tanh_approx(ah[i]);
         y_val += WHO(i, 1) * tanh_approx(ah[i]);
     }
-
+    
     // pred = global for storing prediction values
     pred[0] = (unsigned short)((x_val * 112) + 0.5);
     pred[1] = (unsigned short)((y_val * 112) + 0.5);
       
+//    f_finish_write();
     if (disk_write_fast(0, (uint8_t *)pred, sd_ptr, 1) != RES_OK)      return -1;
-    
     sd_ptr += 1;
+    f_finish_write();
     
     return 0;
 }

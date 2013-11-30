@@ -30,11 +30,13 @@ int main()
   config_ms_timer();
   
   while(1) {
+//  for (int i = 0; i < 100; i++) {
     // TODO: Try taking a full image on the eye-facing, then doing prediction on it here and offline to verify that we're pulling the right pixel data
-    if (stony_image_single() != 0)
-      while (1);
-    if (stony_image_subsample() != 0)
-      while (1);
+//    if (stony_image_single() != 0)
+//      while (1);
+//    if (stony_image_subsample() != 0)
+//      while (1);
+    stony_image_test();
   }
   
   return total;
