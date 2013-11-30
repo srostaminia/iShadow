@@ -4,10 +4,10 @@ graphics_toolkit('fltk')
 %data_path = '../data/addison1_adjusted'
 %X=load([data_path, '/addison1.csv'])
 
-data_path = '/Users/ammayber/Desktop/eye_exper/addison1'
+data_path = '/Users/ammayber/Desktop/eye_exper/addison1_unadjusted'
 
 % Number of random samples to choose
-N=1000;
+N=100;
 
 % Index to start choosing from
 start_N = 100;
@@ -24,15 +24,14 @@ j=1;
 for i=Instances
   %img = imread(sprintf('%s/addison1_%06d_eye.png',data_path,i)) ;
   if(exist(sprintf('%s/addison1_eye_%06d.png',data_path,i)))
-    img = double(imread(sprintf('%s/addison1_eye_%06d.png',data_path,i))) ;
-    img = img(2:end,:);
-    X(j,1:prod(res)) = img(:)';
+    img_txt = double(load(sprintf('%s/addison1_eye_%06d.txt',data_path,i))) ;
+    X(j,1:prod(res)) = img_txt(:)';
 
-    img = double(imread(sprintf('%s/addison1_out_%06d.png',data_path,i))) ;
-    img = img(2:end,:);
-    Out(j,1:prod(res)) = img(:)';
+    img_txt = double(load(sprintf('%s/addison1_out_%06d.txt',data_path,i))) ;
+    Out(j,1:prod(res)) = img_txt(:)';
 
-    disp_img = [img; (zeros(50, 112) + 255)];
+    disp_img = double(imread(sprintf('%s/addison1_out_%06d.png',data_path,i)));
+    disp_img = [disp_img; (zeros(50, 112) + 255)];
     figure(1);hold off;
     imagesc(disp_img);colormap gray;hold on;
     set(gca,'dataAspectRatio',[1 1 1]);

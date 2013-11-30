@@ -11,14 +11,14 @@ pkg load statistics;
 %   last column needs to be appended column of 1's. 
 % * Out: scene image data in (n x 12544) matrix with one row per image
 % * gout: gaze coordinates in (n x 2) matrix
-gaze_data_file = 'addison1_data_1000';
+gaze_data_file = 'eye_data_auto';
 
 %Regularization parameter range.  
 %Must go from low to high values
 %Larger values give sparser models
-params(1).lambdas = [logspace(-4,-1,10)]
-%params(1).lambdas = [logspace(-4,-1,2)]; 
-%params(1).lambdas = [0.000215]
+%params(1).lambdas = [logspace(-4,-1,10)]
+%params(1).lambdas = [logspace(-3,-2,2)]; 
+params(1).lambdas = [0.001000, 0.010000, 0.100000]
 
 %Number of hidden units. nHidden-1 will be real hidden units
 %and 1 will be a bias unit
@@ -37,7 +37,7 @@ params(1).maxiter = 500;
 
 %Run all results from scratch
 %Set to 0 to continue a partial run
-from_scratch = 1;
+from_scratch = 0;
 
 
 %Set randomization seed
@@ -53,7 +53,7 @@ rand('seed',seed); %set rand seed
 randn('seed',seed); %set randn seed
 
 g          = bsxfun(@times,gout,1./[111,112]); %Normalize gaze matrix
-X          = X/255;
+X          = [X, ones(size(X,1),1)]/1000;
 [N,nVars]  = size(X); %get data matrix size
 num_reps   = 1;
 
@@ -198,7 +198,7 @@ for c=[1]
     fname = sprintf('results/%s/test_error_hist_rep%d.pdf',local_suffix,r);
     xlabel('Gaze Prediction Error')
     ylabel('Frequency')
-    %pretty_graph(gcf,gca);
+    %pretty_graph(gcf,gca);l
     % exportfig(gcf,fname,'width',4,'height',3,'format','pdf','color','cmyk'); 
     print(fname,'-dpdf'); %,'-S1200,900');
 
@@ -218,16 +218,16 @@ for c=[1]
       pred =  logisticmlp_prediction(W_groupSparse,X(n,:),params.nHidden,2);
       hold off;
       eye_img = reshape(X(n,1:end-1),[111,112]);
-      out_img = reshape(double(Out(n,1:end))/255,[111,112]);
+      out_img = reshape(double(Out(n,1:end))/1000,[111,112]);
       imagesc([fliplr(eye_img), out_img]);
       hold on;
-      plot(111+112*pred(1),112*pred(2),'r+','markersize',20,'linewidth',3);
-      plot(111+112*g(n,1),112*g(n,2),'bo','markersize',20,'linewidth',3);
+      plot(112+112*pred(1),111*pred(2),'r+','markersize',20,'linewidth',3);
+      plot(112+112*g(n,1),111*g(n,2),'bo','markersize',20,'linewidth',3);
       axis off;
       colormap(gray);
       drawnow;
       fname = sprintf('results/%s/train_error_hist_img%d.pdf',local_suffix,n);
-      print(fname,'-dpng');
+      print(fname,'-dpdf');
     end
   end
 end

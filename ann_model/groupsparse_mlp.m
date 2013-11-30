@@ -12,8 +12,8 @@ for r=1:10
 N = size(X,1);
 Ntest = floor(N*0.2);
 ind{r} = randperm(N);
-Xtest = X(ind{r}(1:Ntest),:)/255;
-Xtrain= X(ind{r}(Ntest+1:end),:)/255;
+Xtest = X(ind{r}(1:Ntest),:)/4095;
+Xtrain= X(ind{r}(Ntest+1:end),:)/4095;
 ytest = bsxfun(@times,g(ind{r}(1:Ntest),:), 1./[800,600]);
 ytrain = bsxfun(@times,g(ind{r}(Ntest+1:end),:), 1./[800,600]);
 
