@@ -18,7 +18,7 @@ gaze_data_file = 'eye_data_auto';
 %Larger values give sparser models
 %params(1).lambdas = [logspace(-4,-1,10)]
 %params(1).lambdas = [logspace(-3,-2,2)]; 
-params(1).lambdas = [0.001000, 0.010000, 0.100000]
+params(1).lambdas = [0.001000, 0.010000]
 
 %Number of hidden units. nHidden-1 will be real hidden units
 %and 1 will be a bias unit
@@ -53,7 +53,7 @@ rand('seed',seed); %set rand seed
 randn('seed',seed); %set randn seed
 
 g          = bsxfun(@times,gout,1./[111,112]); %Normalize gaze matrix
-X          = [X, ones(size(X,1),1)]/1000;
+X          = [X/1000, ones(size(X,1),1)];
 [N,nVars]  = size(X); %get data matrix size
 num_reps   = 1;
 
