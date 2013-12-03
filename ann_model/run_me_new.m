@@ -11,14 +11,14 @@ pkg load statistics;
 %   last column needs to be appended column of 1's. 
 % * Out: scene image data in (n x 12544) matrix with one row per image
 % * gout: gaze coordinates in (n x 2) matrix
-gaze_data_file = 'eye_data_auto';
+gaze_data_file = 'eye_data_addison2_auto_minmax';
 
 %Regularization parameter range.  
 %Must go from low to high values
 %Larger values give sparser models
 %params(1).lambdas = [logspace(-4,-1,10)]
 %params(1).lambdas = [logspace(-3,-2,2)]; 
-params(1).lambdas = [0.001000, 0.010000]
+params(1).lambdas = [0.010000, 0.001000]
 
 %Number of hidden units. nHidden-1 will be real hidden units
 %and 1 will be a bias unit
@@ -37,7 +37,7 @@ params(1).maxiter = 500;
 
 %Run all results from scratch
 %Set to 0 to continue a partial run
-from_scratch = 0;
+from_scratch = 1;
 
 
 %Set randomization seed
@@ -53,7 +53,7 @@ rand('seed',seed); %set rand seed
 randn('seed',seed); %set randn seed
 
 g          = bsxfun(@times,gout,1./[111,112]); %Normalize gaze matrix
-X          = [X/1000, ones(size(X,1),1)];
+X          = [X, ones(size(X,1),1)];
 [N,nVars]  = size(X); %get data matrix size
 num_reps   = 1;
 

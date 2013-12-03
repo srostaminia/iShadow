@@ -1,13 +1,14 @@
 graphics_toolkit('fltk')
 pkg load signal
 
-data_path = '~/Desktop/eye_exper/addison1'; %set path to directory of pngs
-save_name = 'eye_data_auto.mat';% name of mat file for output
+data_path = '~/Desktop/eye_exper/addison2_unadjusted'; %set path to directory of pngs
+save_name = 'eye_data_addison2_auto.mat';% name of mat file for output
 display_skip = 1; %Set to >0 to display output for display_skip frames
 
 
 res = [111,112];
-instances = 100:6000;
+instances = 100:7000;
+%instances = 100:1000;
 %X=ones(N,prod(res)+1);
 j=0;
 
@@ -17,11 +18,12 @@ if(0 & exist('template.mat'))
   load('template.mat')
 else  
   template = zeros(2*w+1,2*w+1);
-  template_instances = 1:1000:6000;
+  template_instances = 1:2000:6000;
+  % template_instances = 1:50:150;
   j = 1;
   for t=template_instances
     i=instances(t);
-    name = sprintf('%s/addison1_out_%06d.txt',data_path,i)
+    name = sprintf('%s/addison2_out_%06d.txt',data_path,i)
     img = double(load(name))/1000.0;
     img = img - quantile(img(:),0.05);
     img = img / quantile(img(:),0.99);
@@ -49,17 +51,16 @@ Out = zeros(length(instances),prod(res));
 Eye = zeros(length(instances),prod(res));
 gaze= zeros(length(instances),2);
 
-
 j=1;
 c=0;
 xold = 1;
 yold = 1;
 img_out_old = zeros(res(1),res(2));
 for i=instances
-  name_out = sprintf('%s/addison1_out_%06d.txt',data_path,i);
-  name_eye = sprintf('%s/addison1_eye_%06d.txt',data_path,i);
+  name_out = sprintf('%s/addison2_out_%06d.txt',data_path,i);
+  name_eye = sprintf('%s/addison2_eye_%06d.txt',data_path,i);
   num_match = 1;
-  
+
   if(exist(name_out) && exist(name_eye))
     found_gaze = 0;
     img_eye = double(load(name_eye))/1000.0;
