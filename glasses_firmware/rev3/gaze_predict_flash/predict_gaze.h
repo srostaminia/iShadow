@@ -12,7 +12,9 @@
 extern "C" {
 #endif
 
-#define NUM_SUBSAMPLE 1001
+#include "stm32l1xx.h"
+  
+#define NUM_SUBSAMPLE 2174
 #define NUM_HIDDEN 6
 
 #define BH(X)           *((float*)(model_data + bh_offset + ((X) * 2)))  
@@ -22,7 +24,7 @@ extern "C" {
 #define WIH(X, Y)       *((float*)(model_data + wih_offset + ((X) * num_hidden * 2) + ((Y) * 2)))
 #define FPN(X)          model_data[fpn_offset + (X)]
   
-void predict_gaze(unsigned short subsamples[]);
+void predict_gaze(unsigned short subsamples[], uint16_t min, uint16_t max);
 int finish_predict(float ah[6]);
 
 float tanh_approx(float input);
