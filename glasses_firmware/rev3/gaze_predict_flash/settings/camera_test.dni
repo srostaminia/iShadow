@@ -9,7 +9,7 @@ TriggerName=main
 LimitSize=0
 ByteLimit=50
 [DebugChecksum]
-Checksum=-891106424
+Checksum=-1172196046
 [Exceptions]
 StopOnUncaught=_ 0
 StopOnThrow=_ 0
@@ -62,7 +62,9 @@ mode=0
 Bp0=_ 1 "EMUL_CODE" "{$PROJ_DIR$\main.c}.30.3" 0 0 1 "" 0 "" 0
 Bp1=_ 1 "EMUL_CODE" "{$PROJ_DIR$\main.c}.47.3" 0 0 1 "" 0 "" 0
 Bp2=_ 1 "EMUL_CODE" "{$PROJ_DIR$\predict_gaze.c}.169.5" 0 0 1 "" 0 "" 0
-Count=3
+Bp3=_ 1 "EMUL_CODE" "{$PROJ_DIR$\predict_gaze.c}.207.5" 0 0 1 "" 0 "" 0
+Bp4=_ 0 "EMUL_CODE" "{$PROJ_DIR$\libstony.c}.755.3" 0 0 1 "" 0 "" 0
+Count=5
 [Log file]
 LoggingEnabled=_ 0
 LogFile=_ ""

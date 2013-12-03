@@ -731,7 +731,8 @@ int stony_image_subsample()
       ADC_SoftwareStartConv(ADC1);
       
       if (pixel > 0) {
-        x = (float)(subsamples[pixel - 1]);
+//        x = (float)(subsamples[pixel - 1]);
+        x = (float)(subsamples[pixel - 1] - last_min) / last_max;
 
         for (int i = 0; i < num_hidden; i++) {
             ah[i] += x * WIH(pixel - 1, i);
@@ -750,7 +751,8 @@ int stony_image_subsample()
       adc_idx = !adc_idx;
   }
   
-  x = (float)(subsamples[num_subsample - 1]);
+//  x = (float)(subsamples[num_subsample - 1]);
+  x = (float)(subsamples[num_subsample - 1] - last_min) / last_max;
 
   for (int i = 0; i < num_hidden; i++) {
       ah[i] += x * WIH(num_subsample - 1, i);

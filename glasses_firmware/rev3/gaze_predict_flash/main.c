@@ -35,13 +35,13 @@ int main()
 //  }
   
   for (int i = 0; i < 50; i++) {
+    if (stony_image_subsample() != 0)
+      while (1);
 //    if (stony_image_single() != 0)
 //      while (1);
     stony_image_test();
 //    if (stony_image_dual() != 0)
 //      while(1);
-//    if (stony_image_subsample() != 0)
-//      while (1);
   }
   
   return total;
