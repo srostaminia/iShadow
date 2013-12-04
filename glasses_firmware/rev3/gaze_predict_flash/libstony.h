@@ -60,6 +60,7 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp);
 int stony_read_pixel();
 int stony_image_single();
 int stony_image_subsample();
+int stony_image_minmax();
 
 void pulse_resv(uint8_t cam);
 void pulse_incv(uint8_t cam);

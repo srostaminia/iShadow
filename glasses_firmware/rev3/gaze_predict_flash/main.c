@@ -34,15 +34,17 @@ int main()
 //    stony_image_subsample();
 //  }
   
-  for (int i = 0; i < 50; i++) {
+//  for (int i = 0; i < 50; i++) {
+    start = TIM4->CNT;
     if (stony_image_subsample() != 0)
       while (1);
+    total = TIM4->CNT - start;
 //    if (stony_image_single() != 0)
 //      while (1);
-    stony_image_test();
+//    stony_image_test();
 //    if (stony_image_dual() != 0)
 //      while(1);
-  }
+//  }
   
   return total;
 }

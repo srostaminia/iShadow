@@ -318,8 +318,8 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
   num_subsample = model_data[0];
   num_hidden = model_data[1];
   
-  for (int i = 0; i < 512; i++)
-    pred[i] = 0;
+//  for (int i = 0; i < 512; i++)
+//    pred[i] = 0;
   
   bh_offset = 2;
   bo_offset = bh_offset + num_hidden * 2;
@@ -363,6 +363,9 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
   //turn chip on with config value
   set_pointer_value(REG_CONFIG,config,CAM1);
   set_pointer_value(REG_CONFIG,config,CAM2);
+  
+  // Get initial min / max pixel values from eye-facing camera
+  stony_image_minmax();
 }
 
 int stony_read_pixel()
@@ -575,7 +578,7 @@ int stony_image_single()
 int stony_image_test()
 {
   
-  sd_ptr = 0; // FIX ME OH MY GOODNESS PLEASE FIX ME
+//  sd_ptr = 0; // FIX ME OH MY GOODNESS PLEASE FIX ME
   
   // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row
   // Double-buffered (2-dim array)
@@ -678,13 +681,82 @@ int stony_image_test()
   return 0;
 }
 
+int stony_image_minmax()
+{
+  uint16_t lastRow, lastCol;
+  uint16_t pix_value;
+  
+  uint16_t min = 65535, max = 0;
+  
+  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
+  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
+  
+  set_pointer_value(REG_ROWSEL, MASK(0, 0), CAM2);
+  set_pointer_value(REG_COLSEL, 0, CAM2);
+  
+  lastRow = MASK(0, 0);
+  lastCol = 0;
+
+  for (int pixel = 0; pixel < num_subsample; pixel++) {
+      if (MASK(pixel, 0) != lastRow)
+      {
+        char diff = MASK(pixel, 0) - lastRow;
+        
+        inc_pointer_value(REG_ROWSEL, diff, CAM2);
+        
+        lastRow = MASK(pixel, 0);
+
+        set_pointer_value(REG_COLSEL, MASK(pixel, 1), CAM2);
+        
+        lastCol = MASK(pixel, 1);
+        
+        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      } else {
+        inc_value(MASK(pixel, 1) - lastCol, CAM2);
+        
+        lastCol = MASK(pixel, 1);
+      }
+      
+      CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      
+      /* Start ADC1 Software Conversion */
+      ADC_SoftwareStartConv(ADC1);
+      
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+        
+//      subsamples[pixel] = adc_values[adc_idx] - FPN(pixel);
+      pix_value = adc_values[adc_idx] - FPN(pixel);
+      adc_idx = !adc_idx;
+      
+      min = (pix_value < min) ? (pix_value) : (min);
+      max = (pix_value > max) ? (pix_value) : (max);
+  }
+  
+  last_min = min;
+  last_max = max;
+  
+  return 0;
+}
+
 int stony_image_subsample()
 {
   uint16_t lastRow, lastCol;
-  uint16_t subsamples[NUM_SUBSAMPLE];
+  uint16_t pix_value;
+//  uint16_t subsamples[NUM_SUBSAMPLE];
 //  uint16_t subsamples_raw[NUM_SUBSAMPLE];
   float x;
   float ah[NUM_HIDDEN];
+  
+  uint16_t min = 65535, max = 0;
   
   for (int i = 0; i < num_hidden; i++)  {
     ah[i] = BH(i);
@@ -731,8 +803,8 @@ int stony_image_subsample()
       ADC_SoftwareStartConv(ADC1);
       
       if (pixel > 0) {
-//        x = (float)(subsamples[pixel - 1]);
-        x = (float)(subsamples[pixel - 1] - last_min) / last_max;
+//        x = (float)(subsamples[pixel - 1] - last_min) / last_max;
+        x = (float)(pix_value - last_min) / last_max;
 
         for (int i = 0; i < num_hidden; i++) {
             ah[i] += x * WIH(pixel - 1, i);
@@ -745,27 +817,29 @@ int stony_image_subsample()
         asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       }
       
-//      subsamples_raw[pixel] = adc_values[adc_idx];
-//      subsamples_raw[pixel] = FPN(pixel);
-      subsamples[pixel] = adc_values[adc_idx] - FPN(pixel);
+//      subsamples[pixel] = adc_values[adc_idx] - FPN(pixel);
+      pix_value = adc_values[adc_idx] - FPN(pixel);
       adc_idx = !adc_idx;
+      
+//      subsamples[pixel] = pix_value;    // AMM
+      
+      min = (pix_value < min) ? (pix_value) : (min);
+      max = (pix_value > max) ? (pix_value) : (max);
   }
   
-//  x = (float)(subsamples[num_subsample - 1]);
-  x = (float)(subsamples[num_subsample - 1] - last_min) / last_max;
+//  x = (float)(subsamples[num_subsample - 1] - last_min) / last_max;
+  x = (float)(pix_value - last_min) / last_max;
 
   for (int i = 0; i < num_hidden; i++) {
       ah[i] += x * WIH(num_subsample - 1, i);
   }
   
-//  f_finish_write();
-//  if (disk_write_fast(0, (uint8_t *)subsamples_raw, sd_ptr, 4) != RES_OK)      return -1;
-//  sd_ptr += 4;
-//  f_finish_write();
-  
   if (finish_predict(ah) != 0)  return -1;
   
-//  predict_gaze(subsamples);
+//  predict_gaze(subsamples, last_min, last_max);       // AMM - Diagnostic        
+  
+  last_min = min;
+  last_max = max;
   
   return 0;
 }
