@@ -34,23 +34,14 @@ int main()
 //    stony_image_subsample();
 //  }
   
-//  for (int i = 0; i < 50; i++) {
-    start = TIM4->CNT;
-<<<<<<< .mine
-//    if (stony_image_subsample() != 0)
-=======
-    if (stony_image_subsample() != 0)
-      while (1);
-    total = TIM4->CNT - start;
-//    if (stony_image_single() != 0)
->>>>>>> .r8565
+  for (int i = 0; i < 50; i++) {
 //      while (1);
-//    stony_image_test();
+    stony_image_test();
     if (stony_image_single() != 0)
       while (1);
 //    if (stony_image_dual() != 0)
 //      while(1);
-//  }
+  }
   
   return total;
 }

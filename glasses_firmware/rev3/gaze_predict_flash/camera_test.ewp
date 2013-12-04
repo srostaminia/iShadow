@@ -229,7 +229,7 @@
         <option>
           <name>CCAllowList</name>
           <version>1</version>
-          <state>1111111</state>
+          <state>0000000</state>
         </option>
         <option>
           <name>CCDebugInfo</name>
@@ -321,7 +321,7 @@
         </option>
         <option>
           <name>CCOptLevel</name>
-          <state>3</state>
+          <state>0</state>
         </option>
         <option>
           <name>CCOptStrategy</name>
@@ -330,7 +330,7 @@
         </option>
         <option>
           <name>CCOptLevelSlave</name>
-          <state>3</state>
+          <state>0</state>
         </option>
         <option>
           <name>CompilerMisraRules98</name>
@@ -643,7 +643,7 @@
         </option>
         <option>
           <name>IlinkRawBinaryFile</name>
-          <state>\\vmware-host\Shared Folders\Desktop\model_files\addison2\lambda0.01000_6181p.raw</state>
+          <state>\\vmware-host\Shared Folders\Desktop\model_files\addisonjoint\lambda0_010000_2174p.raw</state>
         </option>
         <option>
           <name>IlinkRawBinarySymbol</name>
