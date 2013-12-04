@@ -2,7 +2,11 @@
 
 <project>
   <fileVersion>2</fileVersion>
+<<<<<<< .mine
+  <fileChecksum>967363251</fileChecksum>
+=======
   <fileChecksum>4166321763</fileChecksum>
+>>>>>>> .r8565
   <configuration>
     <name>Debug</name>
     <outputs>
@@ -264,7 +268,11 @@
       <file>$PROJ_DIR$\Debug\Obj\stm32l1xx_exti.o</file>
       <file>$PROJ_DIR$\STM32L1xx_StdPeriph_Driver\inc\stm32l1xx_rtc.h</file>
       <file>$PROJ_DIR$\Debug\Obj\stm32l1xx_pwr.o</file>
+<<<<<<< .mine
+      <file>\\vmware-host\Shared Folders\Desktop\model_files\addisonjoint\lambda0_010000_2174.raw</file>
+=======
       <file>\\vmware-host\Shared Folders\Desktop\lambda0_100000.raw</file>
+>>>>>>> .r8565
     </outputs>
     <file>
       <name>$PROJ_DIR$\..\..\common_libs\SDIO_Driver\lowlevel.c</name>
@@ -453,6 +461,13 @@
           <name>ICCARM</name>
           <file> 100 107 106 155 239 232 113 56 179 138 168 93 238 162 96 103 5 98 101 78 83 74 73 79 85 86 87 97 95 94 76 92 90 89 84 81 75 80 82 77 99</file>
         </tool>
+<<<<<<< .mine
+        <tool>
+          <name>BICOMP</name>
+          <file> 100 107 106 155 239 232 113 56 179 138 168 93 238 162 96 103 5 98 101 78 83 74 73 79 85 86 87 97 95 94 76 92 90 89 84 81 75 80 82 77 99</file>
+        </tool>
+=======
+>>>>>>> .r8565
       </inputs>
     </file>
     <file>

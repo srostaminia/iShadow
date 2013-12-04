@@ -14,7 +14,11 @@ extern "C" {
 
 #include "stm32l1xx.h"
   
+<<<<<<< .mine
+#define NUM_SUBSAMPLE 6181
+=======
 #define NUM_SUBSAMPLE 2042
+>>>>>>> .r8565
 #define NUM_HIDDEN 6
 
 #define BH(X)           *((float*)(model_data + bh_offset + ((X) * 2)))  

@@ -41,7 +41,7 @@
           
           
           
-        <item>subsamples</item><item></item></expressions>
+        <item>subsamples</item><item>min</item><item>max</item><item>pred[0]</item><item>pred[1]</item><item></item></expressions>
         <col-names>
           
           
@@ -102,7 +102,7 @@
             <Factory>WATCH_1</Factory>
           </Tab><Tab><Identity>TabID-16458-27153</Identity><TabName>Call Stack</TabName><Factory>CallStack</Factory></Tab><Tab><Identity>TabID-6009-19824</Identity><TabName>Find All Declarations</TabName><Factory>Find-All-Declarations</Factory><Session/></Tab></Tabs>
         
-      <SelectedTab>0</SelectedTab></Wnd0><Wnd1>
+      <SelectedTab>5</SelectedTab></Wnd0><Wnd1>
         <Tabs>
           <Tab>
             <Identity>TabID-27509-25905</Identity>
@@ -120,14 +120,14 @@
       
       
       
-    <Pane><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\libstony.c</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>940</YPos2><SelStart2>31723</SelStart2><SelEnd2>31723</SelEnd2></Tab><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\predict_gaze.c</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>139</YPos2><SelStart2>3515</SelStart2><SelEnd2>3515</SelEnd2></Tab><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\main.c</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>32</YPos2><SelStart2>929</SelStart2><SelEnd2>929</SelEnd2></Tab><ActiveTab>2</ActiveTab><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\predict_gaze.h</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>3</YPos2><SelStart2>221</SelStart2><SelEnd2>221</SelEnd2></Tab></Pane><ActivePane>0</ActivePane><Sizes><Pane><X>1000000</X><Y>1000000</Y></Pane></Sizes><SplitMode>1</SplitMode></Editor>
+    <Pane><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\libstony.c</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>553</YPos2><SelStart2>18374</SelStart2><SelEnd2>18374</SelEnd2></Tab><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\predict_gaze.c</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>154</YPos2><SelStart2>3621</SelStart2><SelEnd2>3621</SelEnd2></Tab><ActiveTab>1</ActiveTab><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\main.c</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>6</YPos2><SelStart2>596</SelStart2><SelEnd2>596</SelEnd2></Tab><Tab><Factory>TextEditor</Factory><Filename>$WS_DIR$\predict_gaze.h</Filename><XPos>0</XPos><YPos>0</YPos><SelStart>0</SelStart><SelEnd>0</SelEnd><XPos2>0</XPos2><YPos2>3</YPos2><SelStart2>249</SelStart2><SelEnd2>249</SelEnd2></Tab></Pane><ActivePane>0</ActivePane><Sizes><Pane><X>1000000</X><Y>1000000</Y></Pane></Sizes><SplitMode>1</SplitMode></Editor>
     <Positions>
       
       
       
       
       
-    <Top><Row0><Sizes><Toolbar-002e3d68><key>iaridepm.enu1</key></Toolbar-002e3d68><Toolbar-107b6020><key>debuggergui.enu1</key></Toolbar-107b6020><Toolbar-107b5e90><key>armstlink.enu1</key></Toolbar-107b5e90></Sizes></Row0></Top><Left><Row0><Sizes><Wnd1><Rect><Top>-2</Top><Left>-2</Left><Bottom>554</Bottom><Right>269</Right><x>-2</x><y>-2</y><xscreen>637</xscreen><yscreen>267</yscreen><sizeHorzCX>442361</sizeHorzCX><sizeHorzCY>326406</sizeHorzCY><sizeVertCX>188194</sizeVertCX><sizeVertCY>679707</sizeVertCY></Rect></Wnd1></Sizes></Row0></Left><Right><Row0><Sizes><Wnd2><Rect><Top>-2</Top><Left>-2</Left><Bottom>554</Bottom><Right>326</Right><x>-2</x><y>-2</y><xscreen>200</xscreen><yscreen>200</yscreen><sizeHorzCX>138889</sizeHorzCX><sizeHorzCY>244499</sizeHorzCY><sizeVertCX>227778</sizeVertCX><sizeVertCY>679707</sizeVertCY></Rect></Wnd2></Sizes></Row0></Right><Bottom><Row0><Sizes><Wnd0><Rect><Top>-2</Top><Left>-2</Left><Bottom>219</Bottom><Right>1442</Right><x>-2</x><y>-2</y><xscreen>1444</xscreen><yscreen>221</yscreen><sizeHorzCX>1002778</sizeHorzCX><sizeHorzCY>270171</sizeHorzCY><sizeVertCX>442361</sizeVertCX><sizeVertCY>326406</sizeVertCY></Rect></Wnd0></Sizes></Row0></Bottom><Float><Sizes/></Float></Positions>
+    <Top><Row0><Sizes><Toolbar-02893d68><key>iaridepm.enu1</key></Toolbar-02893d68><Toolbar-0d6f3410><key>debuggergui.enu1</key></Toolbar-0d6f3410><Toolbar-0d6f3280><key>armstlink.enu1</key></Toolbar-0d6f3280></Sizes></Row0></Top><Left><Row0><Sizes><Wnd1><Rect><Top>-2</Top><Left>-2</Left><Bottom>554</Bottom><Right>269</Right><x>-2</x><y>-2</y><xscreen>637</xscreen><yscreen>267</yscreen><sizeHorzCX>442361</sizeHorzCX><sizeHorzCY>326406</sizeHorzCY><sizeVertCX>188194</sizeVertCX><sizeVertCY>679707</sizeVertCY></Rect></Wnd1></Sizes></Row0></Left><Right><Row0><Sizes><Wnd2><Rect><Top>-2</Top><Left>-2</Left><Bottom>554</Bottom><Right>326</Right><x>-2</x><y>-2</y><xscreen>200</xscreen><yscreen>200</yscreen><sizeHorzCX>138889</sizeHorzCX><sizeHorzCY>244499</sizeHorzCY><sizeVertCX>227778</sizeVertCX><sizeVertCY>679707</sizeVertCY></Rect></Wnd2></Sizes></Row0></Right><Bottom><Row0><Sizes><Wnd0><Rect><Top>-2</Top><Left>-2</Left><Bottom>219</Bottom><Right>1442</Right><x>-2</x><y>-2</y><xscreen>1444</xscreen><yscreen>221</yscreen><sizeHorzCX>1002778</sizeHorzCX><sizeHorzCY>270171</sizeHorzCY><sizeVertCX>442361</sizeVertCX><sizeVertCY>326406</sizeVertCY></Rect></Wnd0></Sizes></Row0></Bottom><Float><Sizes/></Float></Positions>
   </Desktop>
 </Project>
 

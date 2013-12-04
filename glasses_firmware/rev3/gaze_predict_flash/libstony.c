@@ -500,7 +500,7 @@ int stony_image_single()
   
   volatile uint16_t start, total;
   uint8_t buf_idx = 0;
-  uint16_t min = 65535, max = 0;
+//  uint16_t min = 65535, max = 0;
   
   ADC_RegularChannelConfig(ADC1, CAM1_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
   ADC_RegularChannelConfig(ADC1, CAM1_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
@@ -533,8 +533,8 @@ int stony_image_single()
       
       buf16[(data_cycle * 112) + col] = adc_values[adc_idx];
       
-      min = (adc_values[adc_idx] < min) ? (adc_values[adc_idx]) : (min);
-      max = (adc_values[adc_idx] > max) ? (adc_values[adc_idx]) : (max);
+//      min = (adc_values[adc_idx] < min) ? (adc_values[adc_idx]) : (min);
+//      max = (adc_values[adc_idx] > max) ? (adc_values[adc_idx]) : (max);
       
       adc_idx = !adc_idx;
 
@@ -569,8 +569,8 @@ int stony_image_single()
   
   f_finish_write();
   
-  last_max = max;
-  last_min = min;
+//  last_max = max;
+//  last_min = min;
   
   return 0;
 }
