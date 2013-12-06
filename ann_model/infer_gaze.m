@@ -1,9 +1,10 @@
 graphics_toolkit('fltk')
 pkg load signal
 
-data_path = '~/Desktop/eye_exper/addison2_unadjusted'; %set path to directory of pngs
-save_name = 'eye_data_addison2_auto.mat';% name of mat file for output
+data_path = '~/Desktop/eye_exper/dan_unadjusted'; %set path to directory of pngs
+save_name = 'eye_data_dan_auto.mat';% name of mat file for output
 display_skip = 1; %Set to >0 to display output for display_skip frames
+data_name = 'dan'
 
 
 res = [111,112];
@@ -23,7 +24,7 @@ else
   j = 1;
   for t=template_instances
     i=instances(t);
-    name = sprintf('%s/addison2_out_%06d.txt',data_path,i)
+    name = sprintf('%s/%s_out_%06d.txt',data_path,data_name,i)
     img = double(load(name))/1000.0;
     img = img - quantile(img(:),0.05);
     img = img / quantile(img(:),0.99);
@@ -57,8 +58,8 @@ xold = 1;
 yold = 1;
 img_out_old = zeros(res(1),res(2));
 for i=instances
-  name_out = sprintf('%s/addison2_out_%06d.txt',data_path,i);
-  name_eye = sprintf('%s/addison2_eye_%06d.txt',data_path,i);
+  name_out = sprintf('%s/%s_out_%06d.txt',data_path,data_name,i);
+  name_eye = sprintf('%s/%s_eye_%06d.txt',data_path,data_name,i);
   num_match = 1;
 
   if(exist(name_out) && exist(name_eye))

@@ -46,6 +46,10 @@ function [W,alpha] = train_mlp(Xtrain,ytrain,nHidden,lambda,Winit,alphainit, max
   %Solve optimization problem
   options.verbose=2;
   options.maxIter = maxiter;
+
+  options.optTol = 1e-5; %default 1e-5
+  options.progTol  = 1e-9; %default 1e-9
+
   Walpha = minConf_SPG(penalizedFunObj,[W_groupSparse(:);alpha],funProj,options);
   W = Walpha(1:nParams);
   W(abs(W) < 1e-5) = 0;

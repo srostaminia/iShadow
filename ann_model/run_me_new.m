@@ -16,9 +16,10 @@ gaze_data_file = 'eye_data_addison2_auto_minmax';
 %Regularization parameter range.  
 %Must go from low to high values
 %Larger values give sparser models
-%params(1).lambdas = [logspace(-4,-1,10)]
+params(1).lambdas = [logspace(-4,-1,10)]
 %params(1).lambdas = [logspace(-3,-2,2)]; 
-params(1).lambdas = [0.010000, 0.001000]
+% params(1).lambdas = [0.100000, 0.010000, 0.001000]
+% params(1).lambdas = [0.010000, 0.100000]
 
 %Number of hidden units. nHidden-1 will be real hidden units
 %and 1 will be a bias unit
