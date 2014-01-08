@@ -1,14 +1,14 @@
 graphics_toolkit('fltk')
 pkg load signal
 
-data_path = '~/Desktop/eye_exper/dan_unadjusted'; %set path to directory of pngs
-save_name = 'eye_data_dan_auto.mat';% name of mat file for output
+data_path = '~/Desktop/eye_exper/seth_unadjusted'; %set path to directory of pngs
+save_name = 'eye_data_seth_auto.mat';% name of mat file for output
 display_skip = 1; %Set to >0 to display output for display_skip frames
-data_name = 'dan'
+data_name = 'seth'
 
 
 res = [111,112];
-instances = 100:7000;
+instances = 200:6740;
 %instances = 100:1000;
 %X=ones(N,prod(res)+1);
 j=0;
@@ -19,7 +19,7 @@ if(0 & exist('template.mat'))
   load('template.mat')
 else  
   template = zeros(2*w+1,2*w+1);
-  template_instances = 1:2000:6000;
+  template_instances = 500:2100:6740;
   % template_instances = 1:50:150;
   j = 1;
   for t=template_instances
