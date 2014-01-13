@@ -70,16 +70,16 @@
         <option>
           <name>GRuntimeLibSelect</name>
           <version>0</version>
-          <state>2</state>
+          <state>1</state>
         </option>
         <option>
           <name>GRuntimeLibSelectSlave</name>
           <version>0</version>
-          <state>2</state>
+          <state>1</state>
         </option>
         <option>
           <name>RTDescription</name>
-          <state>Use the full configuration of the C/C++ runtime library. Full locale interface, C locale, file descriptor support, multibytes in printf and scanf, and hex floats in strtod.</state>
+          <state>Use the normal configuration of the C/C++ runtime library. No locale interface, C locale, no file descriptor support, no multibytes in printf and scanf, and no hex floats in strtod.</state>
         </option>
         <option>
           <name>OGProductVersion</name>
@@ -133,7 +133,7 @@
         </option>
         <option>
           <name>RTConfigPath2</name>
-          <state>$TOOLKIT_DIR$\INC\c\DLib_Config_Full.h</state>
+          <state>$TOOLKIT_DIR$\INC\c\DLib_Config_Normal.h</state>
         </option>
         <option>
           <name>GFPUCoreSlave</name>
@@ -169,6 +169,7 @@
         <option>
           <name>CCDefines</name>
           <state>STM32L1XX_HD</state>
+          <state>USE_STM32L151XD</state>
         </option>
         <option>
           <name>CCPreprocFile</name>
@@ -229,7 +230,7 @@
         <option>
           <name>CCAllowList</name>
           <version>1</version>
-          <state>1111111</state>
+          <state>0000000</state>
         </option>
         <option>
           <name>CCDebugInfo</name>
@@ -301,7 +302,9 @@
           <state>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\inc</state>
           <state>$PROJ_DIR$</state>
           <state>$PROJ_DIR$\..\..\common_libs\CMSIS\Include</state>
-          <state>$PROJ_DIR$\\..\..\common_libs\SDIO_Driver</state>
+          <state>$PROJ_DIR$\Startup Files\Flash</state>
+          <state>$PROJ_DIR$\..\..\common_libs\STM32_USB-FS-Device_Driver\inc</state>
+          <state>$PROJ_DIR$\..\..\common_libs\Virtual COM Port\inc</state>
         </option>
         <option>
           <name>CCStdIncCheck</name>
@@ -321,16 +324,16 @@
         </option>
         <option>
           <name>CCOptLevel</name>
-          <state>3</state>
+          <state>0</state>
         </option>
         <option>
           <name>CCOptStrategy</name>
           <version>0</version>
-          <state>2</state>
+          <state>0</state>
         </option>
         <option>
           <name>CCOptLevelSlave</name>
-          <state>3</state>
+          <state>0</state>
         </option>
         <option>
           <name>CompilerMisraRules98</name>
@@ -577,7 +580,7 @@
         </option>
         <option>
           <name>OOCOutputFile</name>
-          <state>camera_test.srec</state>
+          <state>usb_test.srec</state>
         </option>
         <option>
           <name>OOCCommandLineProducer</name>
@@ -643,19 +646,19 @@
         </option>
         <option>
           <name>IlinkRawBinaryFile</name>
-          <state>\\vmware-host\Shared Folders\Desktop\model_files\addison2_minmax\lambda0_100000_24p.raw</state>
+          <state></state>
         </option>
         <option>
           <name>IlinkRawBinarySymbol</name>
-          <state>model_data</state>
+          <state></state>
         </option>
         <option>
           <name>IlinkRawBinarySegment</name>
-          <state>model_sect</state>
+          <state></state>
         </option>
         <option>
           <name>IlinkRawBinaryAlign</name>
-          <state>1</state>
+          <state></state>
         </option>
         <option>
           <name>IlinkDefines</name>
@@ -1840,24 +1843,15 @@
     </settings>
   </configuration>
   <group>
-    <name>Filesystem</name>
-    <file>
-      <name>$PROJ_DIR$\..\..\common_libs\SDIO_Driver\diskio.c</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\common_libs\SDIO_Driver\lowlevel.c</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\common_libs\SDIO_Driver\stm32l152d_eval_sdio_sd.c</name>
-    </file>
-  </group>
-  <group>
     <name>SPL Config</name>
+    <file>
+      <name>$PROJ_DIR$\..\..\common_libs\CMSIS\Include\core_cm3.h</name>
+    </file>
     <file>
       <name>$PROJ_DIR$\Startup Files\Flash\startup_stm32l1xx_hd.s</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\CMSIS\Device\ST\STM32L1xx\Include\stm32l1xx.h</name>
+      <name>$PROJ_DIR$\..\..\common_libs\CMSIS\Device\ST\STM32L1xx\Include\stm32l1xx.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\stm32l1xx_conf.h</name>
@@ -1872,7 +1866,7 @@
       <name>$PROJ_DIR$\system_stm32l1xx.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\CMSIS\Device\ST\STM32L1xx\Include\system_stm32l1xx.h</name>
+      <name>$PROJ_DIR$\..\..\common_libs\CMSIS\Device\ST\STM32L1xx\Include\system_stm32l1xx.h</name>
     </file>
   </group>
   <group>
@@ -1960,18 +1954,45 @@
     </file>
   </group>
   <group>
-    <name>Stonyman</name>
+    <name>USB-FS Device Driver</name>
     <file>
-      <name>$PROJ_DIR$\libstony.c</name>
+      <name>$PROJ_DIR$\..\..\common_libs\STM32_USB-FS-Device_Driver\src\usb_core.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\libstony.h</name>
+      <name>$PROJ_DIR$\..\..\common_libs\STM32_USB-FS-Device_Driver\src\usb_init.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\predict_gaze.c</name>
+      <name>$PROJ_DIR$\..\..\common_libs\STM32_USB-FS-Device_Driver\src\usb_int.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\predict_gaze.h</name>
+      <name>$PROJ_DIR$\..\..\common_libs\STM32_USB-FS-Device_Driver\src\usb_mem.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\common_libs\STM32_USB-FS-Device_Driver\src\usb_regs.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\common_libs\STM32_USB-FS-Device_Driver\src\usb_sil.c</name>
+    </file>
+  </group>
+  <group>
+    <name>Virtual COM Port</name>
+    <file>
+      <name>$PROJ_DIR$\..\..\common_libs\Virtual COM Port\src\hw_config.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\common_libs\Virtual COM Port\src\usb_desc.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\common_libs\Virtual COM Port\src\usb_endp.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\common_libs\Virtual COM Port\src\usb_istr.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\common_libs\Virtual COM Port\src\usb_prop.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\common_libs\Virtual COM Port\src\usb_pwr.c</name>
     </file>
   </group>
   <file>
@@ -1982,9 +2003,6 @@
   </file>
   <file>
     <name>$PROJ_DIR$\main.h</name>
-  </file>
-  <file>
-    <name>$PROJ_DIR$\TestSDCard.c</name>
   </file>
 </project>
 

@@ -1,15 +1,27 @@
 [Stack]
-FillEnabled=0
+FillEnabled=1
 OverflowWarningsEnabled=1
 WarningThreshold=90
 SpWarningsEnabled=1
-WarnLogOnly=1
+WarnLogOnly=0
 UseTrigger=1
 TriggerName=main
 LimitSize=0
 ByteLimit=50
+[Interrupts]
+Enabled=1
+[MemoryMap]
+Enabled=0
+Base=0
+UseAuto=0
+TypeViolation=1
+UnspecRange=1
+ActionState=1
+[Trace1]
+Enabled=0
+ShowSource=1
 [DebugChecksum]
-Checksum=2062804044
+Checksum=-113565167
 [Exceptions]
 StopOnUncaught=_ 0
 StopOnThrow=_ 0
@@ -34,12 +46,6 @@ ITMportsEnable=0
 ITMportsTermIO=0
 ITMportsLogFile=0
 ITMlogFile=$PROJ_DIR$\ITM.log
-[array_types]
-Fmt0=unsigned char[2]	4	0
-[watch_formats]
-Fmt0={W}0:buffer_adr	4	0
-Fmt1={W}0:tmp	4	0
-Fmt2={W}0:tmpreg	1	0
 [DataLog]
 LogEnabled=0
 SumEnabled=0
@@ -83,14 +89,15 @@ Exclusions=
 [Disassemble mode]
 mode=0
 [Breakpoints2]
-Bp0=_ 1 "EMUL_CODE" "{$PROJ_DIR$\main.c}.35.7" 0 0 1 "" 0 "" 0
-Bp1=_ 1 "EMUL_CODE" "{$PROJ_DIR$\main.c}.30.3" 0 0 1 "" 0 "" 0
-Bp2=_ 1 "EMUL_CODE" "{$PROJ_DIR$\main.c}.28.5" 0 0 1 "" 0 "" 0
-Count=3
+Bp0=_ 1 "EMUL_CODE" "{$PROJ_DIR$\main.c}.35.9" 0 0 1 "" 0 "" 0
+Bp1=_ 1 "EMUL_CODE" "{$PROJ_DIR$\main.c}.33.9" 0 0 1 "" 0 "" 0
+Bp2=_ 1 "EMUL_CODE" "{$PROJ_DIR$\main.c}.35.9" 0 0 1 "" 0 "" 0
+Bp3=_ 1 "EMUL_CODE" "{$PROJ_DIR$\main.c}.37.9" 0 0 1 "" 0 "" 0
+Bp4=_ 1 "EMUL_CODE" "{$PROJ_DIR$\main.c}.37.9" 0 0 1 "" 0 "" 0
+Bp5=_ 1 "EMUL_CODE" "{$PROJ_DIR$\main.c}.31.13" 0 0 1 "" 0 "" 0
+Bp6=_ 1 "EMUL_CODE" "{$PROJ_DIR$\main.c}.29.3" 0 0 1 "" 0 "" 0
+Count=7
 [Aliases]
-A0=_ "\\vmware-host\Shared Folders\Desktop\Cam2\L152-eval\diskio.c" ""
-A1=_ "\\vmware-host\Shared Folders\Desktop\Cam2\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_adc.c" ""
-A2=_ "\\vmware-host\Shared Folders\Desktop\Cam2\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_rcc.c" ""
-A3=_ "\\vmware-host\Shared Folders\Desktop\Cam2\Startup Files\Flash\startup_stm32l1xx_hd.s" ""
-Count=4
+A0=_ "C:\Users\Addison\Projects\CPLD Test\startup_stm32l1xx_hd.s" "C:\Users\Addison\Projects\CPLD Test\Startup Files\Flash\startup_stm32l1xx_hd.s"
+Count=1
 SuppressDialog=1

@@ -771,7 +771,7 @@ int stony_image_subsample()
   lastRow = MASK(0, 0);
   lastCol = 0;
 
-  for (int pixel = 0; pixel < num_subsample; pixel++) {
+  for (int pixel = 0; pixel < NUM_SUBSAMPLE; pixel++) {
       if (MASK(pixel, 0) != lastRow)
       {
         char diff = MASK(pixel, 0) - lastRow;
@@ -831,7 +831,7 @@ int stony_image_subsample()
   x = (float)(pix_value - last_min) / last_max;
 
   for (int i = 0; i < num_hidden; i++) {
-      ah[i] += x * WIH(num_subsample - 1, i);
+      ah[i] += x * WIH(NUM_SUBSAMPLE - 1, i);
   }
   
   if (finish_predict(ah) != 0)  return -1;
