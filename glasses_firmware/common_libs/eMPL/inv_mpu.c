@@ -984,6 +984,22 @@ int mpu_get_temperature(long *data, unsigned long *timestamp)
     return 0;
 }
 
+int mpu_get_accel_bias(long accel_bias[3])
+{
+  unsigned char data[6];
+  if (i2c_read(st.hw->addr, 0x06, 6, data))
+    return -1;
+  
+  accel_bias[0] = (data[0] << 8) & 0xFF00;
+  accel_bias[0] |= data[1] & 0x00FF;
+  accel_bias[1] = (data[2] << 8) & 0xFF00;
+  accel_bias[1] |= data[3] & 0x00FF;
+  accel_bias[2] = (data[4] << 8) & 0xFF00;
+  accel_bias[2] |= data[5] & 0x00FF;
+  
+  return 0;
+}
+
 /**
  *  @brief      Push biases to the accel bias registers.
  *  This function expects biases relative to the current sensor output, and

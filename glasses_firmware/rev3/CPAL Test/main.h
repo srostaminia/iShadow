@@ -53,6 +53,15 @@
 #endif
 
 /* Exported types ------------------------------------------------------------*/
+struct hal_s {
+    unsigned char sensors;
+    unsigned char dmp_on;
+    unsigned char wait_for_tap;
+    volatile unsigned char new_gyro;
+    unsigned short report;
+    unsigned short dmp_features;
+    unsigned char motion_int_mode;
+};
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions ------------------------------------------------------- */
@@ -62,6 +71,8 @@ void config_us_delay();
 void set_mco();
 void delay_us(int delayTime);
 int imu_test();
+void get_quat();
+void accel_cal();
 
 unsigned short inv_row_2_scale(const signed char *row);
 unsigned short inv_orientation_matrix_to_scalar(const signed char *mtx);

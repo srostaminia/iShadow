@@ -1996,6 +1996,9 @@
   <file>
     <name>$PROJ_DIR$\main.h</name>
   </file>
+  <file>
+    <name>$PROJ_DIR$\mpu9150_interrupts.c</name>
+  </file>
 </project>
 
 

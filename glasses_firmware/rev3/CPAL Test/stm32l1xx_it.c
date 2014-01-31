@@ -31,10 +31,13 @@
 #include "stm32l1xx_it.h"
 #include "main.h"
 #include "cpal_conf.h"
+#include "mpu9150_interrupts.h"
 
 /** @addtogroup Template_Project
   * @{
   */
+
+extern struct hal_s hal;
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -195,5 +198,16 @@ void USBWakeUp_IRQHandler(void)
   * @}
   */ 
 
+void EXTI15_10_IRQHandler(void) 
+{  
+   if(EXTI_GetITStatus(EXTI_Line10))
+   {             
+     if(MPU9150_Get_INTpin_State())
+     {
+       hal.new_gyro = 1;
+     }
+     EXTI_ClearITPendingBit(EXTI_Line10);        
+   }   
+}
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
