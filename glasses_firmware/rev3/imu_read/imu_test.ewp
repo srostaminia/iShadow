@@ -581,7 +581,7 @@
         </option>
         <option>
           <name>OOCOutputFile</name>
-          <state>CPAL_test.srec</state>
+          <state>imu_read.srec</state>
         </option>
         <option>
           <name>OOCCommandLineProducer</name>

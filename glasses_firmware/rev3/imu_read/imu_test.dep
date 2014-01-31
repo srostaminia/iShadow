@@ -206,7 +206,7 @@
       <file>$PROJ_DIR$\Debug\Obj\stm32l1xx_it.o</file>
       <file>$PROJ_DIR$\Debug\Obj\stm32l1xx_aes_util.o</file>
       <file>$PROJ_DIR$\Debug\Obj\inv_mpu_dmp_motion_driver.pbi</file>
-      <file>$PROJ_DIR$\Debug\Obj\CPAL_test.pbd</file>
+      <file>$PROJ_DIR$\Debug\Obj\imu_read.pbd</file>
       <file>$PROJ_DIR$\Debug\Obj\stm32l1xx_aes.o</file>
       <file>$PROJ_DIR$\Debug\Obj\stm32l1xx_dac.pbi</file>
       <file>$TOOLKIT_DIR$\inc\c\yvals.h</file>
@@ -1550,6 +1550,10 @@
         <tool>
           <name>BICOMP</name>
           <file> 219</file>
+        </tool>
+        <tool>
+          <name>ICCARM</name>
+          <file> 136</file>
         </tool>
       </outputs>
       <inputs>
