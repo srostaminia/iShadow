@@ -43,6 +43,8 @@ ErrorStatus HSEStartUpStatus;
 EXTI_InitTypeDef EXTI_InitStructure;
 
 /* Extern variables ----------------------------------------------------------*/
+extern uint8_t packet_sent;
+
 /* Private function prototypes -----------------------------------------------*/
 static void IntToUnicode (uint32_t value , uint8_t *pbuf , uint8_t len);
 /* Private functions ---------------------------------------------------------*/
@@ -456,6 +458,29 @@ static void IntToUnicode (uint32_t value , uint8_t *pbuf , uint8_t len)
     
     pbuf[ 2* idx + 1] = 0;
   }
+}
+
+// -----send_packet----
+uint32_t send_packet (uint8_t *ptrBuffer, uint8_t Send_length)
+{
+  /*Sent flag*/
+  packet_sent = 0;
+  
+  if (GetENDPOINT(ENDP1) & EP_DTOG_RX)
+  {
+    UserToPMABufferCopy(ptrBuffer, ENDP1_BUF0Addr, Send_length);
+  }
+  else
+  {
+    UserToPMABufferCopy(ptrBuffer, ENDP1_BUF1Addr, Send_length);
+  }
+  
+  /* send  packet to PMA*/
+//  UserToPMABufferCopy((unsigned char*)ptrBuffer, ENDP1_TXADDR, Send_length);
+  SetEPTxCount(ENDP1, Send_length);
+  SetEPTxValid(ENDP1);
+
+  return 1;
 }
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

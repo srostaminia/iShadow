@@ -190,7 +190,7 @@ const uint8_t Speaker_ConfigDescriptor[] =
     /* Endpoint 1 - Standard Descriptor */
     AUDIO_STANDARD_ENDPOINT_DESC_SIZE,    /* bLength */
     USB_ENDPOINT_DESCRIPTOR_TYPE,         /* bDescriptorType */
-    0x01,                                 /* bEndpointAddress 1 out endpoint*/
+    0x81,                                 /* bEndpointAddress 1 out endpoint*/ // AMM
     USB_ENDPOINT_TYPE_ISOCHRONOUS,        /* bmAttributes */
     0x10,                                 /* wMaxPacketSize 22 bytes*/ // AMM
     0x00,

@@ -14,13 +14,20 @@ extern uint16_t Out_Data_Offset;
 extern uint8_t Stream_Buff[24];
 extern uint8_t IT_Clock_Sent;
 
+uint8_t packet_sent = 1;
+
 static __IO uint32_t TimingDelay;
 
 int main()
-{  
+{ 
+  uint8_t tx_test[16];
+  
   if (SysTick_Config(SystemCoreClock / 1000)) {
     while (1);
   }
+  
+  for (int i = 0; i < 16; i++)
+    tx_test[i] = 0;
   
   Set_System();
   Set_USBClock();
@@ -28,7 +35,10 @@ int main()
   USB_Init();
   Speaker_Config();
   
-  while (1) {};
+  while (1) {
+//    if (packet_sent == 1)
+      send_packet(tx_test, 16);
+  };
   
 //  while (1)
 //  {

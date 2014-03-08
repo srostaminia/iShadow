@@ -37,6 +37,8 @@ uint8_t Stream_Buff[24];
 uint16_t In_Data_Offset;
 
 /* Extern variables ----------------------------------------------------------*/
+extern uint8_t packet_sent;
+
 /* Private function prototypes -----------------------------------------------*/
 /* Extern function prototypes ------------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
@@ -69,22 +71,23 @@ uint16_t In_Data_Offset;
 
 void EP1_IN_Callback(void)
 {
-  uint16_t Data_Len;       /* data length*/
-  
-  if (GetENDPOINT(ENDP1) & EP_DTOG_TX)
-  {
-    /*read from ENDP1_BUF0Addr buffer*/
-    Data_Len = GetEPDblBuf0Count(ENDP1);
-    PMAToUserBufferCopy(Stream_Buff, ENDP1_BUF0Addr, Data_Len);
-  }
-  else
-  {
-    /*read from ENDP1_BUF1Addr buffer*/
-    Data_Len = GetEPDblBuf1Count(ENDP1);
-    PMAToUserBufferCopy(Stream_Buff, ENDP1_BUF1Addr, Data_Len);
-  }
-  FreeUserBuffer(ENDP1, EP_DBUF_OUT);
-  In_Data_Offset += Data_Len;
+//  uint16_t Data_Len;       /* data length*/
+//  
+//  if (GetENDPOINT(ENDP1) & EP_DTOG_TX)
+//  {
+//    /*read from ENDP1_BUF0Addr buffer*/
+//    Data_Len = GetEPDblBuf0Count(ENDP1);
+//    PMAToUserBufferCopy(Stream_Buff, ENDP1_BUF0Addr, Data_Len);
+//  }
+//  else
+//  {
+//    /*read from ENDP1_BUF1Addr buffer*/
+//    Data_Len = GetEPDblBuf1Count(ENDP1);
+//    PMAToUserBufferCopy(Stream_Buff, ENDP1_BUF1Addr, Data_Len);
+//  }
+  FreeUserBuffer(ENDP1, EP_DBUF_IN);
+  packet_sent = 0;
+//  In_Data_Offset += Data_Len;
 }
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
