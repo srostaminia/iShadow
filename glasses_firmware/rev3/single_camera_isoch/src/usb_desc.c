@@ -169,7 +169,8 @@ const uint8_t Speaker_ConfigDescriptor[] =
     AUDIO_STREAMING_GENERAL,              /* bDescriptorSubtype */
     0x02,                                 /* bTerminalLink */ // AMM
     0x01,                                 /* bDelay */
-    0x01,                                 /* wFormatTag AUDIO_FORMAT_PCM8  0x0002*/     // AMM
+//    0x01,                                 /* wFormatTag AUDIO_FORMAT_PCM8  0x0002*/     // AMM
+    0x02,       // PCM8 - FIXME
     0x00,
     /* 07 byte*/
 

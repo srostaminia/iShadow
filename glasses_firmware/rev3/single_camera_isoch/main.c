@@ -14,20 +14,35 @@ extern uint16_t Out_Data_Offset;
 extern uint8_t Stream_Buff[24];
 extern uint8_t IT_Clock_Sent;
 
-uint8_t packet_sent = 1;
+uint8_t packet_sending = 0;
 
 static __IO uint32_t TimingDelay;
 
 int main()
 { 
   uint8_t tx_test[16];
+//  int16_t large_test[8];
+//  uint8_t *tx_test = (uint8_t*)large_test;
+  
+  uint8_t empty[16];
   
   if (SysTick_Config(SystemCoreClock / 1000)) {
     while (1);
   }
   
-  for (int i = 0; i < 16; i++)
-    tx_test[i] = 0;
+  for (int i = 0; i < 16; i++) {
+    tx_test[i] = 4;
+    empty[i] = 0;
+  }
+  
+//  for (int i = 0; i < 8; i++) {
+//    large_test[i] = 3;
+//  }
+  
+//  for (int i = 0; i < 16; i += 2) {
+//    tx_test[i] = 0;
+//    tx_test[i + 1] = 1;
+//  }
   
   Set_System();
   Set_USBClock();
@@ -36,8 +51,14 @@ int main()
   Speaker_Config();
   
   while (1) {
-//    if (packet_sent == 1)
-      send_packet(tx_test, 16);
+    while (packet_sending == 1);
+    
+    send_packet(tx_test, 16);
+//    tx_test[0] += 1;
+    
+//    while (packet_sending == 1);
+//    
+//    send_packet(empty, 16);
   };
   
 //  while (1)
@@ -48,7 +69,7 @@ int main()
 //      /*Check to see if we have data yet */
 //      if (Receive_length  != 0)
 //      {
-//        if (packet_sent == 1)
+//        if (packet_sending == 1)
 //          CDC_Send_DATA ((unsigned char*)Receive_Buffer,Receive_length);
 //        Receive_length = 0;
 //      }

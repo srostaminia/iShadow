@@ -43,7 +43,7 @@ ErrorStatus HSEStartUpStatus;
 EXTI_InitTypeDef EXTI_InitStructure;
 
 /* Extern variables ----------------------------------------------------------*/
-extern uint8_t packet_sent;
+extern uint8_t packet_sending;
 
 /* Private function prototypes -----------------------------------------------*/
 static void IntToUnicode (uint32_t value , uint8_t *pbuf , uint8_t len);
@@ -464,7 +464,7 @@ static void IntToUnicode (uint32_t value , uint8_t *pbuf , uint8_t len)
 uint32_t send_packet (uint8_t *ptrBuffer, uint8_t Send_length)
 {
   /*Sent flag*/
-  packet_sent = 0;
+  packet_sending = 0;
   
   if (GetENDPOINT(ENDP1) & EP_DTOG_RX)
   {

@@ -37,7 +37,7 @@ uint8_t Stream_Buff[24];
 uint16_t In_Data_Offset;
 
 /* Extern variables ----------------------------------------------------------*/
-extern uint8_t packet_sent;
+extern uint8_t packet_sending;
 
 /* Private function prototypes -----------------------------------------------*/
 /* Extern function prototypes ------------------------------------------------*/
@@ -86,7 +86,7 @@ void EP1_IN_Callback(void)
 //    PMAToUserBufferCopy(Stream_Buff, ENDP1_BUF1Addr, Data_Len);
 //  }
   FreeUserBuffer(ENDP1, EP_DBUF_IN);
-  packet_sent = 0;
+  packet_sending = 0;
 //  In_Data_Offset += Data_Len;
 }
 
