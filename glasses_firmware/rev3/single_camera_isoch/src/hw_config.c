@@ -464,7 +464,7 @@ static void IntToUnicode (uint32_t value , uint8_t *pbuf , uint8_t len)
 uint32_t send_packet (uint8_t *ptrBuffer, uint8_t Send_length)
 {
   /*Sent flag*/
-  packet_sending = 0;
+  packet_sending = 1;
   
   if (GetENDPOINT(ENDP1) & EP_DTOG_RX)
   {
@@ -478,7 +478,7 @@ uint32_t send_packet (uint8_t *ptrBuffer, uint8_t Send_length)
   /* send  packet to PMA*/
 //  UserToPMABufferCopy((unsigned char*)ptrBuffer, ENDP1_TXADDR, Send_length);
   SetEPTxCount(ENDP1, Send_length);
-  SetEPTxValid(ENDP1);
+//  SetEPTxValid(ENDP1);
 
   return 1;
 }
