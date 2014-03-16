@@ -7,7 +7,6 @@
 #include "usb_lib.h"
 #include "usb_desc.h"
 #include "usb_pwr.h"
-#include "usb_regs.h"
 
 extern uint32_t MUTE_DATA;
 extern uint16_t In_Data_Offset;
@@ -21,14 +20,17 @@ static __IO uint32_t TimingDelay;
 
 int main()
 { 
-  uint8_t tx_test[16];
+  uint8_t tx_test[16], empty[16];
   
   if (SysTick_Config(SystemCoreClock / 1000)) {
     while (1);
   }
+
+  config_ms_timer();
   
   for (int i = 0; i < 16; i++) {
-    tx_test[i] = 0;
+    tx_test[i] = i + 1;
+    empty[i] = 0;
   }
   
   Set_System();
@@ -37,18 +39,36 @@ int main()
   USB_Init();
   Speaker_Config();
   
-  uint8_t value = 0;
-  tx_test[0] = 0;
+  uint16_t start = 0, val = 0;
   while (1) {
-    for (int i = 1; i < 16; i++) {
-      value++;
-      tx_test[i] = value;
+    
+    // Wait 5 seconds before retransmitting
+    if (TIM3->CNT > 2000) {
+      start = TIM3->CNT;
+      send_packet(tx_test, 16);
+      
+      tx_test[0] = val;
+      val++;
+      
+      while (packet_sending == 1);
+      
+//      send_packet(empty, 16);      
+//      packet_sending = 1;
+//      while (packet_sending == 1);
+      
+//      delay_ms(100);
+//      
+//      send_packet(empty, 16);
+//      
+//      while (packet_sending == 1);
+      
+      clear_ENDP1_packet_buffers(16);
+      
+      TIM3->CNT = 0;
     }
-    
-    while (packet_sending == 1);
-    
-    send_packet(tx_test, 16);
-  };
+      
+
+  }
   
   return 0;
 }
@@ -76,4 +96,26 @@ void TimingDelay_Decrement(void)
   { 
     TimingDelay--;
   }
+}
+
+void config_ms_timer()
+{
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
+  
+  TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
+  
+  TIM_TimeBaseStructInit(&TIM_TimeBaseStructure); 
+  TIM_TimeBaseStructure.TIM_Prescaler = (SystemCoreClock / 1000) - 1;
+  TIM_TimeBaseStructure.TIM_Period = UINT16_MAX; 
+  TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
+  TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+  TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
+  
+  TIM_Cmd(TIM3, ENABLE);
+}
+
+void delay_ms(int delayTime)
+{
+  TIM3->CNT = 0;
+  while((uint16_t)(TIM3->CNT) <= delayTime);
 }

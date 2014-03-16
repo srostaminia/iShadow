@@ -483,4 +483,23 @@ uint32_t send_packet (uint8_t *ptrBuffer, uint8_t Send_length)
   return 1;
 }
 
+// -----send_packet----
+uint32_t clear_ENDP1_packet_buffers(uint8_t buffer_length)
+{
+  uint32_t empty[4] = {0, 0, 0, 0};
+  
+  /*Sent flag*/
+  packet_sending = 1;
+  
+  UserToPMABufferCopy((uint8_t*)empty, ENDP1_BUF0Addr, buffer_length);
+  UserToPMABufferCopy((uint8_t*)empty, ENDP1_BUF1Addr, buffer_length);
+  
+  /* send  packet to PMA*/
+//  UserToPMABufferCopy((unsigned char*)ptrBuffer, ENDP1_TXADDR, Send_length);
+  SetEPTxCount(ENDP1, buffer_length);
+//  SetEPTxValid(ENDP1);
+
+  return 1;
+}
+
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

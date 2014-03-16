@@ -60,7 +60,9 @@ void TimingDelay_Decrement(void);
 void Delay(__IO uint32_t nTime);
 void config_us_delay();
 void set_mco();
-void delay_us(int delayTime);
+//void delay_us(int delayTime);
+void config_ms_timer();
+void delay_ms(int DelayTime);
 
 #endif /* __MAIN_H */
 
