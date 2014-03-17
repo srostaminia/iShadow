@@ -153,7 +153,7 @@
       <file>$PROJ_DIR$\inc\platform_config.h</file>
       <file>$PROJ_DIR$\Debug\Obj\stm32l1xx_dac.pbi</file>
       <file>$PROJ_DIR$\Debug\Obj\stm32l1xx_rcc.pbi</file>
-      <file>$PROJ_DIR$\Debug\Obj\isoch_camera.pbd</file>
+      <file>$PROJ_DIR$\Debug\Obj\isoch_usb_full.pbd</file>
       <file>$PROJ_DIR$\Debug\Obj\stm32l1xx_pwr.pbi</file>
       <file>$PROJ_DIR$\Debug\Obj\stm32l1xx_comp.o</file>
       <file>$PROJ_DIR$\Debug\Obj\stm32l1xx_dbgmcu.o</file>
@@ -1217,6 +1217,10 @@
       <inputs>
         <tool>
           <name>ICCARM</name>
+          <file> 175 198 3 2 160 104 188 62 205 138 44 161 137 94 7 4 65 155 108 194 196 112 95 58 41 183 135 177 128 59 170 171 200 176 40 168 195 46 204 156 84 78 140 130 115 87 144 172 121 80 93 42 56 98 126 79 111 152 154</file>
+        </tool>
+        <tool>
+          <name>BICOMP</name>
           <file> 175 198 3 2 160 104 188 62 205 138 44 161 137 94 7 4 65 155 108 194 196 112 95 58 41 183 135 177 128 59 170 171 200 176 40 168 195 46 204 156 84 78 140 130 115 87 144 172 121 80 93 42 56 98 126 79 111 152 154</file>
         </tool>
       </inputs>

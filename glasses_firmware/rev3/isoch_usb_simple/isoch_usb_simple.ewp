@@ -580,7 +580,7 @@
         </option>
         <option>
           <name>OOCOutputFile</name>
-          <state>usb_test.srec</state>
+          <state>isoch_usb_simple.srec</state>
         </option>
         <option>
           <name>OOCCommandLineProducer</name>

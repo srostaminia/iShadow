@@ -580,7 +580,7 @@
         </option>
         <option>
           <name>OOCOutputFile</name>
-          <state>isoch_camera.srec</state>
+          <state>isoch_usb_full.srec</state>
         </option>
         <option>
           <name>OOCCommandLineProducer</name>

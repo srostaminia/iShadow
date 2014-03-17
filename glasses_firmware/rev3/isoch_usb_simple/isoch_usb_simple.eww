@@ -2,7 +2,7 @@
 
 <workspace>
   <project>
-    <path>$WS_DIR$\usb_test.ewp</path>
+    <path>$WS_DIR$\isoch_usb_simple.ewp</path>
   </project>
   <batchBuild/>
 </workspace>
