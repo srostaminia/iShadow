@@ -48,7 +48,7 @@
 #define BufferSize        100
 #define CodecAddress      0x27
 
-#define PACKET_SIZE       0x10
+#define PACKET_SIZE       0xB8
 
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
