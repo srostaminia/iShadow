@@ -191,27 +191,6 @@ void USBWakeUp_IRQHandler(void)
   EXTI_ClearITPendingBit(EXTI_Line18);
 }
 
-/**
-  * @brief  This function handles TIM6 global interrupt request.
-  * @param  None
-  * @retval None
-  */
-void TIM6_IRQHandler(void)
-{
-  if (TIM_GetITStatus(TIM6, TIM_IT_Update) != RESET)
-  {
-    /* Clear TIM6 update interrupt */
-    TIM_ClearITPendingBit(TIM6, TIM_IT_Update);
-
-    if ((Out_Data_Offset < In_Data_Offset) && ((uint8_t)(MUTE_DATA) == 0))
-    {
-      /* Set DAC Channel1 DHR register */
-      DAC_SetChannel1Data(DAC_Align_8b_R, Stream_Buff[Out_Data_Offset]);      
-      Out_Data_Offset++;
-    }
-  }
-}
-
 /******************************************************************************/
 /*                 STM32L1xx Peripherals Interrupt Handlers                   */
 /*  Add here the Interrupt Handler for the used peripheral(s) (PPP), for the  */

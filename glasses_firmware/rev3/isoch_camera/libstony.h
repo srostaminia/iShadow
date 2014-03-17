@@ -3,8 +3,8 @@
 
 #include "stm32l1xx.h"
 
-#define CAM1                 0
-#define CAM2                 1
+#define CAM1                 1
+#define CAM2                 2
 
 #define CAM_AHB         RCC_AHBPeriph_GPIOA | RCC_AHBPeriph_GPIOB | RCC_AHBPeriph_GPIOC
 
@@ -58,7 +58,9 @@
 void stony_pin_config();
 void stony_init(short vref, short nbias, short aobias, char gain, char selamp);
 int stony_read_pixel();
-int stony_image_dual();
+int stony_image_single();
+int stony_image_subsample();
+int stony_image_minmax();
 
 void pulse_resv(uint8_t cam);
 void pulse_incv(uint8_t cam);

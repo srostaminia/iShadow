@@ -82,7 +82,7 @@ void TimingDelay_Decrement(void)
 
 void config_ms_timer()
 {
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);
   
   TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
   
@@ -91,13 +91,34 @@ void config_ms_timer()
   TIM_TimeBaseStructure.TIM_Period = UINT16_MAX; 
   TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
   TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
-  TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
+  TIM_TimeBaseInit(TIM4, &TIM_TimeBaseStructure);
   
-  TIM_Cmd(TIM3, ENABLE);
+  TIM_Cmd(TIM4, ENABLE);
 }
 
-void delay_ms(int delayTime)
+void config_us_delay()
 {
-  TIM3->CNT = 0;
-  while((uint16_t)(TIM3->CNT) <= delayTime);
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM5, ENABLE);
+  
+  TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
+  
+  TIM_TimeBaseStructInit(&TIM_TimeBaseStructure); 
+  TIM_TimeBaseStructure.TIM_Prescaler = (SystemCoreClock / 1000000) - 1;
+  TIM_TimeBaseStructure.TIM_Period = UINT16_MAX; 
+  TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
+  TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+  TIM_TimeBaseInit(TIM5, &TIM_TimeBaseStructure);
+  
+  TIM_Cmd(TIM5, ENABLE);
+}
+
+#pragma inline=never
+void delay_us(int delayTime)
+{
+//  uint16_t start = TIM5->CNT;
+//  while((uint16_t)(TIM5->CNT - start) <= delayTime);
+  
+  for (int i = 0; i < delayTime; i++) {
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+  }
 }
