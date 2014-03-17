@@ -305,6 +305,7 @@
           <state>$PROJ_DIR$\Startup Files\Flash</state>
           <state>$PROJ_DIR$\..\..\common_libs\STM32_USB-FS-Device_Driver\inc</state>
           <state>$PROJ_DIR$\inc</state>
+          <state>$PROJ_DIR$\..\..\common_libs\SDIO_Driver</state>
         </option>
         <option>
           <name>CCStdIncCheck</name>
@@ -1843,6 +1844,18 @@
     </settings>
   </configuration>
   <group>
+    <name>SDIO Driver</name>
+    <file>
+      <name>$PROJ_DIR$\..\..\common_libs\SDIO_Driver\diskio.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\common_libs\SDIO_Driver\lowlevel.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\common_libs\SDIO_Driver\stm32l152d_eval_sdio_sd.c</name>
+    </file>
+  </group>
+  <group>
     <name>SPL Config</name>
     <file>
       <name>$PROJ_DIR$\..\..\common_libs\CMSIS\Include\core_cm3.h</name>
@@ -1972,6 +1985,15 @@
     </file>
     <file>
       <name>$PROJ_DIR$\..\..\common_libs\STM32_USB-FS-Device_Driver\src\usb_sil.c</name>
+    </file>
+  </group>
+  <group>
+    <name>Stonyman</name>
+    <file>
+      <name>$PROJ_DIR$\libstony.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\libstony.h</name>
     </file>
   </group>
   <group>

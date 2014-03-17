@@ -41,10 +41,6 @@ int main()
   
   uint16_t start = 0, val = 0;
   while (1) {
-    
-    // Wait 5 seconds before retransmitting
-//    if (TIM3->CNT > 2000) {
-//      start = TIM3->CNT;
       send_packet(tx_test, PACKET_SIZE);
       
       tx_test[0] = val;
@@ -52,22 +48,8 @@ int main()
       
       while (packet_sending == 1);
       
-//      send_packet(empty, 16);      
-//      packet_sending = 1;
-//      while (packet_sending == 1);
-      
-//      delay_ms(100);
-//      
-//      send_packet(empty, 16);
-//      
-//      while (packet_sending == 1);
-      
 //      clear_ENDP1_packet_buffers(16);
-      
-//      TIM3->CNT = 0;
-//    }
-      
-
+//      while (packet_sending == 1);
   }
   
   return 0;
