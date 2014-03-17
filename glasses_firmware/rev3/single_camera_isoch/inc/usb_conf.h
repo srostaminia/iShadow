@@ -30,6 +30,8 @@
 #ifndef __USB_CONF_H
 #define __USB_CONF_H
 
+#include "hw_config.h"
+
 /*-------------------------------------------------------------*/
 /* EP_NUM */
 /* defines how many endpoints are used by the device */
@@ -52,7 +54,8 @@
 /* EP1  */
 /* buffer base address */
 #define ENDP1_BUF0Addr      (0x90)
-#define ENDP1_BUF1Addr      (0xC0)
+//#define ENDP1_BUF1Addr      (0x148) // AMM
+#define ENDP1_BUF1Addr      ENDP1_BUF0Addr + PACKET_SIZE
 
 /*-------------------------------------------------------------*/
 /* -------------------   ISTR events  -------------------------*/

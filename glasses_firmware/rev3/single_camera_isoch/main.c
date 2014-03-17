@@ -20,7 +20,7 @@ static __IO uint32_t TimingDelay;
 
 int main()
 { 
-  uint8_t tx_test[16], empty[16];
+  uint8_t tx_test[PACKET_SIZE], empty[PACKET_SIZE];
   
   if (SysTick_Config(SystemCoreClock / 1000)) {
     while (1);
@@ -28,7 +28,7 @@ int main()
 
   config_ms_timer();
   
-  for (int i = 0; i < 16; i++) {
+  for (int i = 0; i < PACKET_SIZE; i++) {
     tx_test[i] = i + 1;
     empty[i] = 0;
   }
@@ -43,9 +43,9 @@ int main()
   while (1) {
     
     // Wait 5 seconds before retransmitting
-    if (TIM3->CNT > 2000) {
-      start = TIM3->CNT;
-      send_packet(tx_test, 16);
+//    if (TIM3->CNT > 2000) {
+//      start = TIM3->CNT;
+      send_packet(tx_test, PACKET_SIZE);
       
       tx_test[0] = val;
       val++;
@@ -62,10 +62,10 @@ int main()
 //      
 //      while (packet_sending == 1);
       
-      clear_ENDP1_packet_buffers(16);
+//      clear_ENDP1_packet_buffers(16);
       
-      TIM3->CNT = 0;
-    }
+//      TIM3->CNT = 0;
+//    }
       
 
   }

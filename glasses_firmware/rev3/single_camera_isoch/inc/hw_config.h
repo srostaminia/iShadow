@@ -48,6 +48,8 @@
 #define BufferSize        100
 #define CodecAddress      0x27
 
+#define PACKET_SIZE       0x10
+
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
 /* Exported define -----------------------------------------------------------*/
@@ -71,7 +73,7 @@ uint32_t Codec_SpeakerConfig(uint16_t I2S_Standard, uint8_t volume, uint32_t ver
 void Get_SerialNum(void);
 
 uint32_t send_packet(uint8_t *ptrBuffer, uint8_t Send_length);
-uint32_t clear_ENDP1_packet_buffers(uint8_t buffer_length);
+uint32_t clear_ENDP1_packet_buffers();
 
 #endif  /*__HW_CONFIG_H*/
 

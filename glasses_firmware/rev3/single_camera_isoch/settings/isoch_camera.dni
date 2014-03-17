@@ -9,7 +9,7 @@ TriggerName=main
 LimitSize=0
 ByteLimit=50
 [DebugChecksum]
-Checksum=996104234
+Checksum=1253593782
 [Exceptions]
 StopOnUncaught=_ 0
 StopOnThrow=_ 0
@@ -53,8 +53,8 @@ SumSortOrder=0
 mode=0
 [Breakpoints2]
 Bp0=_ 0 "EMUL_CODE" "{$PROJ_DIR$\stm32l1xx_it.c}.157.3" 0 0 1 "" 0 "" 0
-Bp1=_ 0 "EMUL_CODE" "{$PROJ_DIR$\src\hw_config.c}.475.5" 0 0 1 "" 0 "" 0
-Bp2=_ 0 "EMUL_CODE" "{$PROJ_DIR$\src\hw_config.c}.471.5" 0 0 1 "" 0 "" 0
+Bp1=_ 0 "EMUL_CODE" "{$PROJ_DIR$\src\hw_config.c}.481.5" 0 0 1 "" 0 "" 0
+Bp2=_ 0 "EMUL_CODE" "{$PROJ_DIR$\src\hw_config.c}.477.5" 0 0 1 "" 0 "" 0
 Bp3=_ 0 "EMUL_CODE" "{$PROJ_DIR$\..\..\common_libs\STM32_USB-FS-Device_Driver\src\usb_mem.c}.63.3" 0 0 1 "" 0 "" 0
 Count=4
 [Log file]

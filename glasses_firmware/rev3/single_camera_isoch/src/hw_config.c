@@ -42,6 +42,8 @@
 ErrorStatus HSEStartUpStatus;
 EXTI_InitTypeDef EXTI_InitStructure;
 
+uint8_t empty[PACKET_SIZE];
+
 /* Extern variables ----------------------------------------------------------*/
 extern uint8_t packet_sending;
 
@@ -406,6 +408,10 @@ void Speaker_Config(void)
   SPI_I2S_ITConfig(SPI2, SPI_I2S_IT_TXE, ENABLE);
 
 #endif
+  
+  for (int i = 0; i < PACKET_SIZE; i++) {
+    empty[i] = 0;
+  }
 }
 
 /*******************************************************************************
@@ -484,19 +490,17 @@ uint32_t send_packet (uint8_t *ptrBuffer, uint8_t Send_length)
 }
 
 // -----send_packet----
-uint32_t clear_ENDP1_packet_buffers(uint8_t buffer_length)
-{
-  uint32_t empty[4] = {0, 0, 0, 0};
-  
+uint32_t clear_ENDP1_packet_buffers()
+{  
   /*Sent flag*/
   packet_sending = 1;
   
-  UserToPMABufferCopy((uint8_t*)empty, ENDP1_BUF0Addr, buffer_length);
-  UserToPMABufferCopy((uint8_t*)empty, ENDP1_BUF1Addr, buffer_length);
+  UserToPMABufferCopy((uint8_t*)empty, ENDP1_BUF0Addr, PACKET_SIZE);
+  UserToPMABufferCopy((uint8_t*)empty, ENDP1_BUF1Addr, PACKET_SIZE);
   
   /* send  packet to PMA*/
 //  UserToPMABufferCopy((unsigned char*)ptrBuffer, ENDP1_TXADDR, Send_length);
-  SetEPTxCount(ENDP1, buffer_length);
+  SetEPTxCount(ENDP1, PACKET_SIZE);
 //  SetEPTxValid(ENDP1);
 
   return 1;
