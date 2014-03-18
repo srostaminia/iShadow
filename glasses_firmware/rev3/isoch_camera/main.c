@@ -51,11 +51,14 @@ int main()
     while (packet_sending == 1);
     
     clear_ENDP1_packet_buffers();
+    while(packet_sending == 1);
+    packet_sending = 1;
+    while(packet_sending == 1);
     
-    for (int i = 0; i < 11; i++) {
-      packet_sending = 1;
-      while (packet_sending == 1);
-    }
+//    for (int i = 0; i < 11; i++) {
+//      packet_sending = 1;
+//      while (packet_sending == 1);
+//    }
     
 //    delay_ms(100);
   }
