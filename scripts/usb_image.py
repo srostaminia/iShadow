@@ -31,7 +31,7 @@ def main():
     pixels = 0
     data_started = 0
     packets = 0
-    while True:
+    while packets < 14:
         data = endp.read(1840)
 
         if (get_first(data) != -1) and (data_started == 0):
@@ -46,7 +46,7 @@ def main():
 
         valid_bytes = get_valid_bytes(unpacked)
         pixels += len(valid_bytes)
-        print len(valid_bytes), "\n", valid_bytes, "\n"
+        # print len(valid_bytes), "\n", valid_bytes, "\n"
         valid_packed = struct.pack('H' * len(valid_bytes), *valid_bytes)
         output.write(valid_packed)
 
