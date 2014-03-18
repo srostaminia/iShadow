@@ -28,30 +28,40 @@ def main():
 
     endp = get_usb_endp()
 
-    pixels = 0
-    data_started = 0
-    packets = 0
-    while packets < 14:
-        data = endp.read(1840)
+    images = 0
+    while True:
+        pixels = 0
+        data_started = 0
+        packets = 0
+        while packets < 14:
+            data = endp.read(1840)
 
-        if (get_first(data) != -1) and (data_started == 0):
-            data_started = 1
-        elif (get_first(data) == -1) and (data_started == 1):
-            break
+            if (get_first(data) != -1) and (data_started == 0):
+                data_started = 1
+            elif (get_first(data) == -1) and (data_started == 1):
+                break
 
-        if (data_started == 1):
-            packets += 1
+            if (data_started == 1):
+                packets += 1
 
-        unpacked = struct.unpack('H' * 920, data)
+            unpacked = struct.unpack('H' * 920, data)
 
-        valid_bytes = get_valid_bytes(unpacked)
-        pixels += len(valid_bytes)
-        # print len(valid_bytes), "\n", valid_bytes, "\n"
-        valid_packed = struct.pack('H' * len(valid_bytes), *valid_bytes)
-        output.write(valid_packed)
+            valid_bytes = get_valid_bytes(unpacked)
+            pixels += len(valid_bytes)
+            # print len(valid_bytes), "\n", valid_bytes, "\n"
+            valid_packed = struct.pack('H' * len(valid_bytes), *valid_bytes)
+            output.write(valid_packed)
 
-    print "Pixels:", pixels
-    print "Packets:", packets, "\n"
+        # print "Pixels:", pixels
+        # print "Packets:", packets, "\n"
+
+        if pixels != 12544:
+            print "Invalid pixel #:", pixels
+            print "Succesful images:", images
+            sys.exit()
+
+        images += 1
+        print images
 
     output.close()
 
@@ -154,7 +164,7 @@ def disp_save_images(image_file, mask_data, out_filename):
     for i, image in enumerate(images):
         image -= mask_data
 
-        print image
+        # print image
 
         pylab.figimage(image, cmap = pylab.cm.Greys_r)
 
