@@ -777,6 +777,7 @@ int stony_image_single()
   
   set_pointer_value(REG_ROWSEL, 0, CAM1);
   
+  int test = 0;
   int data_cycle = 0;
   for (int row = 0; row < 112; row++) {
     set_pointer_value(REG_COLSEL, 0, CAM1);
@@ -804,9 +805,8 @@ int stony_image_single()
       
       buf16[data_cycle] = adc_values[adc_idx];
       
-      int test = data_cycle;
       if (data_cycle == (USB_PIXELS - 1)) {
-//        while (packet_sending == 1);
+        while (packet_sending == 1);
         
         data_cycle = -1;
         send_packet(buf8[buf_idx], PACKET_SIZE);
@@ -814,6 +814,7 @@ int stony_image_single()
         
         buf_idx = !buf_idx;
         buf16 = (uint16_t *)buf8[buf_idx];
+        test += 1;
       }
       
       data_cycle++;
@@ -825,6 +826,13 @@ int stony_image_single()
     
     inc_pointer_value(REG_ROWSEL, 1, CAM1);
   } // for (row)
+  
+  if (data_cycle != -1) {
+    for (int i = data_cycle; i < USB_PIXELS; i++)
+      buf16[i] = 0;
+    
+    send_packet(buf8[buf_idx], PACKET_SIZE);
+  }
   
 //  last_max = max;
 //  last_min = min;

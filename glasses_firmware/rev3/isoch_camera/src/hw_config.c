@@ -361,7 +361,7 @@ static void IntToUnicode (uint32_t value , uint8_t *pbuf , uint8_t len)
 }
 
 // -----send_packet----
-uint32_t send_packet (uint8_t *ptrBuffer, uint8_t Send_length)
+uint32_t send_packet (uint8_t *ptrBuffer, uint16_t Send_length)
 {
   /*Sent flag*/
   packet_sending = 1;

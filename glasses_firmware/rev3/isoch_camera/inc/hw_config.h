@@ -72,7 +72,7 @@ uint32_t I2SCodec_WriteRegister(uint32_t RegisterAddr, uint32_t RegisterValue, u
 uint32_t Codec_SpeakerConfig(uint16_t I2S_Standard, uint8_t volume, uint32_t verif, uint8_t pll);
 void Get_SerialNum(void);
 
-uint32_t send_packet(uint8_t *ptrBuffer, uint8_t Send_length);
+uint32_t send_packet(uint8_t *ptrBuffer, uint16_t Send_length);
 uint32_t clear_ENDP1_packet_buffers();
 
 #endif  /*__HW_CONFIG_H*/
