@@ -803,8 +803,7 @@ int stony_image_single()
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
-//      buf16[data_cycle] = adc_values[adc_idx];        // FIX ME OH FOR THE LOVE OF ALL THAT IS HOLY IN THIS ENTIRE UNIVERSE PLEASE PLEASE FIX ME
-      buf16[data_cycle] = test + 1;
+      buf16[data_cycle] = adc_values[adc_idx];
       
       if (data_cycle == (USB_PIXELS - 1)) {
         while (packet_sending == 1);
