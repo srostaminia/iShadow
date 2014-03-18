@@ -3,27 +3,31 @@
 #include "main.h"
 #include "diskio.h"
 #include "stm32l152d_eval_sdio_sd.h"
+#include "hw_config.h"
 
-#define TX_ROWS         48
+//#define TX_ROWS         48
+//
+//#define CAM2_OFFSET     TX_ROWS * 112
+////#define CAM2_OFFSET     5376
+//#define TX_BLOCKS       (TX_ROWS * 112 * 4) / 512
+//
+//#if (112 % TX_ROWS != 0)
+//#define CAM2_MOD_OFFSET (112 % TX_ROWS) * 112
+//#define TX_MOD_BLOCKS   ((112 % TX_ROWS) * 112 * 4 ) / 512
+//
+//#if ((112 % TX_ROWS) * 112 * 4 ) % 512 != 0
+//#error TX_ROWS invalid, does not align to 512B boundary
+//#endif
 
-#define CAM2_OFFSET     TX_ROWS * 112
-//#define CAM2_OFFSET     5376
-#define TX_BLOCKS       (TX_ROWS * 112 * 4) / 512
+//#endif
 
-#if (112 % TX_ROWS != 0)
-#define CAM2_MOD_OFFSET (112 % TX_ROWS) * 112
-#define TX_MOD_BLOCKS   ((112 % TX_ROWS) * 112 * 4 ) / 512
-
-#if ((112 % TX_ROWS) * 112 * 4 ) % 512 != 0
-#error TX_ROWS invalid, does not align to 512B boundary
-#endif
-
-#endif
+#define USB_PIXELS      92
 
 extern short pred[512];
 
 extern __IO  uint32_t Receive_length ;
 extern uint32_t sd_ptr;
+extern uint8_t packet_sending;
 
 extern unsigned short num_subsample;
 extern unsigned short num_hidden;
@@ -314,18 +318,15 @@ void stony_pin_config()
 
 void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
 {
-  num_subsample = model_data[0];
-  num_hidden = model_data[1];
+//  num_subsample = model_data[0];
+//  num_hidden = model_data[1];
   
-//  for (int i = 0; i < 512; i++)
-//    pred[i] = 0;
-  
-  bh_offset = 2;
-  bo_offset = bh_offset + num_hidden * 2;
-  mask_offset = bo_offset + 4;
-  who_offset = mask_offset + num_subsample * 2;
-  wih_offset = who_offset + num_hidden * 2 * 2;
-  fpn_offset = wih_offset + (num_hidden * num_subsample * 2);
+//  bh_offset = 2;
+//  bo_offset = bh_offset + num_hidden * 2;
+//  mask_offset = bo_offset + 4;
+//  who_offset = mask_offset + num_subsample * 2;
+//  wih_offset = who_offset + num_hidden * 2 * 2;
+//  fpn_offset = wih_offset + (num_hidden * num_subsample * 2);
   
   short config;
   char flagUseAmplifier;
@@ -364,7 +365,7 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
   set_pointer_value(REG_CONFIG,config,CAM2);
   
   // Get initial min / max pixel values from eye-facing camera
-  stony_image_minmax();
+//  stony_image_minmax();
 }
 
 int stony_read_pixel()
@@ -651,119 +652,120 @@ int stony_read_pixel()
 //  return 0;
 //}
 
-int stony_image_dual()
-{
-  // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, 2 cameras
-  // Double-buffered (2-dim array)
-  uint8_t buf8[2][112 * TX_ROWS * 2 * 2];
-  uint16_t *buf16 = (uint16_t *)buf8[0];
-  
-  uint16_t cam2_offset = CAM2_OFFSET;
-  volatile uint16_t start, total;
-  uint8_t buf_idx = 0;
-  
-  set_pointer_value(REG_ROWSEL, 0, CAM1);
-  set_pointer_value(REG_ROWSEL, 0, CAM2);
-
-  for (int row = 0, data_cycle = 0; row < 112; row++, data_cycle++) {
-    set_pointer_value(REG_COLSEL, 0, CAM1);
-    set_pointer_value(REG_COLSEL, 0, CAM2);
-    
-    delay_us(1);
-    
-    for (int col = 0; col < 112; col++) {      
-      CAM1_INPH_BANK->ODR |= CAM1_INPH_PIN;
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      CAM1_INPH_BANK->ODR &= ~CAM1_INPH_PIN;
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      
-      if (col != 0) {
-        buf16[(data_cycle * 112) + cam2_offset + (col - 1)] = adc_values[1];
-      }
-      
-      // Do conversion for CAM1
-      ADC_SoftwareStartConv(ADC1);
-      
-      if (col != 0) {
-        CAM2_INCV_BANK->ODR |= CAM2_INCV_PIN;
-        CAM2_INCV_BANK->ODR &= ~CAM2_INCV_PIN;
-      }
-      
-      CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      
-      buf16[(data_cycle * 112) + col] = adc_values[0];
-      
-      // Do conversion for CAM2
-      ADC_SoftwareStartConv(ADC1);
-
-      CAM1_INCV_BANK->ODR |= CAM1_INCV_PIN;
-      CAM1_INCV_BANK->ODR &= ~CAM1_INCV_PIN;
-    } // for (col)
-    
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    
-    buf16[(data_cycle * 112) + cam2_offset + 111] = adc_values[1];
-    
-    inc_pointer_value(REG_ROWSEL, 1, CAM1);
-    inc_pointer_value(REG_ROWSEL, 1, CAM2);
-
-    if (data_cycle == TX_ROWS - 1) {
-      if (row > TX_ROWS - 1) {
-        f_finish_write();
-      }
-      
-      if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, TX_BLOCKS) != RES_OK)      return -1;
-      
-      buf_idx = !buf_idx;
-      buf16 = (uint16_t *)buf8[buf_idx];
-      
-      sd_ptr += TX_BLOCKS;
-      data_cycle = -1;
-      
-#if (112 % TX_ROWS != 0)
-      if (row + TX_ROWS > 112) {
-        cam2_offset = CAM2_MOD_OFFSET;
-//        data_val = 0xCCCC;
-      }
-//      else
-//        data_val = 0xBBBB;
-#endif
-      
-//      if (row == 31)    return 0;
-    }
-
-  } // for (row)
-
-#if (112 % TX_ROWS != 0)
-  f_finish_write();
-  
-  if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, TX_MOD_BLOCKS) != RES_OK)      return -1;
-  sd_ptr += TX_MOD_BLOCKS;
-#endif
-  
-  f_finish_write();
-  
-  return 0;
-}
+//int stony_image_dual()
+//{
+//  // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, 2 cameras
+//  // Double-buffered (2-dim array)
+//  uint8_t buf8[2][112 * TX_ROWS * 2 * 2];
+//  uint16_t *buf16 = (uint16_t *)buf8[0];
+//  
+//  uint16_t cam2_offset = CAM2_OFFSET;
+//  volatile uint16_t start, total;
+//  uint8_t buf_idx = 0;
+//  
+//  set_pointer_value(REG_ROWSEL, 0, CAM1);
+//  set_pointer_value(REG_ROWSEL, 0, CAM2);
+//
+//  for (int row = 0, data_cycle = 0; row < 112; row++, data_cycle++) {
+//    set_pointer_value(REG_COLSEL, 0, CAM1);
+//    set_pointer_value(REG_COLSEL, 0, CAM2);
+//    
+//    delay_us(1);
+//    
+//    for (int col = 0; col < 112; col++) {      
+//      CAM1_INPH_BANK->ODR |= CAM1_INPH_PIN;
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      CAM1_INPH_BANK->ODR &= ~CAM1_INPH_PIN;
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      
+//      if (col != 0) {
+//        buf16[(data_cycle * 112) + cam2_offset + (col - 1)] = adc_values[1];
+//      }
+//      
+//      // Do conversion for CAM1
+//      ADC_SoftwareStartConv(ADC1);
+//      
+//      if (col != 0) {
+//        CAM2_INCV_BANK->ODR |= CAM2_INCV_PIN;
+//        CAM2_INCV_BANK->ODR &= ~CAM2_INCV_PIN;
+//      }
+//      
+//      CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      
+//      buf16[(data_cycle * 112) + col] = adc_values[0];
+//      
+//      // Do conversion for CAM2
+//      ADC_SoftwareStartConv(ADC1);
+//
+//      CAM1_INCV_BANK->ODR |= CAM1_INCV_PIN;
+//      CAM1_INCV_BANK->ODR &= ~CAM1_INCV_PIN;
+//    } // for (col)
+//    
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    
+//    buf16[(data_cycle * 112) + cam2_offset + 111] = adc_values[1];
+//    
+//    inc_pointer_value(REG_ROWSEL, 1, CAM1);
+//    inc_pointer_value(REG_ROWSEL, 1, CAM2);
+//
+//    if (data_cycle == TX_ROWS - 1) {
+//      if (row > TX_ROWS - 1) {
+//        f_finish_write();
+//      }
+//      
+//      if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, TX_BLOCKS) != RES_OK)      return -1;
+//      
+//      buf_idx = !buf_idx;
+//      buf16 = (uint16_t *)buf8[buf_idx];
+//      
+//      sd_ptr += TX_BLOCKS;
+//      data_cycle = -1;
+//      
+//#if (112 % TX_ROWS != 0)
+//      if (row + TX_ROWS > 112) {
+//        cam2_offset = CAM2_MOD_OFFSET;
+////        data_val = 0xCCCC;
+//      }
+////      else
+////        data_val = 0xBBBB;
+//#endif
+//      
+////      if (row == 31)    return 0;
+//    }
+//
+//  } // for (row)
+//
+//#if (112 % TX_ROWS != 0)
+//  f_finish_write();
+//  
+//  if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, TX_MOD_BLOCKS) != RES_OK)      return -1;
+//  sd_ptr += TX_MOD_BLOCKS;
+//#endif
+//  
+//  f_finish_write();
+//  
+//  return 0;
+//}
 
 int stony_image_single()
 {
   // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row
   // Double-buffered (2-dim array)
-  uint8_t buf8[2][112 * TX_ROWS * 2];
+//  uint8_t buf8[2][112 * TX_ROWS * 2];
+  uint8_t buf8[2][USB_PIXELS * 2];
   uint16_t *buf16 = (uint16_t *)buf8[0];
   
   volatile uint16_t start, total;
@@ -774,8 +776,9 @@ int stony_image_single()
   ADC_RegularChannelConfig(ADC1, CAM1_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
   
   set_pointer_value(REG_ROWSEL, 0, CAM1);
-
-  for (int row = 0, data_cycle = 0; row < 112; row++, data_cycle++) {
+  
+  int data_cycle = 0;
+  for (int row = 0; row < 112; row++) {
     set_pointer_value(REG_COLSEL, 0, CAM1);
     
     delay_us(1);
@@ -791,7 +794,7 @@ int stony_image_single()
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
-      // Do conversion for CAM2
+      // Do conversion
       ADC_SoftwareStartConv(ADC1);
       
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
@@ -799,11 +802,21 @@ int stony_image_single()
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
-      buf16[(data_cycle * 112) + col] = adc_values[adc_idx];
+      buf16[data_cycle] = adc_values[adc_idx];
       
-//      min = (adc_values[adc_idx] < min) ? (adc_values[adc_idx]) : (min);
-//      max = (adc_values[adc_idx] > max) ? (adc_values[adc_idx]) : (max);
+      int test = data_cycle;
+      if (data_cycle == (USB_PIXELS - 1)) {
+//        while (packet_sending == 1);
+        
+        data_cycle = -1;
+        send_packet(buf8[buf_idx], PACKET_SIZE);
+        packet_sending = 1;
+        
+        buf_idx = !buf_idx;
+        buf16 = (uint16_t *)buf8[buf_idx];
+      }
       
+      data_cycle++;
       adc_idx = !adc_idx;
 
       CAM1_INCV_BANK->ODR |= CAM1_INCV_PIN;
@@ -811,31 +824,7 @@ int stony_image_single()
     } // for (col)
     
     inc_pointer_value(REG_ROWSEL, 1, CAM1);
-
-    if (data_cycle == TX_ROWS - 1) {
-      if (row > TX_ROWS - 1) {
-        f_finish_write();
-      }
-      
-      if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, TX_BLOCKS / 2) != RES_OK)      return -1;
-      
-      buf_idx = !buf_idx;
-      buf16 = (uint16_t *)buf8[buf_idx];
-      
-      sd_ptr += TX_BLOCKS / 2;
-      data_cycle = -1;      
-//      if (row == 31)    return 0;
-    }
   } // for (row)
-
-#if (112 % TX_ROWS != 0)
-  f_finish_write();
-  
-  if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, TX_MOD_BLOCKS / 2) != RES_OK)      return -1;
-  sd_ptr += TX_MOD_BLOCKS / 2;
-#endif
-  
-  f_finish_write();
   
 //  last_max = max;
 //  last_min = min;

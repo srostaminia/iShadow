@@ -244,5 +244,11 @@ void SOF_Callback(void)
   Out_Data_Offset = 0;
 }
 
+void ESOF_Callback()
+{
+  RCC_HSICmd(ENABLE);
+  while(RCC_GetFlagStatus(RCC_FLAG_HSIRDY) == RESET);
+}
+
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
 

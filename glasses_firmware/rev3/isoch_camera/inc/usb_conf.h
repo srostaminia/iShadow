@@ -63,8 +63,10 @@
 /* IMR_MSK */
 /* mask defining which events has to be handled */
 /* by the device application software */
-#define IMR_MSK (CNTR_CTRM  | CNTR_WKUPM | CNTR_SUSPM | CNTR_ERRM  | CNTR_SOFM \
-                 | CNTR_ESOFM | CNTR_RESETM )
+//#define IMR_MSK (CNTR_CTRM  | CNTR_WKUPM | CNTR_SUSPM | CNTR_ERRM  | CNTR_SOFM \
+//                 | CNTR_ESOFM | CNTR_RESETM ) // AMM
+
+#define IMR_MSK (CNTR_CTRM  | CNTR_ERRM  | CNTR_SOFM | CNTR_ESOFM | CNTR_RESETM )
 
 /*#define CTR_CALLBACK*/
 /*#define DOVR_CALLBACK*/
@@ -72,8 +74,8 @@
 /*#define WKUP_CALLBACK*/
 /*#define SUSP_CALLBACK*/
 /*#define RESET_CALLBACK*/
-#define SOF_CALLBACK
-/*#define ESOF_CALLBACK*/
+//#define SOF_CALLBACK
+#define ESOF_CALLBACK // AMM: Need to use this to restart the HSI clock...
 
 
 

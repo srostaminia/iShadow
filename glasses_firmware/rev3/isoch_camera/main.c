@@ -7,6 +7,7 @@
 #include "usb_lib.h"
 #include "usb_desc.h"
 #include "usb_pwr.h"
+#include "libstony.h"
 
 extern uint32_t MUTE_DATA;
 extern uint16_t In_Data_Offset;
@@ -20,18 +21,21 @@ static __IO uint32_t TimingDelay;
 
 int main()
 { 
-  uint8_t tx_test[PACKET_SIZE], empty[PACKET_SIZE];
+//  uint8_t tx_test[PACKET_SIZE];
+//  
+//  for (int i = 0; i < PACKET_SIZE; i++) {
+//    tx_test[i] = i + 1;
+//  }
   
   if (SysTick_Config(SystemCoreClock / 1000)) {
     while (1);
   }
 
   config_ms_timer();
+  config_us_delay();
   
-  for (int i = 0; i < PACKET_SIZE; i++) {
-    tx_test[i] = i + 1;
-    empty[i] = 0;
-  }
+  stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3,
+            SMH_GAIN_3V3, SMH_SELAMP_3V3);
   
   Set_System();
   Set_USBClock();
@@ -39,19 +43,29 @@ int main()
   USB_Init();
   Speaker_Config();
   
-  uint16_t start = 0, val = 0;
   while (1) {
-      send_packet(tx_test, PACKET_SIZE);
-      
-      tx_test[0] = val;
-      val++;
-      
-      while (packet_sending == 1);
-      
-//      clear_ENDP1_packet_buffers(16);
-//      while (packet_sending == 1);
+    clear_ENDP1_packet_buffers();
+    while (packet_sending == 1);
+    
+    stony_image_single();
+    while (packet_sending == 1);
+    
+    clear_ENDP1_packet_buffers();
+    while (packet_sending == 1);
+    
+//    delay_ms(100);
   }
   
+//  uint16_t val = 0;
+//  while (1) {
+//      send_packet(tx_test, PACKET_SIZE);
+//      
+//      tx_test[0] = val;
+//      val++;
+//      
+//      while (packet_sending == 1);
+//  }
+//  
   return 0;
 }
 
@@ -94,6 +108,13 @@ void config_ms_timer()
   TIM_TimeBaseInit(TIM4, &TIM_TimeBaseStructure);
   
   TIM_Cmd(TIM4, ENABLE);
+}
+
+#pragma inline=never
+void delay_ms(int delayTime)
+{
+  TIM4->CNT = 0;
+  while((uint16_t)(TIM4->CNT) <= delayTime);
 }
 
 void config_us_delay()
