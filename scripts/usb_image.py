@@ -6,7 +6,10 @@ import numpy as np
 import pylab
 import struct
 import pickle
+from PIL import Image
 import os
+import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 
 def main():
     parser = argparse.ArgumentParser()
@@ -20,16 +23,15 @@ def main():
 
     mask = load_mask(mask_filename)
 
-    try:
-        output = open(file_prefix + ".raw", "wb")
-    except IOError:
-        print "Output file", file_prefix + ".raw", "could not be opened."
-        sys.exit()
-
     endp = get_usb_endp()
 
-    images = 0
     while True:
+        try:
+            output = open(file_prefix + ".raw", "wb")
+        except IOError:
+            print "Output file", file_prefix + ".raw", "could not be opened."
+            sys.exit()
+
         pixels = 0
         data_started = 0
         packets = 0
@@ -55,27 +57,19 @@ def main():
         # print "Pixels:", pixels
         # print "Packets:", packets, "\n"
 
-        if pixels != 12544:
-            print "Invalid pixel #:", pixels
-            print "Succesful images:", images
+        output.close()
+
+        try:
+            output = open(file_prefix + ".raw", "rb")
+        except IOError:
+            print "Intermediate file", file_prefix + ".raw", "could not be opened."
             sys.exit()
 
-        images += 1
-        print images
+        disp_save_images(output, mask, file_prefix)
 
-    output.close()
+        os.remove(output.name)
 
-    try:
-        output = open(file_prefix + ".raw", "rb")
-    except IOError:
-        print "Intermediate file", file_prefix + ".raw", "could not be opened."
-        sys.exit()
-
-    disp_save_images(output, mask, file_prefix)
-
-    os.remove(output.name)
-
-    output.close()
+        output.close()
 
 
 def load_mask(mask_filename):
@@ -175,12 +169,23 @@ def disp_save_images(image_file, mask_data, out_filename):
         else:
             pylab.savefig(out_filename + str(i) + ".png", dpi=112)
 
-        out_text = open(out_filename + ".txt",'w')
-        for line in image:
-            for item in line:
-                out_text.write(str(item) + " ")
-            out_text.write('\n')
-        out_text.close()
+        img_in = open(out_filename + ".png", 'rb')
+        disp_img = Image.open(img_in)
+        disp_img.show()
+        img_in.close()
+
+        # print "Displaying...",
+        # disp_img = mpimg.imread(out_filename + ".png")
+        # imgplot = plt.imshow(disp_img)
+        # plt.show()
+
+        # out_text = open(out_filename + ".txt",'w')
+        # for line in image:
+        #     for item in line:
+        #         out_text.write(str(item) + " ")
+        #     out_text.write('\n')
+        # out_text.close()
+        print "Finished"
 
 def get_usb_endp():
     dev = usb.core.find(idVendor = 0x483)
