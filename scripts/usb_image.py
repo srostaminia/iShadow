@@ -6,10 +6,11 @@ import numpy as np
 import pylab
 import struct
 import pickle
-from PIL import Image
+from PIL import Image, ImageTk
 import os
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+import Tkinter
 
 def main():
     parser = argparse.ArgumentParser()
@@ -169,23 +170,21 @@ def disp_save_images(image_file, mask_data, out_filename):
         else:
             pylab.savefig(out_filename + str(i) + ".png", dpi=112)
 
-        img_in = open(out_filename + ".png", 'rb')
-        disp_img = Image.open(img_in)
-        disp_img.show()
-        img_in.close()
+        # image1 = Image.fromarray(image.tolist())
+        image1 = Image.open(out_filename + ".png")
+        # image1 = Image.open("refresh.png")
+        # root.title("refresh")
+        root.geometry('%dx%d' % (image1.size[0],image1.size[1]))
+        
+        tkpi = ImageTk.PhotoImage(image1)
+        label_image.configure(image = tkpi)
+        root.update()
 
-        # print "Displaying...",
-        # disp_img = mpimg.imread(out_filename + ".png")
-        # imgplot = plt.imshow(disp_img)
-        # plt.show()
-
-        # out_text = open(out_filename + ".txt",'w')
-        # for line in image:
-        #     for item in line:
-        #         out_text.write(str(item) + " ")
-        #     out_text.write('\n')
-        # out_text.close()
-        print "Finished"
+        # img_in = open(out_filename + ".png", 'rb')
+        # disp_img = Image.open(img_in)
+        # disp_img.show()
+        # img_in.close()
+        # print "Finished"
 
 def get_usb_endp():
     dev = usb.core.find(idVendor = 0x483)
@@ -232,4 +231,11 @@ def read_all_packed_images(image_file):
 
     return images
 
-main()
+# main()
+
+root = Tkinter.Tk()
+label_image = Tkinter.Label(root)
+label_image.place(x=0,y=0,width=112,height=112)
+root.geometry('+%d+%d' % (112,112))
+root.after(0, main)
+root.mainloop()
