@@ -26,6 +26,7 @@ def main():
 
     endp = get_usb_endp()
 
+    imfig = pylab.figure()
     while True:
         try:
             output = open(file_prefix + ".raw", "wb")
@@ -66,7 +67,7 @@ def main():
             print "Intermediate file", file_prefix + ".raw", "could not be opened."
             sys.exit()
 
-        disp_save_images(output, mask, file_prefix)
+        disp_save_images(output, mask, file_prefix, imfig)
 
         os.remove(output.name)
 
@@ -148,14 +149,14 @@ def get_zero_start(data):
 
     return 0
 
-def disp_save_images(image_file, mask_data, out_filename):
+def disp_save_images(image_file, mask_data, out_filename, figure):
     images = read_all_packed_images(image_file)
 
     if len(images) == 0:
         print "ERROR: No full images found in", image_file.name
         sys.exit()
 
-    img = pylab.figure()
+    # img = pylab.figure()
     for i, image in enumerate(images):
         image -= mask_data
 
@@ -163,7 +164,7 @@ def disp_save_images(image_file, mask_data, out_filename):
 
         pylab.figimage(image, cmap = pylab.cm.Greys_r)
 
-        img.set_size_inches(1, 1)
+        figure.set_size_inches(1, 1)
 
         if (len(images) == 1):
             pylab.savefig(out_filename + ".png", dpi=112)
