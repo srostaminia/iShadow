@@ -12,6 +12,9 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import Tkinter
 import shutil
+import utils
+
+plt.ion()
 
 def main():
     parser = argparse.ArgumentParser()
@@ -23,16 +26,16 @@ def main():
     file_prefix = args.file_prefix
     mask_filename = args.mask
 
-    if os.path.isdir(file_prefix):
-        erase = 'x'
-        while (erase.lower() != 'y' and erase.lower() != 'n'):
-            erase = raw_input("Data folder " + file_prefix + " already exists. Erase old data and proceed (y/n)?")
+    # if os.path.isdir(file_prefix):
+    #     erase = 'x'
+    #     while (erase.lower() != 'y' and erase.lower() != 'n'):
+    #         erase = raw_input("Data folder " + file_prefix + " already exists. Erase old data and proceed (y/n)?")
 
-        if erase == 'n':
-            print "\nHalting execution."
-            sys.exit()
+    #     if erase == 'n':
+    #         print "\nHalting execution."
+    #         sys.exit()
 
-        shutil.rmtree(file_prefix)
+    shutil.rmtree(file_prefix)
 
     os.mkdir(file_prefix)
 
@@ -40,17 +43,23 @@ def main():
 
     endp = get_usb_endp()
 
-    imfig = pylab.figure()
+    #imfig = pylab.figure()
 
     iter_num = 0
     save_filename = None
     pred = [None, None]
+
+    frame = np.zeros((112*112,))
+    plt.figure(999) 
+    image=plt.imshow(np.zeros((112,112)), cmap = pylab.cm.Greys_r, interpolation='nearest')
+
     while True:
-        try:
-            output = open(file_prefix + ".raw", "wb")
-        except IOError:
-            print "Output file", file_prefix + ".raw", "could not be opened."
-            sys.exit()
+
+        # try:
+        #     output = open(file_prefix + ".raw", "wb")
+        # except IOError:
+        #     print "Output file", file_prefix + ".raw", "could not be opened."
+        #     sys.exit()
 
         pixels = 0
         data_started = 0
@@ -65,6 +74,8 @@ def main():
 
             if (data_started == 1):
                 packets += 1
+            else:
+                continue
 
             unpacked = struct.unpack('H' * 920, data)
 
@@ -76,33 +87,51 @@ def main():
                 pred[0] = valid_bytes.pop(0)
                 pred[1] = valid_bytes.pop(0)
 
-            pixels += len(valid_bytes)
+            valid_bytes = np.array(valid_bytes)
+            new_pixels = len(valid_bytes)
+            try:
+                frame[pixels:(pixels+new_pixels)] = valid_bytes
+            except:
+                utils.keyboard()
+                
+            pixels += new_pixels
             # print len(valid_bytes), "\n", valid_bytes, "\n"
-            valid_packed = struct.pack('H' * len(valid_bytes), *valid_bytes)
-            output.write(valid_packed)
+            #valid_packed = struct.pack('H' * len(valid_bytes), *valid_bytes)
+            #output.write(valid_packed)
+
 
         print "Pixels:", pixels
         print "Packets:", packets
         print "Prediction (X, Y):", pred[0], pred[1], "\n"
 
-        output.close()
+        frame2=np.reshape(frame,(112,112))   
+        frame2 -= mask
+        frame2 = np.fliplr(frame2)
+        #plt.imshow(frame2, cmap = pylab.cm.Greys_r)
+        image.set_data(frame2)
+        image.autoscale()
+        plt.draw()
 
-        if (iter_num != 0):
-            # Reopen image
-            image1 = Image.open(save_filename)
-            root.geometry('%dx%d' % (image1.size[0],image1.size[1]))
+        #utils.keyboard()
+
+        # output.close()
+
+        # if (iter_num != 0):
+        #     # Reopen image
+        #     image1 = Image.open(save_filename)
+        #     root.geometry('%dx%d' % (image1.size[0],image1.size[1]))
             
-            draw = ImageDraw.Draw(image1)
+        #     draw = ImageDraw.Draw(image1)
 
-            draw.line([(pred[0], max(0, pred[1] - 10)), (pred[0], min(111, pred[1] + 10))], fill=ImageColor.getrgb('red'))
-            draw.line([(max(0, pred[0] - 10), pred[1]), (min(111, pred[0] + 10), pred[1])], fill=ImageColor.getrgb('red'))
+        #     draw.line([(pred[0], max(0, pred[1] - 10)), (pred[0], min(111, pred[1] + 10))], fill=ImageColor.getrgb('red'))
+        #     draw.line([(max(0, pred[0] - 10), pred[1]), (min(111, pred[0] + 10), pred[1])], fill=ImageColor.getrgb('red'))
 
-            del draw
+        #     del draw
 
-            tkpi = ImageTk.PhotoImage(image1)
-            label_image.configure(image = tkpi)
-            root.update()
-            image1.save(save_filename)
+        #     tkpi = ImageTk.PhotoImage(image1)
+        #     label_image.configure(image = tkpi)
+        #     root.update()
+        #     image1.save(save_filename)
 
         # data = endp.read(1840)
         # while (get_first(data) == -1):
@@ -115,17 +144,17 @@ def main():
 
         # sys.exit()
 
-        try:
-            output = open(file_prefix + ".raw", "rb")
-        except IOError:
-            print "Intermediate file", file_prefix + ".raw", "could not be opened."
-            sys.exit()
+        # try:
+        #     output = open(file_prefix + ".raw", "rb")
+        # except IOError:
+        #     print "Intermediate file", file_prefix + ".raw", "could not be opened."
+        #     sys.exit()
 
-        save_filename = disp_save_images(output, mask, file_prefix, iter_num, imfig)
+        #save_filename = disp_save_images(output, mask, file_prefix, iter_num, imfig)
 
-        os.remove(output.name)
+        # os.remove(output.name)
 
-        output.close()
+        #output.close()
 
         iter_num += 1
 
@@ -278,11 +307,11 @@ def read_all_packed_images(image_file):
 
     return images
 
-# main()
+main()
 
-root = Tkinter.Tk()
-label_image = Tkinter.Label(root)
-label_image.place(x=0,y=0,width=112,height=112)
-root.geometry('+%d+%d' % (112,112))
-root.after(0, main)
-root.mainloop()
+# root = Tkinter.Tk()
+# label_image = Tkinter.Label(root)
+# label_image.place(x=0,y=0,width=112,height=112)
+# root.geometry('+%d+%d' % (112,112))
+# root.after(0, main)
+# root.mainloop()
