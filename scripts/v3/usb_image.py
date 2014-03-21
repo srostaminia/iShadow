@@ -11,6 +11,7 @@ import os
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import Tkinter
+import shutil
 
 def main():
     parser = argparse.ArgumentParser()
@@ -22,11 +23,26 @@ def main():
     file_prefix = args.file_prefix
     mask_filename = args.mask
 
+    if os.path.isdir(file_prefix):
+        erase = 'x'
+        while (erase.lower() != 'y' and erase.lower() != 'n')
+            erase = raw_input("Data folder", file_prefix, "already exists. Erase old data and proceed (y/n)?")
+
+        if erase == 'n':
+            print "\nHalting execution."
+            sys.exit()
+
+        shutil.rmtree(file_prefix)
+
+    os.mkdir(file_prefix)
+
     mask = load_mask(mask_filename)
 
     endp = get_usb_endp()
 
     imfig = pylab.figure()
+
+    iter_num = 0
     while True:
         try:
             output = open(file_prefix + ".raw", "wb")
@@ -86,11 +102,13 @@ def main():
             print "Intermediate file", file_prefix + ".raw", "could not be opened."
             sys.exit()
 
-        disp_save_images(output, mask, file_prefix, imfig, [pred_x, pred_y])
+        disp_save_images(output, mask, file_prefix, iter_num, imfig, [pred_x, pred_y])
 
         os.remove(output.name)
 
         output.close()
+
+        iter_num += 1
 
 
 def load_mask(mask_filename):
@@ -168,7 +186,7 @@ def get_zero_start(data):
 
     return 0
 
-def disp_save_images(image_file, mask_data, out_filename, figure, pred):
+def disp_save_images(image_file, mask_data, out_filename, iter_num, figure, pred):
     images = read_all_packed_images(image_file)
 
     if len(images) == 0:
@@ -187,12 +205,12 @@ def disp_save_images(image_file, mask_data, out_filename, figure, pred):
         figure.set_size_inches(1, 1)
 
         if (len(images) == 1):
-            pylab.savefig(out_filename + ".png", dpi=112)
+            pylab.savefig(out_filename + "/" + out_filename + ("%06d" % (iter_num)) + ".png", dpi=112)
         else:
             pylab.savefig(out_filename + str(i) + ".png", dpi=112)
 
         # image1 = Image.fromarray(image.tolist())
-        image1 = Image.open(out_filename + ".png")
+        image1 = Image.open(out_filename + "/" + out_filename + ("%06d" % (iter_num)) + ".png")
         # image1 = Image.open("refresh.png")
         # root.title("refresh")
         root.geometry('%dx%d' % (image1.size[0],image1.size[1]))
