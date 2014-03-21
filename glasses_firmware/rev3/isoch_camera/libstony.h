@@ -61,6 +61,7 @@ int stony_read_pixel();
 int stony_image_single();
 int stony_image_subsample();
 int stony_image_minmax();
+int stony_image_dual_subsample();
 
 void pulse_resv(uint8_t cam);
 void pulse_incv(uint8_t cam);

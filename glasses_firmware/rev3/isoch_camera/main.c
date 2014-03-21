@@ -17,7 +17,12 @@ extern uint8_t IT_Clock_Sent;
 
 uint8_t packet_sending = 0;
 
+extern int fpn_offset;
+
 static __IO uint32_t TimingDelay;
+//extern uint16_t pred_img[112][112];
+extern uint8_t pred[2];
+extern uint16_t min, max;
 
 int main()
 { 
@@ -43,17 +48,15 @@ int main()
   USB_Init();
   Speaker_Config();
   
+  pred[0] = 255;
+  pred[1] = 255;
   while (1) {
     clear_ENDP1_packet_buffers();
     while (packet_sending == 1);
     
-    stony_image_single();
+//    stony_image_single();
+    stony_image_dual_subsample();
     while (packet_sending == 1);
-    
-    clear_ENDP1_packet_buffers();
-    while(packet_sending == 1);
-    packet_sending = 1;
-    while(packet_sending == 1);
     
 //    for (int i = 0; i < 11; i++) {
 //      packet_sending = 1;

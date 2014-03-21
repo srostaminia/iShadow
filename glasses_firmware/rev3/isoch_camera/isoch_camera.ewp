@@ -647,19 +647,19 @@
         </option>
         <option>
           <name>IlinkRawBinaryFile</name>
-          <state></state>
+          <state>\\vmware-host\Shared Folders\Desktop\eye_exper\embedded_models\addison2_lam0-01.mod_2130p.raw</state>
         </option>
         <option>
           <name>IlinkRawBinarySymbol</name>
-          <state></state>
+          <state>model_data</state>
         </option>
         <option>
           <name>IlinkRawBinarySegment</name>
-          <state></state>
+          <state>model_seg</state>
         </option>
         <option>
           <name>IlinkRawBinaryAlign</name>
-          <state></state>
+          <state>1</state>
         </option>
         <option>
           <name>IlinkDefines</name>
@@ -1994,6 +1994,12 @@
     </file>
     <file>
       <name>$PROJ_DIR$\libstony.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\predict_gaze.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\predict_gaze.h</name>
     </file>
   </group>
   <group>
