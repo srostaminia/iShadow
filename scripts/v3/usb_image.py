@@ -37,7 +37,7 @@ def main():
         pixels = 0
         data_started = 0
         packets = 0
-        while packets < 14:
+        while packets < 14 or pixels < (112 * 112):
             data = endp.read(1840)
 
             if (get_first(data) != -1) and (data_started == 0):
@@ -50,16 +50,35 @@ def main():
 
             unpacked = struct.unpack('H' * 920, data)
 
+            # print unpacked, "\n"
+
             valid_bytes = get_valid_bytes(unpacked)
+
+            if (packets == 1):
+                pred_x = valid_bytes.pop(0)
+                pred_y = valid_bytes.pop(0)
+
             pixels += len(valid_bytes)
             # print len(valid_bytes), "\n", valid_bytes, "\n"
             valid_packed = struct.pack('H' * len(valid_bytes), *valid_bytes)
             output.write(valid_packed)
 
-        # print "Pixels:", pixels
-        # print "Packets:", packets, "\n"
+        print "Pixels:", pixels
+        print "Packets:", packets
+        print "Prediction (X, Y):", pred_x, pred_y, "\n"
 
         output.close()
+
+        # data = endp.read(1840)
+        # while (get_first(data) == -1):
+        #     data = endp.read(1840)
+
+        # print data
+
+        # pred = get_valid_bytes(struct.unpack('H' * 920, data))
+        # print pred
+
+        # sys.exit()
 
         try:
             output = open(file_prefix + ".raw", "rb")
@@ -159,6 +178,7 @@ def disp_save_images(image_file, mask_data, out_filename, figure):
     # img = pylab.figure()
     for i, image in enumerate(images):
         image -= mask_data
+        image = np.fliplr(image)
 
         # print image
 
