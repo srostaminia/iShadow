@@ -6,7 +6,7 @@ import numpy as np
 import pylab
 import struct
 import pickle
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw, ImageColor
 import os
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
@@ -86,7 +86,7 @@ def main():
             print "Intermediate file", file_prefix + ".raw", "could not be opened."
             sys.exit()
 
-        disp_save_images(output, mask, file_prefix, imfig)
+        disp_save_images(output, mask, file_prefix, imfig, [pred_x, pred_y])
 
         os.remove(output.name)
 
@@ -168,7 +168,7 @@ def get_zero_start(data):
 
     return 0
 
-def disp_save_images(image_file, mask_data, out_filename, figure):
+def disp_save_images(image_file, mask_data, out_filename, figure, pred):
     images = read_all_packed_images(image_file)
 
     if len(images) == 0:
@@ -197,6 +197,13 @@ def disp_save_images(image_file, mask_data, out_filename, figure):
         # root.title("refresh")
         root.geometry('%dx%d' % (image1.size[0],image1.size[1]))
         
+        draw = ImageDraw.Draw(image1)
+
+        draw.line([(pred[0], max(0, pred[1] - 10)), (pred[0], min(111, pred[1] + 10))], fill=ImageColor.getrgb('red'))
+        draw.line([(max(0, pred[0] - 10), pred[1]), (min(111, pred[0] + 10), pred[1])], fill=ImageColor.getrgb('red'))
+
+        del draw
+
         tkpi = ImageTk.PhotoImage(image1)
         label_image.configure(image = tkpi)
         root.update()
