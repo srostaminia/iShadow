@@ -25,8 +25,8 @@ def main():
 
     if os.path.isdir(file_prefix):
         erase = 'x'
-        while (erase.lower() != 'y' and erase.lower() != 'n')
-            erase = raw_input("Data folder", file_prefix, "already exists. Erase old data and proceed (y/n)?")
+        while (erase.lower() != 'y' and erase.lower() != 'n'):
+            erase = raw_input("Data folder " + file_prefix + " already exists. Erase old data and proceed (y/n)?")
 
         if erase == 'n':
             print "\nHalting execution."
@@ -43,6 +43,8 @@ def main():
     imfig = pylab.figure()
 
     iter_num = 0
+    save_filename = None
+    pred = [None, None]
     while True:
         try:
             output = open(file_prefix + ".raw", "wb")
@@ -71,8 +73,8 @@ def main():
             valid_bytes = get_valid_bytes(unpacked)
 
             if (packets == 1):
-                pred_x = valid_bytes.pop(0)
-                pred_y = valid_bytes.pop(0)
+                pred[0] = valid_bytes.pop(0)
+                pred[1] = valid_bytes.pop(0)
 
             pixels += len(valid_bytes)
             # print len(valid_bytes), "\n", valid_bytes, "\n"
@@ -81,9 +83,26 @@ def main():
 
         print "Pixels:", pixels
         print "Packets:", packets
-        print "Prediction (X, Y):", pred_x, pred_y, "\n"
+        print "Prediction (X, Y):", pred[0], pred[1], "\n"
 
         output.close()
+
+        if (iter_num != 0):
+            # Reopen image
+            image1 = Image.open(save_filename)
+            root.geometry('%dx%d' % (image1.size[0],image1.size[1]))
+            
+            draw = ImageDraw.Draw(image1)
+
+            draw.line([(pred[0], max(0, pred[1] - 10)), (pred[0], min(111, pred[1] + 10))], fill=ImageColor.getrgb('red'))
+            draw.line([(max(0, pred[0] - 10), pred[1]), (min(111, pred[0] + 10), pred[1])], fill=ImageColor.getrgb('red'))
+
+            del draw
+
+            tkpi = ImageTk.PhotoImage(image1)
+            label_image.configure(image = tkpi)
+            root.update()
+            image1.save(save_filename)
 
         # data = endp.read(1840)
         # while (get_first(data) == -1):
@@ -102,7 +121,7 @@ def main():
             print "Intermediate file", file_prefix + ".raw", "could not be opened."
             sys.exit()
 
-        disp_save_images(output, mask, file_prefix, iter_num, imfig, [pred_x, pred_y])
+        save_filename = disp_save_images(output, mask, file_prefix, iter_num, imfig)
 
         os.remove(output.name)
 
@@ -186,7 +205,7 @@ def get_zero_start(data):
 
     return 0
 
-def disp_save_images(image_file, mask_data, out_filename, iter_num, figure, pred):
+def disp_save_images(image_file, mask_data, out_filename, iter_num, figure):
     images = read_all_packed_images(image_file)
 
     if len(images) == 0:
@@ -198,39 +217,21 @@ def disp_save_images(image_file, mask_data, out_filename, iter_num, figure, pred
         image -= mask_data
         image = np.fliplr(image)
 
-        # print image
+        # print image   # Debug
 
         pylab.figimage(image, cmap = pylab.cm.Greys_r)
 
         figure.set_size_inches(1, 1)
 
+        save_filename = out_filename + "/" + out_filename + ("%06d" % (iter_num)) + ".png"
+
+        # Save image
         if (len(images) == 1):
-            pylab.savefig(out_filename + "/" + out_filename + ("%06d" % (iter_num)) + ".png", dpi=112)
+            pylab.savefig(save_filename, dpi=112)
         else:
             pylab.savefig(out_filename + str(i) + ".png", dpi=112)
 
-        # image1 = Image.fromarray(image.tolist())
-        image1 = Image.open(out_filename + "/" + out_filename + ("%06d" % (iter_num)) + ".png")
-        # image1 = Image.open("refresh.png")
-        # root.title("refresh")
-        root.geometry('%dx%d' % (image1.size[0],image1.size[1]))
-        
-        draw = ImageDraw.Draw(image1)
-
-        draw.line([(pred[0], max(0, pred[1] - 10)), (pred[0], min(111, pred[1] + 10))], fill=ImageColor.getrgb('red'))
-        draw.line([(max(0, pred[0] - 10), pred[1]), (min(111, pred[0] + 10), pred[1])], fill=ImageColor.getrgb('red'))
-
-        del draw
-
-        tkpi = ImageTk.PhotoImage(image1)
-        label_image.configure(image = tkpi)
-        root.update()
-
-        # img_in = open(out_filename + ".png", 'rb')
-        # disp_img = Image.open(img_in)
-        # disp_img.show()
-        # img_in.close()
-        # print "Finished"
+        return save_filename
 
 def get_usb_endp():
     dev = usb.core.find(idVendor = 0x483)
