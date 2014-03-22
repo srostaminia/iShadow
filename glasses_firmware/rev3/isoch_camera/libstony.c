@@ -22,7 +22,7 @@
 
 //#endif
 
-#define USB_PIXELS      92
+//#define USB_PIXELS      92
 
 extern uint8_t pred[2];
 //uint16_t pred_img[112][112];
@@ -850,6 +850,8 @@ int stony_image_dual_subsample()
 
 #ifdef SEND_16BIT
   uint16_t *buf16 = (uint16_t *)buf8[0];
+#else
+  uint8_t *buf8_active = (uint8_t *)buf8[0];
 #endif
   
   uint16_t pred_img[112][112];
@@ -868,10 +870,14 @@ int stony_image_dual_subsample()
 #ifdef SEND_16BIT  
   buf16[0] = pred[0];
   buf16[1] = pred[1];
+#else
+  buf8_active[0] = pred[0];
+  buf8_active[1] = pred[1];
 #endif  
   
   uint16_t packets_sent = 0;  // For debug purposes only
   int pixels_collected = 0;
+  uint16_t start = 0, total = 0;
   for (int row = 0; row < 112; row++) {
     set_pointer_value(REG_COLSEL, 0, CAM1);
     set_pointer_value(REG_COLSEL, 0, CAM2);
@@ -900,6 +906,8 @@ int stony_image_dual_subsample()
 #ifdef SEND_16BIT
 //        buf16[data_cycle] = adc_values[1];
         buf16[data_cycle] = pred_img[row][col];
+#else
+        buf8_active[data_cycle] = CONV_8BIT(pred_img[row][col]);
 #endif
         
         if (data_cycle == (USB_PIXELS - 1)) {
@@ -913,6 +921,8 @@ int stony_image_dual_subsample()
           
 #ifdef SEND_16BIT
           buf16 = (uint16_t *)buf8[buf_idx];
+#else
+          buf8_active = (uint8_t *)buf8[buf_idx];
 #endif
           
           packets_sent += 1;
@@ -941,10 +951,19 @@ int stony_image_dual_subsample()
       
 #ifdef SEND_16BIT
       buf16[data_cycle] = adc_values[0];
+#else
+      buf8_active[data_cycle] = CONV_8BIT(adc_values[0]);
 #endif
       
       if (data_cycle == (USB_PIXELS - 1)) {
         while (packet_sending == 1);
+        
+        if (packets_sent == 1) {
+          total = TIM5->CNT - start;
+          packets_sent = 1;
+        }
+        
+        start = TIM5->CNT;
         
         data_cycle = -1;
         send_packet(buf8[buf_idx], PACKET_SIZE);
@@ -954,13 +973,15 @@ int stony_image_dual_subsample()
         
 #ifdef SEND_16BIT
         buf16 = (uint16_t *)buf8[buf_idx];
+#else
+        buf8_active = (uint8_t *)buf8[buf_idx];
 #endif
         
         packets_sent += 1;
       }
     
       data_cycle++;
-#endif
+#endif  // !defined(SEND_EYE)
       
       // Do conversion for CAM2
       ADC_SoftwareStartConv(ADC1);
@@ -985,6 +1006,8 @@ int stony_image_dual_subsample()
 #ifdef SEND_16BIT
 //    buf16[data_cycle] = adc_values[1];
     buf16[data_cycle] = pred_img[row][111];
+#else
+    buf8_active[data_cycle] = CONV_8BIT(pred_img[row][111]);
 #endif
     
     if (data_cycle == (USB_PIXELS - 1)) {
@@ -998,6 +1021,8 @@ int stony_image_dual_subsample()
       
 #ifdef SEND_16BIT
       buf16 = (uint16_t *)buf8[buf_idx];
+#else
+      buf8_active = (uint8_t *)buf8[buf_idx];
 #endif
       
       packets_sent += 1;
@@ -1010,10 +1035,13 @@ int stony_image_dual_subsample()
   } // for (row)
   
   if (data_cycle != -1) {
-    for (int i = data_cycle; i < USB_PIXELS; i++)
+    for (int i = data_cycle; i < USB_PIXELS; i++) {
 #ifdef SEND_16BIT
       buf16[i] = 0;
+#else
+      buf8_active[i] = 0;
 #endif
+    }
     
     while (packet_sending == 1);
     send_packet(buf8[buf_idx], PACKET_SIZE);

@@ -28,6 +28,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "usb_lib.h"
 #include "usb_istr.h"
+#include "libstony.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -87,8 +88,13 @@ void EP1_IN_Callback(void)
 //  }
 //  FreeUserBuffer(ENDP1, EP_DBUF_IN); // NEWFIX
 //  FreeUserBuffer(ENDP1, EP_DBUF_OUT);
+#ifdef SEND_8BIT
+  send_empty_packet();
+#endif
+  
   packet_sending = 0;
-//  In_Data_Offset += Data_Len;
+
+  //  In_Data_Offset += Data_Len;
 }
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

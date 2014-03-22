@@ -59,7 +59,21 @@
 //#define SEND_EYE
 
 // Uncomment one or the other for pixel transmission rate
-#define SEND_16BIT
+//#define SEND_16BIT
+#define SEND_8BIT
+
+#if defined(SEND_16BIT) && defined(SEND_8BIT)
+#error CANNOT DEFINE BOTH SEND_16BIT AND SEND_8BIT (LIBSTONY.H)
+#elif !defined(SEND_16BIT) && !defined(SEND_8BIT)
+#error MUST DEFINE ONE OF SEND_16BIT OR SEND_8BIT (LIBSTONY.H)
+#endif
+
+#ifdef SEND_16BIT
+#define USB_PIXELS      92
+#else
+#define USB_PIXELS      184
+#define CONV_8BIT(X)    (((X) >> 2) & 0xFF)
+#endif
 
 void stony_pin_config();
 void stony_init(short vref, short nbias, short aobias, char gain, char selamp);
