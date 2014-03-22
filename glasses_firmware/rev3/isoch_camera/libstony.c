@@ -847,7 +847,10 @@ int stony_image_dual_subsample()
   // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, 2 cameras
   // Double-buffered (2-dim array)
   uint8_t buf8[2][USB_PIXELS * 2];
+
+#ifdef SEND_16BIT
   uint16_t *buf16 = (uint16_t *)buf8[0];
+#endif
   
   uint16_t pred_img[112][112];
   
@@ -861,8 +864,11 @@ int stony_image_dual_subsample()
 
 //  int data_cycle = 0;
   int data_cycle = 2; // Start at 2 b/c first two "pixels" transmitted are prediction values from previous cycle
+
+#ifdef SEND_16BIT  
   buf16[0] = pred[0];
   buf16[1] = pred[1];
+#endif  
   
   uint16_t packets_sent = 0;  // For debug purposes only
   int pixels_collected = 0;
@@ -884,16 +890,18 @@ int stony_image_dual_subsample()
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
       if (col != 0) {
-        // TODO: Get subsampled pixels...
-//        buf16[(data_cycle * 112) + cam2_offset + (col - 1)] = adc_values[1];
         pred_img[row][col] = adc_values[1] - FPN((row * 112) + (col - 1));
         pixels_collected++;
         min = (pred_img[row][col] < min) ? (pred_img[row][col]) : (min);
         max = (pred_img[row][col] > max) ? (pred_img[row][col]) : (max);
 
 #ifdef SEND_EYE
+
+#ifdef SEND_16BIT
 //        buf16[data_cycle] = adc_values[1];
         buf16[data_cycle] = pred_img[row][col];
+#endif
+        
         if (data_cycle == (USB_PIXELS - 1)) {
           while (packet_sending == 1);
           
@@ -902,7 +910,10 @@ int stony_image_dual_subsample()
           packet_sending = 1;
           
           buf_idx = !buf_idx;
+          
+#ifdef SEND_16BIT
           buf16 = (uint16_t *)buf8[buf_idx];
+#endif
           
           packets_sent += 1;
         }
@@ -927,8 +938,10 @@ int stony_image_dual_subsample()
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
 #if !defined(SEND_EYE)
-//      buf16[(data_cycle * 112) + col] = adc_values[0];
+      
+#ifdef SEND_16BIT
       buf16[data_cycle] = adc_values[0];
+#endif
       
       if (data_cycle == (USB_PIXELS - 1)) {
         while (packet_sending == 1);
@@ -938,7 +951,10 @@ int stony_image_dual_subsample()
         packet_sending = 1;
         
         buf_idx = !buf_idx;
+        
+#ifdef SEND_16BIT
         buf16 = (uint16_t *)buf8[buf_idx];
+#endif
         
         packets_sent += 1;
       }
@@ -965,8 +981,12 @@ int stony_image_dual_subsample()
     max = (pred_img[row][111] > max) ? (pred_img[row][111]) : (max);
     
 #ifdef SEND_EYE
+    
+#ifdef SEND_16BIT
 //    buf16[data_cycle] = adc_values[1];
     buf16[data_cycle] = pred_img[row][111];
+#endif
+    
     if (data_cycle == (USB_PIXELS - 1)) {
       while (packet_sending == 1);
       
@@ -975,7 +995,10 @@ int stony_image_dual_subsample()
       packet_sending = 1;
       
       buf_idx = !buf_idx;
+      
+#ifdef SEND_16BIT
       buf16 = (uint16_t *)buf8[buf_idx];
+#endif
       
       packets_sent += 1;
     }
@@ -986,11 +1009,11 @@ int stony_image_dual_subsample()
     inc_pointer_value(REG_ROWSEL, 1, CAM2);
   } // for (row)
   
-//  predict_gaze_fullimg((uint16_t*)pred_img, min, max);
-  
   if (data_cycle != -1) {
     for (int i = data_cycle; i < USB_PIXELS; i++)
+#ifdef SEND_16BIT
       buf16[i] = 0;
+#endif
     
     while (packet_sending == 1);
     send_packet(buf8[buf_idx], PACKET_SIZE);

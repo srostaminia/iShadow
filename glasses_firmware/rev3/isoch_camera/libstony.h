@@ -58,6 +58,9 @@
 // Uncomment to transmit eye-facing camera instead of out-facing
 //#define SEND_EYE
 
+// Uncomment one or the other for pixel transmission rate
+#define SEND_16BIT
+
 void stony_pin_config();
 void stony_init(short vref, short nbias, short aobias, char gain, char selamp);
 int stony_read_pixel();
