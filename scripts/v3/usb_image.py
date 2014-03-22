@@ -50,8 +50,15 @@ def main():
     pred = [None, None]
 
     frame = np.zeros((112*112,))
-    plt.figure(999) 
+    fig = plt.figure(999) 
     image=plt.imshow(np.zeros((112,112)), cmap = pylab.cm.Greys_r, interpolation='nearest')
+
+    ax=fig.add_subplot(111)
+    ax.set_xlim([0, 112])
+    ax.set_ylim([112, 0])
+
+    vline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
+    hline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
 
     while True:
 
@@ -85,16 +92,22 @@ def main():
             valid_bytes = get_valid_bytes(unpacked)
 
             if (packets == 1):
-                pred[0] = valid_bytes.pop(0)
+                pred[0] = 112 - valid_bytes.pop(0)
                 pred[1] = valid_bytes.pop(0)
+
+            if (iters != 0):
+                vline.set_data([pred[0], pred[0]], [max(0, pred[1] - 10), min(111, pred[1] + 10)])
+                hline.set_data([max(0, pred[0] - 10), min(111, pred[0] + 10)], [pred[1], pred[1]])
 
             valid_bytes = np.array(valid_bytes)
             new_pixels = len(valid_bytes)
             try:
                 frame[pixels:(pixels+new_pixels)] = valid_bytes
             except:
-                utils.keyboard()
-                sys.exit()
+                # utils.keyboard()
+                # sys.exit()
+                frame[pixels:] = valid_bytes[:(12544-pixels)]
+
                 
             pixels += new_pixels
 
@@ -110,57 +123,15 @@ def main():
         print "Packets:", packets
         print "Prediction (X, Y):", pred[0], pred[1], "\n"
 
+        # TODO: Fix this so we're not copying the entire image every time...
         frame2=np.reshape(frame,(112,112))   
         frame2 -= mask
         frame2 = np.fliplr(frame2)
         #plt.imshow(frame2, cmap = pylab.cm.Greys_r)
         image.set_data(frame2)
-        image.autoscale()
+        image.autoscale() 
+
         plt.draw()
-
-        #utils.keyboard()
-
-        # output.close()
-
-        # if (iter_num != 0):
-        #     # Reopen image
-        #     image1 = Image.open(save_filename)
-        #     root.geometry('%dx%d' % (image1.size[0],image1.size[1]))
-            
-        #     draw = ImageDraw.Draw(image1)
-
-        #     draw.line([(pred[0], max(0, pred[1] - 10)), (pred[0], min(111, pred[1] + 10))], fill=ImageColor.getrgb('red'))
-        #     draw.line([(max(0, pred[0] - 10), pred[1]), (min(111, pred[0] + 10), pred[1])], fill=ImageColor.getrgb('red'))
-
-        #     del draw
-
-        #     tkpi = ImageTk.PhotoImage(image1)
-        #     label_image.configure(image = tkpi)
-        #     root.update()
-        #     image1.save(save_filename)
-
-        # data = endp.read(1840)
-        # while (get_first(data) == -1):
-        #     data = endp.read(1840)
-
-        # print data
-
-        # pred = get_valid_bytes(struct.unpack('H' * 920, data))
-        # print pred
-
-        # sys.exit()
-
-        # try:
-        #     output = open(file_prefix + ".raw", "rb")
-        # except IOError:
-        #     print "Intermediate file", file_prefix + ".raw", "could not be opened."
-        #     sys.exit()
-
-        #save_filename = disp_save_images(output, mask, file_prefix, iter_num, imfig)
-
-        # os.remove(output.name)
-
-        #output.close()
 
         iters += 1
 
@@ -242,34 +213,6 @@ def get_zero_start(data):
             return i
 
     return 0
-
-def disp_save_images(image_file, mask_data, out_filename, iter_num, figure):
-    images = read_all_packed_images(image_file)
-
-    if len(images) == 0:
-        print "ERROR: No full images found in", image_file.name
-        sys.exit()
-
-    # img = pylab.figure()
-    for i, image in enumerate(images):
-        # image -= mask_data
-        image = np.fliplr(image)
-
-        # print image   # Debug
-
-        pylab.figimage(image, cmap = pylab.cm.Greys_r)
-
-        figure.set_size_inches(1, 1)
-
-        save_filename = out_filename + "/" + out_filename + ("%06d" % (iter_num)) + ".png"
-
-        # Save image
-        if (len(images) == 1):
-            pylab.savefig(save_filename, dpi=112)
-        else:
-            pylab.savefig(out_filename + str(i) + ".png", dpi=112)
-
-        return save_filename
 
 def get_usb_endp():
     dev = usb.core.find(idVendor = 0x483)
