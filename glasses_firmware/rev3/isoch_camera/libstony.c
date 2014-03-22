@@ -889,7 +889,26 @@ int stony_image_dual_subsample()
         pred_img[row][col] = adc_values[1] - FPN((row * 112) + (col - 1));
         pixels_collected++;
         min = (pred_img[row][col] < min) ? (pred_img[row][col]) : (min);
-        max = (pred_img[row][col] > max) ? (pred_img[row][col]) : (max);        
+        max = (pred_img[row][col] > max) ? (pred_img[row][col]) : (max);
+
+#ifdef SEND_EYE
+//        buf16[data_cycle] = adc_values[1];
+        buf16[data_cycle] = pred_img[row][col];
+        if (data_cycle == (USB_PIXELS - 1)) {
+          while (packet_sending == 1);
+          
+          data_cycle = -1;
+          send_packet(buf8[buf_idx], PACKET_SIZE);
+          packet_sending = 1;
+          
+          buf_idx = !buf_idx;
+          buf16 = (uint16_t *)buf8[buf_idx];
+          
+          packets_sent += 1;
+        }
+        data_cycle++;
+#endif
+        
       }
       
       // Do conversion for CAM1
@@ -907,6 +926,7 @@ int stony_image_dual_subsample()
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
+#if !defined(SEND_EYE)
 //      buf16[(data_cycle * 112) + col] = adc_values[0];
       buf16[data_cycle] = adc_values[0];
       
@@ -924,6 +944,7 @@ int stony_image_dual_subsample()
       }
     
       data_cycle++;
+#endif
       
       // Do conversion for CAM2
       ADC_SoftwareStartConv(ADC1);
@@ -942,6 +963,24 @@ int stony_image_dual_subsample()
     pixels_collected++;
     min = (pred_img[row][111] < min) ? (pred_img[row][111]) : (min);
     max = (pred_img[row][111] > max) ? (pred_img[row][111]) : (max);
+    
+#ifdef SEND_EYE
+//    buf16[data_cycle] = adc_values[1];
+    buf16[data_cycle] = pred_img[row][111];
+    if (data_cycle == (USB_PIXELS - 1)) {
+      while (packet_sending == 1);
+      
+      data_cycle = -1;
+      send_packet(buf8[buf_idx], PACKET_SIZE);
+      packet_sending = 1;
+      
+      buf_idx = !buf_idx;
+      buf16 = (uint16_t *)buf8[buf_idx];
+      
+      packets_sent += 1;
+    }
+    data_cycle++;
+#endif
     
     inc_pointer_value(REG_ROWSEL, 1, CAM1);
     inc_pointer_value(REG_ROWSEL, 1, CAM2);

@@ -55,6 +55,9 @@
 #define ADC1_DR_ADDRESS                 ((uint32_t)0x40012458)
 #define DMA_DIR_PeripheralToMemory      ((uint32_t)0x00000000)
 
+// Uncomment to transmit eye-facing camera instead of out-facing
+//#define SEND_EYE
+
 void stony_pin_config();
 void stony_init(short vref, short nbias, short aobias, char gain, char selamp);
 int stony_read_pixel();
