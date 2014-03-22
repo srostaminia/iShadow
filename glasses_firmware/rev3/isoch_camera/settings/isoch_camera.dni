@@ -9,7 +9,7 @@ TriggerName=main
 LimitSize=0
 ByteLimit=50
 [DebugChecksum]
-Checksum=1741429308
+Checksum=14939460
 [Exceptions]
 StopOnUncaught=_ 0
 StopOnThrow=_ 0
@@ -40,7 +40,8 @@ Fmt1=uint32_t[2]	4	0
 Fmt2=unsigned short[2]	4	0
 [watch_formats]
 Fmt0={W}0:eResumeSetVal	3	0
-Fmt1={W}0:wPMABufAddr	4	0
+Fmt1={W}0:model_data	4	0
+Fmt2={W}0:wPMABufAddr	4	0
 [DataLog]
 LogEnabled=0
 SumEnabled=0

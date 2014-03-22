@@ -886,10 +886,10 @@ int stony_image_dual_subsample()
       if (col != 0) {
         // TODO: Get subsampled pixels...
 //        buf16[(data_cycle * 112) + cam2_offset + (col - 1)] = adc_values[1];
-        pred_img[row][col] = adc_values[1] - FPN((row * 112) + col);
+        pred_img[row][col] = adc_values[1] - FPN((row * 112) + (col - 1));
         pixels_collected++;
         min = (pred_img[row][col] < min) ? (pred_img[row][col]) : (min);
-        max = (pred_img[row][col] > max) ? (pred_img[row][col]) : (max);
+        max = (pred_img[row][col] > max) ? (pred_img[row][col]) : (max);        
       }
       
       // Do conversion for CAM1
@@ -938,7 +938,6 @@ int stony_image_dual_subsample()
     asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
     
     // TODO: Get subsampled pixels...
-//    buf16[(data_cycle * 112) + cam2_offset + 111] = adc_values[1];
     pred_img[row][111] = adc_values[1] - FPN((row * 112) + 111);
     pixels_collected++;
     min = (pred_img[row][111] < min) ? (pred_img[row][111]) : (min);
