@@ -45,7 +45,7 @@ def main():
 
     #imfig = pylab.figure()
 
-    iter_num = 0
+    iters = 0
     save_filename = None
     pred = [None, None]
 
@@ -66,6 +66,7 @@ def main():
         packets = 0
         while packets < 14 or pixels < (112 * 112):
             data = endp.read(1840)
+            # print data
 
             if (get_first(data) != -1) and (data_started == 0):
                 data_started = 1
@@ -93,8 +94,13 @@ def main():
                 frame[pixels:(pixels+new_pixels)] = valid_bytes
             except:
                 utils.keyboard()
+                sys.exit()
                 
             pixels += new_pixels
+
+            # print unpacked, "\n"
+            # print "Pixels in packet:", new_pixels, "\n\n"
+
             # print len(valid_bytes), "\n", valid_bytes, "\n"
             #valid_packed = struct.pack('H' * len(valid_bytes), *valid_bytes)
             #output.write(valid_packed)
@@ -156,7 +162,10 @@ def main():
 
         #output.close()
 
-        iter_num += 1
+        iters += 1
+
+        # if (iters == 1):
+        #     sys.exit()
 
 
 def load_mask(mask_filename):
@@ -243,7 +252,7 @@ def disp_save_images(image_file, mask_data, out_filename, iter_num, figure):
 
     # img = pylab.figure()
     for i, image in enumerate(images):
-        image -= mask_data
+        # image -= mask_data
         image = np.fliplr(image)
 
         # print image   # Debug
