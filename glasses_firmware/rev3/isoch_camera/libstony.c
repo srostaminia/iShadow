@@ -860,12 +860,12 @@ int stony_image_dual_subsample()
   min = 1000;
 
 //  int data_cycle = 0;
-  int data_cycle = 2; // Start at 1 b/c first two "pixels" transmitted are prediction values from previous cycle
+  int data_cycle = 2; // Start at 2 b/c first two "pixels" transmitted are prediction values from previous cycle
   buf16[0] = pred[0];
   buf16[1] = pred[1];
   
   uint16_t packets_sent = 0;  // For debug purposes only
-  
+  int pixels_collected = 0;
   for (int row = 0; row < 112; row++) {
     set_pointer_value(REG_COLSEL, 0, CAM1);
     set_pointer_value(REG_COLSEL, 0, CAM2);
@@ -887,6 +887,7 @@ int stony_image_dual_subsample()
         // TODO: Get subsampled pixels...
 //        buf16[(data_cycle * 112) + cam2_offset + (col - 1)] = adc_values[1];
         pred_img[row][col] = adc_values[1] - FPN((row * 112) + col);
+        pixels_collected++;
         min = (pred_img[row][col] < min) ? (pred_img[row][col]) : (min);
         max = (pred_img[row][col] > max) ? (pred_img[row][col]) : (max);
       }
@@ -939,6 +940,7 @@ int stony_image_dual_subsample()
     // TODO: Get subsampled pixels...
 //    buf16[(data_cycle * 112) + cam2_offset + 111] = adc_values[1];
     pred_img[row][111] = adc_values[1] - FPN((row * 112) + 111);
+    pixels_collected++;
     min = (pred_img[row][111] < min) ? (pred_img[row][111]) : (min);
     max = (pred_img[row][111] > max) ? (pred_img[row][111]) : (max);
     
@@ -954,12 +956,19 @@ int stony_image_dual_subsample()
     
     while (packet_sending == 1);
     send_packet(buf8[buf_idx], PACKET_SIZE);
+    
+    packet_sending = 1;
     while (packet_sending == 1);
+    
+    packets_sent += 1;
   }
   
-  clear_ENDP1_packet_buffers();
+//  clear_ENDP1_packet_buffers();
+  send_empty_packet();
   while(packet_sending == 1);
-  packet_sending = 1;
+  
+//  packet_sending = 1;
+  send_empty_packet();
   while(packet_sending == 1);
   
   // Predict gaze, store results in global variable pred[]

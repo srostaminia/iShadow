@@ -85,7 +85,8 @@ void EP1_IN_Callback(void)
 //    Data_Len = GetEPDblBuf1Count(ENDP1);
 //    PMAToUserBufferCopy(Stream_Buff, ENDP1_BUF1Addr, Data_Len);
 //  }
-  FreeUserBuffer(ENDP1, EP_DBUF_IN);
+//  FreeUserBuffer(ENDP1, EP_DBUF_IN); // NEWFIX
+//  FreeUserBuffer(ENDP1, EP_DBUF_OUT);
   packet_sending = 0;
 //  In_Data_Offset += Data_Len;
 }

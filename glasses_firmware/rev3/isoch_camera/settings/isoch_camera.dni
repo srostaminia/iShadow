@@ -9,7 +9,7 @@ TriggerName=main
 LimitSize=0
 ByteLimit=50
 [DebugChecksum]
-Checksum=-740113870
+Checksum=1741429308
 [Exceptions]
 StopOnUncaught=_ 0
 StopOnThrow=_ 0
@@ -35,7 +35,9 @@ ITMportsTermIO=0
 ITMportsLogFile=0
 ITMlogFile=$PROJ_DIR$\ITM.log
 [array_types]
-Fmt0=unsigned short[2]	4	0
+Fmt0=uint32_t[200]	4	0
+Fmt1=uint32_t[2]	4	0
+Fmt2=unsigned short[2]	4	0
 [watch_formats]
 Fmt0={W}0:eResumeSetVal	3	0
 Fmt1={W}0:wPMABufAddr	4	0
@@ -55,8 +57,7 @@ SumSortOrder=0
 [Disassemble mode]
 mode=0
 [Breakpoints2]
-Bp0=_ 0 "EMUL_CODE" "{$PROJ_DIR$\..\..\common_libs\STM32_USB-FS-Device_Driver\src\usb_mem.c}.54.3" 0 0 1 "" 0 "" 0
-Count=1
+Count=0
 [Log file]
 LoggingEnabled=_ 0
 LogFile=_ ""

@@ -160,10 +160,11 @@ void Speaker_Reset()
   SetEPDblBuffAddr(ENDP1, ENDP1_BUF0Addr, ENDP1_BUF1Addr);
 //  SetEPDblBuffCount(ENDP1, EP_DBUF_OUT, 0x40);
   SetEPDblBuffCount(ENDP1, EP_DBUF_IN, PACKET_SIZE);   // AMM
+  
   ClearDTOG_RX(ENDP1);
   ClearDTOG_TX(ENDP1);
-//  ToggleDTOG_TX(ENDP1);
-  ToggleDTOG_RX(ENDP1);
+  ToggleDTOG_TX(ENDP1);
+//  ToggleDTOG_RX(ENDP1);       // NEWFIX
 //  SetEPRxStatus(ENDP1, EP_RX_VALID);
 //  SetEPTxStatus(ENDP1, EP_TX_DIS);
   SetEPRxStatus(ENDP1, EP_RX_DIS);

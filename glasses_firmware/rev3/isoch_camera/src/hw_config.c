@@ -366,7 +366,8 @@ uint32_t send_packet (uint8_t *ptrBuffer, uint16_t Send_length)
   /*Sent flag*/
   packet_sending = 1;
   
-  if (GetENDPOINT(ENDP1) & EP_DTOG_RX)
+//  if (GetENDPOINT(ENDP1) & EP_DTOG_RX) // NEWFIX
+  if (GetENDPOINT(ENDP1) & EP_DTOG_TX)
   {
     UserToPMABufferCopy(ptrBuffer, ENDP1_BUF0Addr, Send_length);
   }
@@ -391,6 +392,30 @@ uint32_t clear_ENDP1_packet_buffers()
   
   UserToPMABufferCopy((uint8_t*)empty, ENDP1_BUF0Addr, PACKET_SIZE);
   UserToPMABufferCopy((uint8_t*)empty, ENDP1_BUF1Addr, PACKET_SIZE);
+  
+  /* send  packet to PMA*/
+//  UserToPMABufferCopy((unsigned char*)ptrBuffer, ENDP1_TXADDR, Send_length);
+  SetEPTxCount(ENDP1, PACKET_SIZE);
+  SetEPTxValid(ENDP1);
+
+  return 1;
+}
+
+// -----send_empty_packet----
+uint32_t send_empty_packet ()
+{
+  /*Sent flag*/
+  packet_sending = 1;
+  
+//  if (GetENDPOINT(ENDP1) & EP_DTOG_RX) // NEWFIX
+  if (GetENDPOINT(ENDP1) & EP_DTOG_TX)
+  {
+    UserToPMABufferCopy((uint8_t*)empty, ENDP1_BUF0Addr, PACKET_SIZE);
+  }
+  else
+  {
+    UserToPMABufferCopy((uint8_t*)empty, ENDP1_BUF1Addr, PACKET_SIZE);
+  }
   
   /* send  packet to PMA*/
 //  UserToPMABufferCopy((unsigned char*)ptrBuffer, ENDP1_TXADDR, Send_length);
