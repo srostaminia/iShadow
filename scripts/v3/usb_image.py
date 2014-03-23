@@ -14,7 +14,7 @@ import Tkinter
 import shutil
 import utils
 
-DEBUG = 0
+DEBUG = 1
 TX_BITS = 8
 
 plt.ion()
@@ -147,8 +147,8 @@ def main():
         # mask = np.right_shift(mask, 2)
         # mask = np.bitwise_and(mask, 0xFF)
 
-        frame2 -= mask
-        frame2 = np.fliplr(frame2)
+        # frame2 -= mask
+        # frame2 = np.fliplr(frame2)
         #plt.imshow(frame2, cmap = pylab.cm.Greys_r)
         image.set_data(frame2)
         image.autoscale() 

@@ -14,11 +14,12 @@ def main():
 
     args = parser.parse_args()
 
-    input_filename = "/dev/disk1"
+    input_filename = "usb_frame.txt"
     mask_filename = args.filename
 
     try:
-        input_file = open(input_filename, "rb")
+        # input_file = open(input_filename, "rb")
+        input_file = open(input_filename, 'r')
     except IOError:
         print "Input file", input_filename, "could not be opened."
         sys.exit()
@@ -66,7 +67,19 @@ def read_packed_image(image_file):
     return np.array(image)
 
 def generate_mask(data_file, mask_output):
-    pixels = read_packed_image(data_file)
+    # pixels = read_packed_image(data_file)
+
+    image = []
+    i=0
+    for line in data_file:
+        image.append([])
+        for item in line.split():
+            image[i].append(float(item))
+        i+=1
+
+    print image
+
+    pixels=np.array(image)
 
     pixels = np.array(pixels,dtype='uint8')
     

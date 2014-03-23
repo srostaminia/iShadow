@@ -34,6 +34,10 @@ def main():
     fpn_data = pickle.load(fpn_file)
     print len(fpn_data)
 
+    # sample_file = open("eye_test.pi")
+    # sample_data = pickle.load(sample_file)
+    # sample_file.close()
+
     for i in range(len(mask)):
         mask[i][1] -= 1
 
@@ -65,8 +69,16 @@ def main():
     # print fpn_data[mask[1][0]][mask[1][1]]
     # print fpn_data[mask[2][0]][mask[2][1]]
 
-    for i in range(len(mask)):
-        out_file.write(struct.pack('H', fpn_data[mask[i][0]][mask[i][1]]))
+    # for i in range(len(mask)):
+        # out_file.write(struct.pack('H', fpn_data[mask[i][0]][mask[i][1]]))
+
+    for i in range(112):
+        for j in range(112):
+            out_file.write(struct.pack('H', fpn_data[i][j]))
+
+    # for i in range(112):
+    #     for j in range(112):
+    #         out_file.write(struct.pack('H', sample_data[i][j]))
 
     out_file.close()
 

@@ -15,7 +15,7 @@ def main():
 
     args = parser.parse_args()
 
-    input_filename = "/dev/disk1"
+    input_filename = "eye_img.raw"
     file_prefix = args.file_prefix
     mask_filename = args.mask
 
@@ -85,12 +85,20 @@ def disp_save_images(image_file, mask_data, out_filename):
         else:
             pylab.savefig(out_filename + str(i) + ".png", dpi=112)
 
+        # image -= mask_data # REMOVE ME
         out_text = open(out_filename + ".txt",'w')
         for line in image:
             for item in line:
                 out_text.write(str(item) + " ")
             out_text.write('\n')
         out_text.close()
+
+        out_packed = open(out_filename + ".pi", 'w')
+        # for line in image:
+        #     for item in line:
+        #         out_packed.write(struct.pack('H', item))
+        pickle.dump(image, out_packed)
+        out_packed.close()
 
 def read_packed_image(image_file):
     image = []
