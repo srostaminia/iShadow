@@ -14,6 +14,9 @@ import Tkinter
 import shutil
 import utils
 
+DEBUG = 1
+TX_BITS = 16
+
 plt.ion()
 
 def main():
@@ -26,16 +29,16 @@ def main():
     file_prefix = args.file_prefix
     mask_filename = args.mask
 
-    # if os.path.isdir(file_prefix):
-    #     erase = 'x'
-    #     while (erase.lower() != 'y' and erase.lower() != 'n'):
-    #         erase = raw_input("Data folder " + file_prefix + " already exists. Erase old data and proceed (y/n)?")
+    if os.path.isdir(file_prefix):
+        # erase = 'x'
+        # while (erase.lower() != 'y' and erase.lower() != 'n'):
+        #     erase = raw_input("Data folder " + file_prefix + " already exists. Erase old data and proceed (y/n)?")
 
-    #     if erase == 'n':
-    #         print "\nHalting execution."
-    #         sys.exit()
+        # if erase == 'n':
+        #     print "\nHalting execution."
+        #     sys.exit()
 
-    shutil.rmtree(file_prefix)
+        shutil.rmtree(file_prefix)
 
     os.mkdir(file_prefix)
 
@@ -71,7 +74,8 @@ def main():
         pixels = 0
         data_started = 0
         packets = 0
-        while packets < 14 or pixels < (112 * 112):
+        # while packets < 14 or pixels < (112 * 112):
+        while pixels < (112 * 112):
             data = endp.read(1840)
             # print data
 
@@ -85,15 +89,28 @@ def main():
             else:
                 continue
 
-            unpacked = struct.unpack('H' * 920, data)
+            if TX_BITS == 16:
+                # For 16-bit transmission
+                unpacked = struct.unpack('H' * 920, data)
+            elif TX_BITS == 8:
+                # For 8-bit transmission
+                unpacked = struct.unpack('B' * 1840, data)
 
-            # print unpacked, "\n"
+            if (DEBUG):
+                if TX_BITS == 8:
+                    print_packets(unpacked, 184)
+                elif TX_BITS == 16:
+                    print_packets(unpacked, 92)
 
             valid_bytes = get_valid_bytes(unpacked)
 
             if (packets == 1):
                 pred[0] = 112 - valid_bytes.pop(0)
                 pred[1] = valid_bytes.pop(0)
+
+                if (DEBUG and iters == 1):
+                    print "Prediction (X, Y):", pred[0], pred[1], "\n"
+                    sys.exit()
 
             if (iters != 0):
                 vline.set_data([pred[0], pred[0]], [max(0, pred[1] - 10), min(111, pred[1] + 10)])
@@ -112,7 +129,8 @@ def main():
             pixels += new_pixels
 
             # print unpacked, "\n"
-            # print "Pixels in packet:", new_pixels, "\n\n"
+            if (DEBUG):
+                print "Pixels in packet:", new_pixels, "\n\n"
 
             # print len(valid_bytes), "\n", valid_bytes, "\n"
             #valid_packed = struct.pack('H' * len(valid_bytes), *valid_bytes)
@@ -125,7 +143,11 @@ def main():
 
         # TODO: Fix this so we're not copying the entire image every time...
         frame2=np.reshape(frame,(112,112))   
-        frame2 -= mask
+        
+        # mask = np.right_shift(mask, 2)
+        # mask = np.bitwise_and(mask, 0xFF)
+
+        # frame2 -= mask
         frame2 = np.fliplr(frame2)
         #plt.imshow(frame2, cmap = pylab.cm.Greys_r)
         image.set_data(frame2)
@@ -135,9 +157,33 @@ def main():
 
         iters += 1
 
-        # if (iters == 1):
-        #     sys.exit()
+        # outfile = open("usb_frame.pi",'w')
+        # pickle.dump(frame, outfile)
+        # outfile.close()
 
+        # endp.read(1840)
+
+        if (DEBUG):        
+            out_text = open("usb_frame.txt",'w')
+            for line in frame2:
+                for item in line:
+                    out_text.write(str(item) + " ")
+                out_text.write('\n')
+            out_text.close()
+            
+            plt.savefig(file_prefix + "/" + file_prefix + ("_%06d" % (iters)) + ".png")
+            # sys.exit()
+
+
+def print_packets(unpacked, packet_size):
+    if (len(unpacked) % packet_size != 0):
+        print "ERROR: Received length is not a multiple of specified packet size"
+        sys.exit()
+
+    for i in range(len(unpacked) / packet_size):
+        print unpacked[(i * packet_size):((i + 1) * packet_size)]
+
+    print "\n"
 
 def load_mask(mask_filename):
     try:
