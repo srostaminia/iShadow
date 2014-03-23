@@ -847,12 +847,14 @@ int stony_image_dual_subsample()
   // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, 2 cameras
   // Double-buffered (2-dim array)
   uint8_t buf8[2][USB_PIXELS * 2];
-  
+
+#ifdef SEND_8BIT
   for (int i = 0; i < 2; i++) {
     for (int j = 0; j < USB_PIXELS * 2; j++) {
       buf8[i][j] = 0;
     }
   }
+#endif
 
 #ifdef SEND_16BIT
   uint16_t *buf16 = (uint16_t *)buf8[0];
