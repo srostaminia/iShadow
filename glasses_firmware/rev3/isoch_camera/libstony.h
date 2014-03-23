@@ -56,11 +56,11 @@
 #define DMA_DIR_PeripheralToMemory      ((uint32_t)0x00000000)
 
 // Uncomment to transmit eye-facing camera instead of out-facing
-#define SEND_EYE
+//#define SEND_EYE
 
 // Uncomment one or the other for pixel transmission rate
-#define SEND_16BIT
-//#define SEND_8BIT
+//#define SEND_16BIT
+#define SEND_8BIT
 
 #if defined(SEND_16BIT) && defined(SEND_8BIT)
 #error CANNOT DEFINE BOTH SEND_16BIT AND SEND_8BIT (LIBSTONY.H)
