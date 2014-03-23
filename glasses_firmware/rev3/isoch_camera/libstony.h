@@ -56,7 +56,7 @@
 #define DMA_DIR_PeripheralToMemory      ((uint32_t)0x00000000)
 
 // Uncomment to transmit eye-facing camera instead of out-facing
-//#define SEND_EYE
+#define SEND_EYE
 
 // Uncomment one or the other for pixel transmission rate
 #define SEND_16BIT

@@ -883,6 +883,8 @@ int stony_image_dual_subsample()
   buf8_active[1] = pred[1];
 #endif  
   
+  uint16_t this_pixel = 0;
+  
   uint16_t packets_sent = 0;  // For debug purposes only
   int pixels_collected = 0;
   uint16_t start = 0, total = 0;
@@ -904,18 +906,19 @@ int stony_image_dual_subsample()
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
       if (col != 0) {
-        pred_img[row][col] = adc_values[1] - FPN((row * 112) + (col - 1));
+        this_pixel = adc_values[1] - FPN((row * 112) + (col - 1));
+        pred_img[row][col - 1] = this_pixel;
         pixels_collected++;
-        min = (pred_img[row][col] < min) ? (pred_img[row][col]) : (min);
-        max = (pred_img[row][col] > max) ? (pred_img[row][col]) : (max);
+        min = (this_pixel < min) ? (this_pixel) : (min);
+        max = (this_pixel > max) ? (this_pixel) : (max);
 
 #ifdef SEND_EYE
 
 #ifdef SEND_16BIT
 //        buf16[data_cycle] = adc_values[1];
-        buf16[data_cycle] = pred_img[row][col];
+        buf16[data_cycle] = this_pixel;
 #else
-        buf8_active[data_cycle] = CONV_8BIT(pred_img[row][col]);
+        buf8_active[data_cycle] = CONV_8BIT(this_pixel);
 #endif
         
         if (data_cycle == (USB_PIXELS - 1)) {
@@ -965,13 +968,6 @@ int stony_image_dual_subsample()
       
       if (data_cycle == (USB_PIXELS - 1)) {
         while (packet_sending == 1);
-        
-        if (packets_sent == 1) {
-          total = TIM5->CNT - start;
-          packets_sent = 1;
-        }
-        
-        start = TIM5->CNT;
         
         data_cycle = -1;
         send_packet(buf8[buf_idx], PACKET_SIZE);
