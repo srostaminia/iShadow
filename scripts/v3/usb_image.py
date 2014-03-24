@@ -71,6 +71,8 @@ def main():
         #     print "Output file", file_prefix + ".raw", "could not be opened."
         #     sys.exit()
 
+        frame = np.reshape(frame, (112*112))
+
         pixels = 0
         data_started = 0
         packets = 0
@@ -142,15 +144,15 @@ def main():
         print "Prediction (X, Y):", pred[0], pred[1], "\n"
 
         # TODO: Fix this so we're not copying the entire image every time...
-        frame2=np.reshape(frame,(112,112))   
+        frame=np.reshape(frame,(112,112))   
         
         # mask = np.right_shift(mask, 2)
         # mask = np.bitwise_and(mask, 0xFF)
 
-        # frame2 -= mask
-        # frame2 = np.fliplr(frame2)
+        frame -= mask
+        frame = np.fliplr(frame)
         #plt.imshow(frame2, cmap = pylab.cm.Greys_r)
-        image.set_data(frame2)
+        image.set_data(frame)
         image.autoscale() 
 
         plt.draw()
