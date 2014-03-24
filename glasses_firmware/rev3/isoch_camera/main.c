@@ -15,7 +15,7 @@ extern uint16_t Out_Data_Offset;
 extern uint8_t Stream_Buff[24];
 extern uint8_t IT_Clock_Sent;
 
-uint8_t packet_sending = 0;
+volatile uint8_t packet_sending = 0;
 
 extern int fpn_offset;
 

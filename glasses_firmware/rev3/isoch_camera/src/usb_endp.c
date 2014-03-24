@@ -38,7 +38,7 @@ uint8_t Stream_Buff[24];
 uint16_t In_Data_Offset;
 
 /* Extern variables ----------------------------------------------------------*/
-extern uint8_t packet_sending;
+extern volatile uint8_t packet_sending;
 
 /* Private function prototypes -----------------------------------------------*/
 /* Extern function prototypes ------------------------------------------------*/

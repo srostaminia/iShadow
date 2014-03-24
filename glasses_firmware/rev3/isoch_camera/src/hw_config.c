@@ -45,7 +45,7 @@ EXTI_InitTypeDef EXTI_InitStructure;
 uint8_t empty[PACKET_SIZE];
 
 /* Extern variables ----------------------------------------------------------*/
-extern uint8_t packet_sending;
+extern volatile uint8_t packet_sending;
 
 /* Private function prototypes -----------------------------------------------*/
 static void IntToUnicode (uint32_t value , uint8_t *pbuf , uint8_t len);

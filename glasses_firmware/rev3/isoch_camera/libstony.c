@@ -29,7 +29,7 @@ extern uint8_t pred[2];
 
 extern __IO  uint32_t Receive_length ;
 extern uint32_t sd_ptr;
-extern uint8_t packet_sending;
+extern volatile uint8_t packet_sending;
 
 extern unsigned short num_subsample;
 extern unsigned short num_hidden;
