@@ -14,7 +14,7 @@ extern "C" {
 
 #include "stm32l1xx.h"
   
-#define NUM_SUBSAMPLE 2130
+#define NUM_SUBSAMPLE 1261
 #define NUM_HIDDEN 6
 
 #define BH(X)           *((float*)(model_data + bh_offset + ((X) * 2)))  
@@ -26,9 +26,11 @@ extern "C" {
   
 void predict_gaze(unsigned short subsamples[], uint16_t min, uint16_t max);
 void predict_gaze_fullimg(unsigned short img[], uint16_t min, uint16_t max);
+void predict_gaze_fullmean(uint16_t img[], float mean, float std);
 int finish_predict(float ah[6]);
 
 float tanh_approx(float input);
+float calc_std(uint16_t img[]);
 
 #ifdef	__cplusplus
 }

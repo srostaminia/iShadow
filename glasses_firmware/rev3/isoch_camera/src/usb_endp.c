@@ -88,9 +88,9 @@ void EP1_IN_Callback(void)
 //  }
 //  FreeUserBuffer(ENDP1, EP_DBUF_IN); // NEWFIX
 //  FreeUserBuffer(ENDP1, EP_DBUF_OUT);
-#ifdef SEND_8BIT
+//#ifdef SEND_8BIT
   send_empty_packet();
-#endif
+//#endif
   
   packet_sending = 0;
 

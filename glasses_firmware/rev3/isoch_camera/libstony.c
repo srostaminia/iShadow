@@ -5,6 +5,7 @@
 #include "stm32l152d_eval_sdio_sd.h"
 #include "hw_config.h"
 #include "predict_gaze.h"
+#include "math.h"
 
 //#define TX_ROWS         48
 //
@@ -24,7 +25,7 @@
 
 //#define USB_PIXELS      92
 
-extern uint8_t pred[2];
+extern int8_t pred[2];
 //uint16_t pred_img[112][112];
 
 extern __IO  uint32_t Receive_length ;
@@ -847,6 +848,11 @@ int stony_image_dual_subsample()
   // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, 2 cameras
   // Double-buffered (2-dim array)
   uint8_t buf8[2][USB_PIXELS * 2];
+  
+  uint32_t pixel_sum = 0;
+  float M = 0.0, S = 0.0;
+  float value, tmpM;
+  int k = 1;
 
 #ifdef SEND_8BIT
   for (int i = 0; i < 2; i++) {
@@ -909,8 +915,16 @@ int stony_image_dual_subsample()
         this_pixel = adc_values[1] - FPN((row * 112) + (col - 1));
         pred_img[row][col - 1] = this_pixel;
         pixels_collected++;
-        min = (this_pixel < min) ? (this_pixel) : (min);
-        max = (this_pixel > max) ? (this_pixel) : (max);
+//        min = (this_pixel < min) ? (this_pixel) : (min);
+//        max = (this_pixel > max) ? (this_pixel) : (max);
+        pixel_sum += this_pixel;
+        
+        // Standard deviation computation
+        value = (float)this_pixel;
+        tmpM = M;
+        M += (value - tmpM) / k;
+        S += (value - tmpM) * (value - M);
+        k++;
 
 #ifdef SEND_EYE
 
@@ -1000,10 +1014,19 @@ int stony_image_dual_subsample()
     asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
     
     // TODO: Get subsampled pixels...
-    pred_img[row][111] = adc_values[1] - FPN((row * 112) + 111);
+    this_pixel = adc_values[1] - FPN((row * 112) + 111);
+    pred_img[row][111] = this_pixel;
     pixels_collected++;
-    min = (pred_img[row][111] < min) ? (pred_img[row][111]) : (min);
-    max = (pred_img[row][111] > max) ? (pred_img[row][111]) : (max);
+//    min = (pred_img[row][111] < min) ? (pred_img[row][111]) : (min);
+//    max = (pred_img[row][111] > max) ? (pred_img[row][111]) : (max);
+    pixel_sum += this_pixel;
+    
+    // Standard deviation computation
+    value = (float)this_pixel;
+    tmpM = M;
+    M += (value - tmpM) / k;
+    S += (value - tmpM) * (value - M);
+    k++;
     
 #ifdef SEND_EYE
     
@@ -1064,8 +1087,12 @@ int stony_image_dual_subsample()
   send_empty_packet();
   while(packet_sending == 1);
   
+  float mean = (float)pixel_sum / (112 * 112);
+  float std = sqrt(S / (k-1));
+  
   // Predict gaze, store results in global variable pred[]
-  predict_gaze_fullimg((uint16_t*)pred_img, min, max);    
+//  predict_gaze_fullimg((uint16_t*)pred_img, min, max);
+  predict_gaze_fullmean((uint16_t*)pred_img, mean, std);
   
   return 0;
 }

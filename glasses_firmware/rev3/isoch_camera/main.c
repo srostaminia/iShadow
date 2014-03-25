@@ -21,7 +21,7 @@ extern int fpn_offset;
 
 static __IO uint32_t TimingDelay;
 //extern uint16_t pred_img[112][112];
-extern uint8_t pred[2];
+extern int8_t pred[2];
 extern uint16_t min, max;
 
 int main()
