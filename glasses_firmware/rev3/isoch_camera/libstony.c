@@ -853,6 +853,13 @@ int stony_image_dual_subsample()
   float M = 0.0, S = 0.0;
   float value, tmpM;
   int k = 1;
+  
+  uint16_t pred_img[112][112];
+  uint8_t buf_idx = 0;
+  
+  uint16_t this_pixel = 0;
+  uint32_t eye_pixels_collected = -1;
+  uint32_t current_subsample = 0;
 
 #ifdef SEND_8BIT
   for (int i = 0; i < 2; i++) {
@@ -868,31 +875,28 @@ int stony_image_dual_subsample()
   uint8_t *buf8_active = (uint8_t *)buf8[0];
 #endif
   
-  uint16_t pred_img[112][112];
-  
-  uint8_t buf_idx = 0;
-  
   set_pointer_value(REG_ROWSEL, 0, CAM1);
   set_pointer_value(REG_ROWSEL, 0, CAM2);
   
-  max = 0;
-  min = 1000;
+//  max = 0;
+//  min = 1000;
 
 //  int data_cycle = 0;
   int data_cycle = 2; // Start at 2 b/c first two "pixels" transmitted are prediction values from previous cycle
 
 #ifdef SEND_16BIT  
-  buf16[0] = pred[0];
-  buf16[1] = pred[1];
+//  buf16[0] = pred[0];
+//  buf16[1] = pred[1];
+  buf8[0][0] = pred[0];
+  buf8[0][1] = 0;
+  buf8[0][2] = pred[1];
+  buf8[0][3] = 0;
 #else
   buf8_active[0] = pred[0];
   buf8_active[1] = pred[1];
 #endif  
   
-  uint16_t this_pixel = 0;
-  
   uint16_t packets_sent = 0;  // For debug purposes only
-  int pixels_collected = 0;
   uint16_t start = 0, total = 0;
   for (int row = 0; row < 112; row++) {
     set_pointer_value(REG_COLSEL, 0, CAM1);
@@ -914,17 +918,24 @@ int stony_image_dual_subsample()
       if (col != 0) {
         this_pixel = adc_values[1] - FPN((row * 112) + (col - 1));
         pred_img[row][col - 1] = this_pixel;
-        pixels_collected++;
+        eye_pixels_collected++;
 //        min = (this_pixel < min) ? (this_pixel) : (min);
 //        max = (this_pixel > max) ? (this_pixel) : (max);
-        pixel_sum += this_pixel;
         
-        // Standard deviation computation
-        value = (float)this_pixel;
-        tmpM = M;
-        M += (value - tmpM) / k;
-        S += (value - tmpM) * (value - M);
-        k++;
+        
+        if (MASK(current_subsample, 0) == row && 
+            MASK(current_subsample, 1) == col - 1)
+        {
+          pixel_sum += this_pixel;
+          
+          // Standard deviation computation
+          value = (float)this_pixel;
+          tmpM = M;
+          M += (value - tmpM) / k;
+          S += (value - tmpM) * (value - M);
+          k++;
+          current_subsample++;
+        }
 
 #ifdef SEND_EYE
 
@@ -1016,17 +1027,23 @@ int stony_image_dual_subsample()
     // TODO: Get subsampled pixels...
     this_pixel = adc_values[1] - FPN((row * 112) + 111);
     pred_img[row][111] = this_pixel;
-    pixels_collected++;
+    eye_pixels_collected++;
 //    min = (pred_img[row][111] < min) ? (pred_img[row][111]) : (min);
 //    max = (pred_img[row][111] > max) ? (pred_img[row][111]) : (max);
-    pixel_sum += this_pixel;
     
-    // Standard deviation computation
-    value = (float)this_pixel;
-    tmpM = M;
-    M += (value - tmpM) / k;
-    S += (value - tmpM) * (value - M);
-    k++;
+        if (MASK(current_subsample, 0) == row && 
+            MASK(current_subsample, 1) == 111)
+        {
+          pixel_sum += this_pixel;
+          
+          // Standard deviation computation
+          value = (float)this_pixel;
+          tmpM = M;
+          M += (value - tmpM) / k;
+          S += (value - tmpM) * (value - M);
+          k++;
+          current_subsample++;
+        }
     
 #ifdef SEND_EYE
     
@@ -1087,7 +1104,8 @@ int stony_image_dual_subsample()
   send_empty_packet();
   while(packet_sending == 1);
   
-  float mean = (float)pixel_sum / (112 * 112);
+//  float mean = (float)pixel_sum / (112 * 112);
+  float mean = (float)pixel_sum / (NUM_SUBSAMPLE);
   float std = sqrt(S / (k-1));
   
   // Predict gaze, store results in global variable pred[]

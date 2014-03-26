@@ -9,7 +9,7 @@ TriggerName=main
 LimitSize=0
 ByteLimit=50
 [DebugChecksum]
-Checksum=-1592212841
+Checksum=-1107938307
 [Exceptions]
 StopOnUncaught=_ 0
 StopOnThrow=_ 0
@@ -35,11 +35,12 @@ ITMportsTermIO=0
 ITMportsLogFile=0
 ITMlogFile=$PROJ_DIR$\ITM.log
 [array_types]
-Fmt0=uint16_t[112]	3	0
-Fmt1=uint32_t[200]	4	0
-Fmt2=uint32_t[2]	4	0
-Fmt3=uint8_t[2]	3	0
-Fmt4=unsigned short[2]	4	0
+Fmt0=int8_t[2]	3	0
+Fmt1=uint16_t[112]	3	0
+Fmt2=uint32_t[200]	4	0
+Fmt3=uint32_t[2]	4	0
+Fmt4=uint8_t[2]	3	0
+Fmt5=unsigned short[2]	4	0
 [watch_formats]
 Fmt0={W}0:eResumeSetVal	3	0
 Fmt1={W}0:model_data	4	0
@@ -57,9 +58,20 @@ GraphEnabled=0
 ShowTimeLog=1
 ShowTimeSum=1
 SumSortOrder=0
+[Disassemble mode]
+mode=0
+[Breakpoints2]
+Count=0
+[Log file]
+LoggingEnabled=_ 0
+LogFile=_ ""
+Category=_ 0
 [TermIOLog]
 LoggingEnabled=_ 0
 LogFile=_ ""
+[Aliases]
+Count=0
+SuppressDialog=0
 [Trace2]
 Enabled=0
 ShowSource=0
@@ -80,14 +92,3 @@ Mode=3
 Graph=0
 Symbiont=0
 Exclusions=
-[Disassemble mode]
-mode=0
-[Breakpoints2]
-Count=0
-[Log file]
-LoggingEnabled=_ 0
-LogFile=_ ""
-Category=_ 0
-[Aliases]
-Count=0
-SuppressDialog=0
