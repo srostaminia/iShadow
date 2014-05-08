@@ -1,1 +1,0 @@
-For software, I like OpenCV fine, and I think it's a very reasonable design choice.  It's a known target, mature, has good documentation (if confusing), and lots of support.  It's written in C, which makes it pretty ultra-portable.  It's also available for iOS and Android.

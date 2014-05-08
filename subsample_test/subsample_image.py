@@ -1,1 +1,0 @@
-../scripts/subsample_image.py
