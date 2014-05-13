@@ -1,0 +1,1 @@
+This folder contains individual projects for driving various functions of the MCU or running discrete tasks. 
