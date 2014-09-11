@@ -53,7 +53,7 @@
 
 #include "utils.h"
 #include "main.h"
-#define delay_ms    Delay
+#define delay_ms    delay_ms
 
 //#elif defined EMPL_TARGET_UC3L0
 /* Instead of using the standard TWI driver from the ASF library, we're using

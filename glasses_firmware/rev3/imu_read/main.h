@@ -68,8 +68,10 @@ struct hal_s {
 void TimingDelay_Decrement(void);
 void Delay(__IO uint32_t nTime);
 void config_us_delay();
+void config_ms_timer();
 void set_mco();
 void delay_us(int delayTime);
+void delay_ms(int delayTime);
 int imu_test();
 void get_quat();
 void accel_cal();

@@ -77,7 +77,7 @@
 #include "main.h"
 #define i2c_write   			stm32_i2c_write
 #define i2c_read    			stm32_i2c_read
-#define delay_ms                        Delay
+#define delay_ms                        delay_ms
 
 static inline int reg_int_cb(struct int_param_s *int_param)
 {

@@ -77,13 +77,16 @@ int main()
   }
   
   config_us_delay();
+  config_ms_timer();
   
   unsigned char *data;
   //stm32_i2c_write(0x0C << 1, 0x0A, 1, data);
   
-  Delay(10);
+  delay_ms(10);
   
-  get_quat();
+  imu_test();
+  
+//  get_quat();
 //  accel_cal();
   
   while(1);
@@ -101,6 +104,29 @@ void Delay(__IO uint32_t nTime)
   TimingDelay = nTime;
 
   while(TimingDelay != 0);
+}
+
+void config_ms_timer()
+{
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, ENABLE);
+  
+  TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
+  
+  TIM_TimeBaseStructInit(&TIM_TimeBaseStructure); 
+  TIM_TimeBaseStructure.TIM_Prescaler = (SystemCoreClock / 1000) - 1;
+  TIM_TimeBaseStructure.TIM_Period = UINT16_MAX; 
+  TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
+  TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+  TIM_TimeBaseInit(TIM4, &TIM_TimeBaseStructure);
+  
+  TIM_Cmd(TIM4, ENABLE);
+}
+
+#pragma inline=never
+void delay_ms(int delayTime)
+{
+  TIM4->CNT = 0;
+  while((uint16_t)(TIM4->CNT) <= delayTime);
 }
 
 /**
