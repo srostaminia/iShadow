@@ -11,12 +11,12 @@ function results = test_model(W_groupSparse,Xtrain,ytrain,Xtest,ytest,params)
       Who = reshape(W_groupSparse((count+1):end),[nHidden,nTargets]);
 
       %Display Parameters
-      figure(1000);clf;
-      cm = max(max(abs(Wih(1:end-1,:))));
-      for i=1:nHidden-1
-        subplot(HiddenShape(1),HiddenShape(2), i); 
-        imagesc(reshape(Wih(1:end-1,i+1),[111,112]));colormap(covcolor); caxis([-cm,cm]);colorbar;
-      end
+      % figure(1000);clf;
+      % cm = max(max(abs(Wih(1:end-1,:))));
+      % for i=1:nHidden-1
+      %   subplot(HiddenShape(1),HiddenShape(2), i); 
+      %   imagesc(reshape(Wih(1:end-1,i+1),[111,112]));colormap(covcolor); caxis([-cm,cm]);colorbar;
+      % end
 
       %Compute error
       nTargets = size(ytrain,2);

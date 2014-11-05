@@ -14,4 +14,4 @@ function y = define_target(g,spec,type)
       ind   = D<=0;
    end
    y   = 2*ind -1;
-        
+   keyboard;

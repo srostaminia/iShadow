@@ -2,21 +2,23 @@ import os, shutil
 
 from subprocess import call
 
-names = ['seth']
+names = ['addison2', 'dan', 'james', 'john', 'keith', 'luis', 'niri', 'michelle', 'steve', 'seth']
 
-types = ['full', '5m_exfold', '3m_exfold', '2m_exfold', '1m_exfold', '30s_exfold']
+# types = ['full', '5m_exfold', '3m_exfold', '2m_exfold', '1m_exfold', '30s_exfold']
+
+types = ['full']
 
 data = ['results', 'model']
 
 for name in names:
 	for ftype in types:
 		for datum in data:
-			datum_pathname = 'awesomeness/' + name + '/' + ftype + '/' + datum + '/'
+			datum_pathname = 'awesomeness_mean/' + name + '/' + ftype + '/' + datum + '/'
 
 			if not os.path.exists(datum_pathname):
 				os.makedirs(datum_pathname)
 
-		ftype_pathname = 'awesomeness/' + name + '/' + ftype + '/'
+		ftype_pathname = 'awesomeness_mean/' + name + '/' + ftype + '/'
 
 		dataf = open(ftype_pathname + 'init.txt','w')
 
@@ -31,22 +33,22 @@ for name in names:
 
 		dataf = open(ftype_pathname + 'data_limit.txt','w')
 
-		if ftype == '5m':
+		if ftype[0:2] == '5m':
 			dataf.write(str(3000) + '\n')
-		elif ftype == '3m':
+		elif ftype[0:2] == '3m':
 			dataf.write(str(1800) + '\n')
-		elif ftype == '2m':
+		elif ftype[0:2] == '2m':
 			dataf.write(str(1200) + '\n')
-		elif ftype == '1m':
+		elif ftype[0:2] == '1m':
 			dataf.write(str(600) + '\n')
-		elif ftype == '30s':
+		elif ftype[0:3] == '30s':
 			dataf.write(str(300) + '\n')
 		else:
 			dataf.write(str(0) + '\n')
 
 		dataf.close()
 
-		shutil.copy('run_template.sh', ftype_pathname + name + '_' + ftype + '.sh')
+		shutil.copy('run_template_subcontrast.sh', ftype_pathname + name + '_' + ftype + '.sh')
 
 		os.link('training_sets/' + 'eye_data_' + name + '_auto.mat', ftype_pathname + 'eye_data.mat')
 

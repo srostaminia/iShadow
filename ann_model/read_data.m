@@ -1,10 +1,10 @@
 clear all; close all;
 graphics_toolkit('fltk')
 
-%data_path = '../data/addison1_adjusted'
-%X=load([data_path, '/addison1.csv'])
+%data_path = '../data/addison2_adjusted'
+%X=load([data_path, '/addison2.csv'])
 
-data_path = '/Users/ammayber/Desktop/eye_exper/addison1_unadjusted'
+data_path = '/Users/ammayber/Desktop/eye_exper/addison2_unadjusted'
 
 % Number of random samples to choose
 N=100;
@@ -22,15 +22,15 @@ res = [111,112];
 X=ones(N,prod(res)+1);
 j=1;
 for i=Instances
-  %img = imread(sprintf('%s/addison1_%06d_eye.png',data_path,i)) ;
-  if(exist(sprintf('%s/addison1_eye_%06d.png',data_path,i)))
-    img_txt = double(load(sprintf('%s/addison1_eye_%06d.txt',data_path,i))) ;
+  %img = imread(sprintf('%s/addison2_%06d_eye.png',data_path,i)) ;
+  if(exist(sprintf('%s/addison2_eye_%06d.png',data_path,i)))
+    img_txt = double(load(sprintf('%s/addison2_eye_%06d.txt',data_path,i))) ;
     X(j,1:prod(res)) = img_txt(:)';
 
-    img_txt = double(load(sprintf('%s/addison1_out_%06d.txt',data_path,i))) ;
+    img_txt = double(load(sprintf('%s/addison2_out_%06d.txt',data_path,i))) ;
     Out(j,1:prod(res)) = img_txt(:)';
 
-    disp_img = double(imread(sprintf('%s/addison1_out_%06d.png',data_path,i)));
+    disp_img = double(imread(sprintf('%s/addison2_out_%06d.png',data_path,i)));
     disp_img = [disp_img; (zeros(50, 112) + 255)];
     figure(1);hold off;
     imagesc(disp_img);colormap gray;hold on;
@@ -62,7 +62,7 @@ end
 
 %save('eye_data.mat','g','X');
 
-save('addison1_data.mat','gout','X','Out');
+save('addison2_data.mat','gout','X','Out');
 
 
 for i=1:size(X,1)

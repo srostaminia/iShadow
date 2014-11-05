@@ -11,7 +11,7 @@ pkg load statistics;
 %   last column needs to be appended column of 1's. 
 % * Out: scene image data in (n x 12544) matrix with one row per image
 % * gout: gaze coordinates in (n x 2) matrix
-gaze_data_file = 'eye_data_james_auto';
+gaze_data_file = 'eye_data_addison_v3';
 
 %Regularization parameter range.  
 %Must go from low to high values
@@ -34,7 +34,7 @@ params(1).init   = 'strips';
 params(1).subset = 'l1';
 
 %Max number of neural network training epochs/function evals
-params(1).maxiter = 500;
+params(1).maxiter = 250;
 
 %Run all results from scratch
 %Set to 0 to continue a partial run
@@ -53,8 +53,11 @@ fprintf('Done.\n');
 rand('seed',seed); %set rand seed
 randn('seed',seed); %set randn seed
 
+X2=X; %Non-scaled data
+
 g          = bsxfun(@times,gout,1./[111,112]); %Normalize gaze matrix
-X          = [minmax_contrast_adjust_nosave(X), ones(size(X,1),1)];
+% X          = [minmax_contrast_adjust_nosave(X), ones(size(X,1),1)];
+X          = [mean_contrast_adjust_nosave(X), ones(size(X,1),1)];
 [N,nVars]  = size(X); %get data matrix size
 num_reps   = 1;
 
@@ -67,8 +70,12 @@ for c=[1]
   N = size(X,1);
   Ntest = floor(N*0.2);
   ind = randperm(N);
+
   Xtest = X(ind(1:Ntest),:);
+  Xtest2 = X2(ind(1:Ntest),:);
+
   Xtrain= X(ind(Ntest+1:end),:);
+  Xtrain2= X2(ind(Ntest+1:end),:);
 
   ytest = g(ind(1:Ntest),:);
   ytrain = g(ind(Ntest+1:end),:);
@@ -129,12 +136,21 @@ for c=[1]
           end
       end   
 
-      Xtrain_sub    = Xtrain(:,ind);
+      if (ind(end) ~= 12433)
+        error('Bias not included in subsampled model!!')
+        exit
+      end
+      
+      Xtrain_sub  = [mean_contrast_adjust_nosave(Xtrain2(:,ind(1:end-1) )),ones(size(Xtrain2,1),1)];
+
       W_groupSparse = train_mlp(Xtrain_sub,ytrain,params(c).nHidden,0,Winitsub,[],params(c).maxiter);
       W_groupSparse = params_expand(W_groupSparse,ind,nVars,params(c).nHidden);
       Winitsub      = W_groupSparse;
 
-      these_results= test_model(W_groupSparse,Xtrain,ytrain,Xtest,ytest,params(c));
+      Xtrain_rescale  = [mean_contrast_adjust_nosave(Xtrain2),ones(size(Xtrain2,1),1)];
+      Xtest_rescale  = [mean_contrast_adjust_nosave(Xtest2),ones(size(Xtest2,1),1)];
+
+      these_results= test_model(W_groupSparse,Xtrain_rescale,ytrain,Xtest_rescale,ytest,params(c));
       these_results.alpha0 = alpha0;
 
       these_params = params(c);
@@ -214,7 +230,7 @@ for c=[1]
     print(fname,'-dpdf'); %,'-S1200,900');
     
     %Plot Results
-    for n=1:4
+    for n=100:10:201
       figure()
       pred =  logisticmlp_prediction(W_groupSparse,X(n,:),params.nHidden,2);
       hold off;

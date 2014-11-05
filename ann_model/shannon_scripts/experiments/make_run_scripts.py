@@ -1,22 +1,51 @@
 import os, shutil
+import itertools
 
 from subprocess import call
 
-names = ['addison2', 'dan', 'james', 'john', 'keith', 'luis', 'niri', 'michelle']
+# Configure these two values for the experiment
+experiment_descriptor = "sub_resize"
+mat_file = "run_me_cluster_sub_resize.m"
 
-types = ['full', '5m', '3m', '2m', '1m', '30s', 'full_kmed', 'full_rand']
+# Leave the list alone, just modify the mask
+name_list = ['addison2', 'dan', 'james', 'john', 'keith', 'luis', 'niri', 'michelle', 'seth', 'steve']
+name_mask = [    1,		   1,	   1,		1,		1,		 1,		 1,		   1,		 1,		  1  ]
+
+# Leave the list alone, just modify the mask
+type_list = ['full', '5m', '3m', '2m', '1m', '30s', 'full_kmed', 'full_rand']
+type_mask = [  1,	   0,	0,	   0,	 0,	   0,		 0,		      0		]
 
 data = ['results', 'models']
+
+work_dir = '/mnt/nfs/work1/marlin/amayberr'
+
+if len(experiment_descriptor) != 0:
+	experiment_descriptor = '_' + experiment_descriptor
+
+experiment_title = 'awesomeness' + experiment_descriptor
+template_title = 'run_template' + experiment_descriptor + '.sh'
+
+template_f = open(work_dir + '/' + template_title, 'w')
+
+template_f.write('#!/bin/bash\n')
+template_f.write('octave ' + work_dir + '/' + mat_file + '\n')
+
+template_f.close()
+
+names = [ item for item, flag in zip(name_list, name_mask) if flag == 1 ]
+types = [ item for item, flag in zip(type_list, type_mask) if flag == 1 ]
+
+print names
 
 for name in names:
 	for ftype in types:
 		for datum in data:
-			datum_pathname = 'awesomeness/' + name + '/' + ftype + '/' + datum + '/'
+			datum_pathname = work_dir + '/' + experiment_title + '/' + name + '/' + ftype + '/' + datum + '/'
 
 			if not os.path.exists(datum_pathname):
 				os.makedirs(datum_pathname)
 
-		ftype_pathname = 'awesomeness/' + name + '/' + ftype + '/'
+		ftype_pathname = work_dir + '/' + experiment_title + '/' + name + '/' + ftype + '/'
 
 		dataf = open(ftype_pathname + 'init.txt','w')
 
@@ -46,10 +75,12 @@ for name in names:
 
 		dataf.close()
 
-		shutil.copy('run_template.sh', ftype_pathname + name + '_' + ftype + '.sh')
+		shutil.copy(work_dir + '/' + template_title, ftype_pathname + name + '_' + ftype + experiment_descriptor + '.sh')
 
-		os.link('training_sets/' + 'eye_data_' + name + '_auto.mat', ftype_pathname + 'eye_data.mat')
+		os.link(work_dir + '/training_sets/eye_data_' + name + '_auto.mat', ftype_pathname + 'eye_data.mat')
+
+		pwd = os.getcwd()
 
 		os.chdir(ftype_pathname)
-		call(['qsub', '-cwd', '-o', 'stdout.txt', '-e', 'stderr.txt', name + '_' + ftype + '.sh'])
-		os.chdir('/home/amayberr')
+		call(['qsub', '-cwd', '-o', 'stdout.txt', '-e', 'stderr.txt', name + '_' + ftype + experiment_descriptor + '.sh'])
+		os.chdir(pwd)

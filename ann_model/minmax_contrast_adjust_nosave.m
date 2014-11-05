@@ -5,5 +5,5 @@ function [X] = minmax_contrast_adjust_nosave(X)
 	% 	X(i,:) /= max(X(i,:));
 	% end
 
-	X=bsxfun(@Minus,X,min(X,[],2));
-	X ./= max(X,[],2);
+	X=bsxfun(@minus,X,min(X,[],2));
+	X=bsxfun(@rdivide,X,max(X,[],2));

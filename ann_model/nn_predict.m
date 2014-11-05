@@ -13,7 +13,6 @@ for i=1:D
   end
 end
 
-
 %Compute Hidden layer values and output
 x=Bo(1); %Horizontal position
 y=Bo(2); %Vertical position
