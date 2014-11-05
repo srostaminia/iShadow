@@ -6,8 +6,8 @@ import os
 from random import shuffle
 
 # Window dimensions
-X_DIM=1750
-Y_DIM=1000
+X_DIM=1280
+Y_DIM=980
 
 X_ADDITIONAL=0
 
@@ -43,9 +43,9 @@ def main():
 
     # Setup graphics window
     win = graphics.GraphWin("Eye Experiment", X_DIM + X_ADDITIONAL, Y_DIM)
-    win.setBackground('black')
+    win.setBackground('white')
     circle = graphics.Circle(graphics.Point(X_ADDITIONAL / 2, 0), GRAN)
-    circle.setFill('white')
+    circle.setFill('black')
     circle.draw(win)
 
     print index
@@ -54,13 +54,13 @@ def main():
 
     for point in points:
     	moveCircle(circle, point, win, index)
-    	circle.setFill('white')
+    	circle.setFill('black')
 
     	time.sleep(0.5)
     	writer.writerow([index, point[0], point[1], X_DIM, Y_DIM])
     	
     	index += 1
-    	circle.setFill('white')
+    	circle.setFill('black')
 
 def readExisting(logfile, points):
     lines = 0

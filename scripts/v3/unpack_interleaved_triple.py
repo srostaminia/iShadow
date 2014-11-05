@@ -30,12 +30,6 @@ def main():
     if args.reuse_raw:
         os.chdir(file_prefix)
     else:
-        if not os.path.exists(file_prefix):
-            os.makedirs(file_prefix)
-        else:
-            print "Error: data folder " + file_prefix + " already exists."
-            sys.exit()
-
         try:
             input_file = open(input_filename, "rb")
         except IOError:
@@ -55,6 +49,14 @@ def main():
         except IOError:
             print "Input file", file_prefix + "\\" + file_prefix + "_b.raw", "could not be opened."
             sys.exit()
+
+        if not os.path.exists(file_prefix):
+            os.makedirs(file_prefix)
+        else:
+            print "Error: data folder " + file_prefix + " already exists."
+            sys.exit()
+
+        print num_pairs
 
         if (num_pairs > 0):
             for i in range(num_pairs):
@@ -183,6 +185,7 @@ def read_packed_image(image_file, mask_data, out_filename, index):
             
             image[i].append(value)
 
+    print image[0]
     image = image[1:]
 
     img = pylab.figure()
