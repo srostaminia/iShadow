@@ -74,6 +74,7 @@ void Get_SerialNum(void);
 
 uint32_t send_packet(uint8_t *ptrBuffer, uint16_t Send_length);
 uint32_t clear_ENDP1_packet_buffers();
+uint32_t send_empty_packet ();
 
 #endif  /*__HW_CONFIG_H*/
 

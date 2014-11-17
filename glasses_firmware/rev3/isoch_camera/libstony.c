@@ -368,8 +368,46 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
   set_pointer_value(REG_CONFIG,config,CAM1);
   set_pointer_value(REG_CONFIG,config,CAM2);
   
+  dac_init();
+  
   // Get initial min / max pixel values from eye-facing camera
 //  stony_image_minmax();
+}
+
+void dac_init() {
+  GPIO_InitTypeDef GPIO_InitStructure;
+  DAC_InitTypeDef DAC_InitStructure;
+
+  /* DAC Periph clock enable */
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_DAC, ENABLE);
+
+  /* GPIOA clock enable */
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
+  /* Configure PA.04 (DAC_OUT1), PA.05 (DAC_OUT2) as analog */
+  GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_5;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+  
+  GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_4;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+  
+  DAC_DeInit();
+  
+  DAC_InitStructure.DAC_Trigger = DAC_Trigger_None;
+  DAC_InitStructure.DAC_WaveGeneration = DAC_WaveGeneration_None;
+  DAC_InitStructure.DAC_OutputBuffer = DAC_OutputBuffer_Enable;
+  
+  /* DAC Channel2 Init */
+  DAC_Init(DAC_Channel_2, &DAC_InitStructure);
+  DAC_Init(DAC_Channel_1, &DAC_InitStructure);
+
+  /* Enable DAC Channel2 */
+  DAC_Cmd(DAC_Channel_2, ENABLE);
+  DAC_Cmd(DAC_Channel_1, ENABLE);
+  
+  DAC_SetChannel2Data(DAC_Align_12b_R, LED_HIGH);
+  DAC_SetChannel1Data(DAC_Align_12b_R, LED_HIGH);
 }
 
 int stony_read_pixel()
@@ -845,6 +883,14 @@ int stony_image_single()
 
 int stony_image_dual_subsample()
 {
+  __IO uint32_t tmp = 0;
+  uint32_t DAC_Align = DAC_Align_12b_R;
+  
+  tmp = (uint32_t)DAC_BASE;
+  tmp += DHR12R2_OFFSET + DAC_Align;
+  
+  *(__IO uint32_t *) tmp = LED_HIGH;
+  
   // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, 2 cameras
   // Double-buffered (2-dim array)
   uint8_t buf8[2][USB_PIXELS * 2];
@@ -897,14 +943,14 @@ int stony_image_dual_subsample()
 #endif  
   
   uint16_t packets_sent = 0;  // For debug purposes only
-  uint16_t start = 0, total = 0;
+//  uint16_t start = 0, total = 0;
   for (int row = 0; row < 112; row++) {
     set_pointer_value(REG_COLSEL, 0, CAM1);
     set_pointer_value(REG_COLSEL, 0, CAM2);
     
     delay_us(1);
     
-    for (int col = 0; col < 112; col++) {      
+    for (int col = 0; col < 112; col++) {        
       CAM1_INPH_BANK->ODR |= CAM1_INPH_PIN;
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
@@ -917,11 +963,14 @@ int stony_image_dual_subsample()
       
       if (col != 0) {
         this_pixel = adc_values[1] - FPN((row * 112) + (col - 1));
+        
+        //      DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);      
+//        *(__IO uint32_t *) tmp = LED_LOW;
+        
         pred_img[row][col - 1] = this_pixel;
         eye_pixels_collected++;
 //        min = (this_pixel < min) ? (this_pixel) : (min);
 //        max = (this_pixel > max) ? (this_pixel) : (max);
-        
         
         if (MASK(current_subsample, 0) == row && 
             MASK(current_subsample, 1) == col - 1)
@@ -976,6 +1025,9 @@ int stony_image_dual_subsample()
         CAM2_INCV_BANK->ODR &= ~CAM2_INCV_PIN;
       }
       
+      //      DAC_SetChannel1Data(DAC_Align_12b_R, LED_HIGH);
+//      *(__IO uint32_t *) tmp = LED_HIGH;
+      
       CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
@@ -1026,6 +1078,10 @@ int stony_image_dual_subsample()
     
     // TODO: Get subsampled pixels...
     this_pixel = adc_values[1] - FPN((row * 112) + 111);
+    
+    //      DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);      
+//    *(__IO uint32_t *) tmp = LED_LOW;
+    
     pred_img[row][111] = this_pixel;
     eye_pixels_collected++;
 //    min = (pred_img[row][111] < min) ? (pred_img[row][111]) : (min);

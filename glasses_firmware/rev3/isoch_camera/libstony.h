@@ -6,6 +6,9 @@
 #define CAM1                 1
 #define CAM2                 2
 
+#define DHR12R1_OFFSET             ((uint32_t)0x00000008)
+#define DHR12R2_OFFSET             ((uint32_t)0x00000014)
+
 #define CAM_AHB         RCC_AHBPeriph_GPIOA | RCC_AHBPeriph_GPIOB | RCC_AHBPeriph_GPIOC
 
 #define CAM1_RESP_BANK       GPIOB
@@ -52,6 +55,8 @@
 #define SMH_GAIN_3V3    2//3   //amp gain for 3.3 volts 
 #define SMH_SELAMP_3V3  1
 
+#define SMH_VREF_OUT    48
+
 #define ADC1_DR_ADDRESS                 ((uint32_t)0x40012458)
 #define DMA_DIR_PeripheralToMemory      ((uint32_t)0x00000000)
 
@@ -76,8 +81,14 @@
 #define CONV_8BIT(X)    (((X) >> 2) & 0xFF)
 #endif
 
+#define LED_LOW         0
+#define LED_HIGH        0x5D1
+//#define LED_HIGH        0x64D
+//#define LED_HIGH        0x746
+
 void stony_pin_config();
 void stony_init(short vref, short nbias, short aobias, char gain, char selamp);
+void dac_init();
 int stony_read_pixel();
 int stony_image_single();
 int stony_image_subsample();
