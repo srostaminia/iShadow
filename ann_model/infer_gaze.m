@@ -1,15 +1,15 @@
 % graphics_toolkit('fltk')
 pkg load signal
 
-data_path = '~/eye_exper/addison_nir_newframes'; %set path to directory of pngs
-save_name = 'eye_data_addison_nir_newframes_auto.mat';% name of mat file for output
+data_path = '~/eye_exper/addison_nir_newframes4'; %set path to directory of pngs
+save_name = 'eye_data_addison_nir_newframes4_auto.mat';% name of mat file for output
 display_skip = 1; %Set to >0 to display output for display_skip frames
-data_name = 'addison_nir_newframes'
+data_name = 'addison_nir_newframes4'
 
 start_index = 300;
-stop_index = 6300;
+stop_index = 6100;
 
-ask_reposition = false;
+ask_reposition = true;
 reuse_template = true;
 
 res = [111,112];
@@ -211,7 +211,7 @@ for i=instances
       if((xold<2*w || xold>res-2*w || yold<2*w || yold>res-2*w) && c<100)
         %if the frame has changed, update the skip counter
         c=c+1;
-      elseif(xold>w && xold<res-w && yold>w && yold<res-w && c<12)  
+      elseif(xold>w && xold<res-w && yold>w && yold<res-w && c<25)  
         c=c+1;
       else
         %If more than max_skip steps have elapsed, get the gaze point from the user

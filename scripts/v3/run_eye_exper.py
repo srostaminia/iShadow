@@ -7,7 +7,7 @@ from random import shuffle
 
 # Window dimensions
 X_DIM=1280
-Y_DIM=980
+Y_DIM=950
 
 X_ADDITIONAL=0
 
