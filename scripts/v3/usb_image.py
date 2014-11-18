@@ -6,7 +6,7 @@ import numpy as np
 import pylab
 import struct
 import pickle
-from PIL import Image, ImageTk, ImageDraw, ImageColor
+# from PIL import Image, ImageTk, ImageDraw, ImageColor
 import os
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
@@ -14,7 +14,7 @@ import Tkinter
 import shutil
 import utils
 
-DEBUG = 1
+CONTRAST_ADJUST = 0
 TX_BITS = 8
 
 plt.ion()
@@ -22,27 +22,37 @@ plt.ion()
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("file_prefix", help="output file prefix")
-    parser.add_argument("mask", help="camera mask")
+    parser.add_argument("--debug_folder", help="debug mode output file prefix")
+    parser.add_argument("--mask", help="camera mask")
+    parser.add_argument("--gen_mask", help="generate new camera mask",action="store_true")
 
     args = parser.parse_args()
-    file_prefix = args.file_prefix
+    debug_folder = args.debug_folder
     mask_filename = args.mask
+    gen_mask = args.gen_mask
 
-    if os.path.isdir(file_prefix):
-        # erase = 'x'
-        # while (erase.lower() != 'y' and erase.lower() != 'n'):
-        #     erase = raw_input("Data folder " + file_prefix + " already exists. Erase old data and proceed (y/n)?")
+    if (debug_folder != None): 
+        if os.path.isdir(debug_folder):
+            # erase = 'x'
+            # while (erase.lower() != 'y' and erase.lower() != 'n'):
+            #     erase = raw_input("Data folder " + debug_folder + " already exists. Erase old data and proceed (y/n)?")
 
-        # if erase == 'n':
-        #     print "\nHalting execution."
-        #     sys.exit()
+            # if erase == 'n':
+            #     print "\nHalting execution."
+            #     sys.exit()
 
-        shutil.rmtree(file_prefix)
+            shutil.rmtree(debug_folder)
 
-    os.mkdir(file_prefix)
+        os.mkdir(debug_folder)
 
-    mask = load_mask(mask_filename)
+        debug = True
+    else:
+        debug = False
+
+    if (mask_filename == None):
+        mask = None
+    else:
+        mask = load_mask(mask_filename)
 
     endp = get_usb_endp()
 
@@ -60,15 +70,16 @@ def main():
     ax.set_xlim([0, 112])
     ax.set_ylim([112, 0])
 
-    vline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
-    hline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
+    if (debug == False):
+        vline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
+        hline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
 
     while True:
 
         # try:
-        #     output = open(file_prefix + ".raw", "wb")
+        #     output = open(debug_folder + ".raw", "wb")
         # except IOError:
-        #     print "Output file", file_prefix + ".raw", "could not be opened."
+        #     print "Output file", debug_folder + ".raw", "could not be opened."
         #     sys.exit()
 
         frame = np.reshape(frame, (112*112))
@@ -98,7 +109,7 @@ def main():
                 # For 8-bit transmission
                 unpacked = struct.unpack('B' * 1840, data)
 
-            if (DEBUG):
+            if (debug):
                 if TX_BITS == 8:
                     print_packets(unpacked, 184)
                 elif TX_BITS == 16:
@@ -107,14 +118,14 @@ def main():
             valid_bytes = get_valid_bytes(unpacked)
 
             if (packets == 1):
-                pred[0] = 112 - valid_bytes.pop(0)
-                pred[1] = valid_bytes.pop(0)
+                pred[0] = 112 - struct.unpack('h', struct.pack('H', valid_bytes.pop(0)))[0]
+                pred[1] = struct.unpack('h', struct.pack('H', valid_bytes.pop(0)))[0]
 
-                if (DEBUG and iters == 1):
+                if (debug and iters == 1):
                     print "Prediction (X, Y):", pred[0], pred[1], "\n"
                     sys.exit()
 
-            if (iters != 0):
+            if (iters != 0) and (debug == 0):
                 vline.set_data([pred[0], pred[0]], [max(0, pred[1] - 10), min(111, pred[1] + 10)])
                 hline.set_data([max(0, pred[0] - 10), min(111, pred[0] + 10)], [pred[1], pred[1]])
 
@@ -131,7 +142,7 @@ def main():
             pixels += new_pixels
 
             # print unpacked, "\n"
-            if (DEBUG):
+            if (debug):
                 print "Pixels in packet:", new_pixels, "\n\n"
 
             # print len(valid_bytes), "\n", valid_bytes, "\n"
@@ -149,8 +160,17 @@ def main():
         # mask = np.right_shift(mask, 2)
         # mask = np.bitwise_and(mask, 0xFF)
 
-        frame -= mask
-        frame = np.fliplr(frame)
+        # if (debug == 0):
+        if (not gen_mask and mask != None):
+            frame -= mask #************************UNCOMMENT ME ***************
+
+        if (not gen_mask):
+            frame = np.fliplr(frame)
+
+        if (CONTRAST_ADJUST == 1):
+            frame -= np.mean(frame)
+            frame /= float(np.std(frame))
+
         #plt.imshow(frame2, cmap = pylab.cm.Greys_r)
         image.set_data(frame)
         image.autoscale() 
@@ -165,16 +185,38 @@ def main():
 
         # endp.read(1840)
 
-        if (DEBUG):        
-            out_text = open("usb_frame.txt",'w')
-            for line in frame2:
+        if (debug):        
+            out_text = open(debug_folder + "/usb_frame.txt",'w')
+            for line in frame:
                 for item in line:
                     out_text.write(str(item) + " ")
                 out_text.write('\n')
             out_text.close()
             
-            plt.savefig(file_prefix + "/" + file_prefix + ("_%06d" % (iters)) + ".png")
+            frame1 = plt.gca()
+            frame1.axes.get_xaxis().set_visible(False)
+            frame1.axes.get_yaxis().set_visible(False)
+            plt.savefig(debug_folder + "/" + debug_folder + ("_%06d" % (iters)) + ".png")
             # sys.exit()
+
+        if (gen_mask):
+            mask_file = open("new_mask.pi","wb")
+
+            if (TX_BITS == 16):
+                frame = np.array(frame, dtype='uint16')
+            elif (TX_BITS == 8):
+                frame = np.array(frame, dtype='uint8')
+
+            frame -= np.amin(frame)
+            pickle.dump(frame, mask_file)
+            mask_file.close()
+
+            frame1 = plt.gca()
+            frame1.axes.get_xaxis().set_visible(False)
+            frame1.axes.get_yaxis().set_visible(False)
+            plt.savefig(debug_folder + "/" + debug_folder + ("_%06d" % (iters)) + ".png")
+
+            sys.exit()
 
 
 def print_packets(unpacked, packet_size):
