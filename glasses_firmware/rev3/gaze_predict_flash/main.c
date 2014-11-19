@@ -31,8 +31,6 @@ int main()
   
   config_ms_timer();
   
-  SleepMode_Measure();
-  
   while(1) {
 //    start = TIM4->CNT;
     stony_image_subsample();
