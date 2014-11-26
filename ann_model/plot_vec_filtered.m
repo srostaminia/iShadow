@@ -17,6 +17,6 @@ function filtered=plot_vec_filtered(v, conv_op, title_str)
     
     coff = [floor(length(conv_op) / 2), ceil(length(conv_op) / 2)];
     subplot(3,1,2);
-    plot(coff(1):length(v)-coff(2), abs(filtered));
+    plot( (coff(1):length(v)-coff(2)) + 1, abs(filtered));
 
 end
