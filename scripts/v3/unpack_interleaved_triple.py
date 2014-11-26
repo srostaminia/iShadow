@@ -14,7 +14,7 @@ def main():
     parser.add_argument("out_mask", help="outward-facing camera mask")
     parser.add_argument("eye_mask", help="eye-facing camera mask")
     parser.add_argument("num_pairs", type = int, help="number of interleaved image pairs stored in the input file")
-    parser.add_argument("--reuse_raw", required=False, action="store_true", help="Reuse previously stored raw image data files")
+    parser.add_argument("--reuse-raw", required=False, action="store_true", help="Reuse previously stored raw image data files")
 
     args = parser.parse_args()
 
@@ -29,11 +29,18 @@ def main():
 
     if args.reuse_raw:
         os.chdir(file_prefix)
+        num_images = num_pairs
     else:
         try:
             input_file = open(input_filename, "rb")
         except IOError:
             print "Input file", input_filename, "could not be opened."
+            sys.exit()
+
+        if not os.path.exists(file_prefix):
+            os.makedirs(file_prefix)
+        else:
+            print "Error: data folder " + file_prefix + " already exists."
             sys.exit()
 
         os.chdir(file_prefix)
@@ -50,14 +57,7 @@ def main():
             print "Input file", file_prefix + "\\" + file_prefix + "_b.raw", "could not be opened."
             sys.exit()
 
-        if not os.path.exists(file_prefix):
-            os.makedirs(file_prefix)
-        else:
-            print "Error: data folder " + file_prefix + " already exists."
-            sys.exit()
-
-        print num_pairs
-
+        print "Reading image data..."
         if (num_pairs > 0):
             for i in range(num_pairs):
                 for j in range(2):
@@ -66,6 +66,9 @@ def main():
 
                     data = input_file.read(10752)
                     output_b.write(data)
+
+                if (i % 500 == 0):
+                    print i, "images so far"
 
                 data = input_file.read(3584)
                 output_a.write(data)
@@ -78,7 +81,7 @@ def main():
             while (True):
                 for j in range(2):
                     data = input_file.read(10752)
-                    if (ord(data[0]) == 0) and (ord(data[1700]) == 0) and (ord(data[3583]) == 0):
+                    if (ord(data[0]) < 0) and (ord(data[1700]) < 0) and (ord(data[3583]) < 0):
                         end = True
                         break
 
@@ -102,6 +105,9 @@ def main():
 
                 i += 1
 
+        num_images = i
+        print "Total:", num_images, "images\n"
+
         output_a.close()
         output_b.close()
 
@@ -117,8 +123,8 @@ def main():
         print "Input file", file_prefix + "\\" + file_prefix + "_b.raw", "could not be opened."
         sys.exit()
 
-    disp_save_images(output_a, out_mask, file_prefix + "_out")
-    disp_save_images(output_b, eye_mask, file_prefix + "_eye")
+    disp_save_images(output_b, eye_mask, file_prefix + "_eye", num_images)
+    disp_save_images(output_a, out_mask, file_prefix + "_out", num_images)
 
     output_a.close()
     output_b.close()
@@ -145,7 +151,7 @@ def load_mask(mask_filename):
     return mask_data
 
 
-def disp_save_images(image_file, mask_data, out_filename):
+def disp_save_images(image_file, mask_data, out_filename, num_images):
     # images = read_all_packed_images(image_file)
 
     # img = pylab.figure()
@@ -160,14 +166,21 @@ def disp_save_images(image_file, mask_data, out_filename):
 
     success = True
 
+    print "Saving", out_filename + ":"
+
     i = 0
-    while success:
+    while success and ((num_images == 0) or (i < num_images)):
         if i % 500 == 0 and i != 0:
-            print "Saved", i, "of", out_filename
+            if num_images > 0:
+                print i, '/', num_images
+            else:
+                print i, '/', 
 
         success = read_packed_image(image_file, mask_data, out_filename, i)
 
         i += 1
+
+    print
 
 def read_packed_image(image_file, mask_data, out_filename, index):
     image = []
@@ -185,29 +198,27 @@ def read_packed_image(image_file, mask_data, out_filename, index):
             
             image[i].append(value)
 
-    print image[0]
+    # print image[0]
     image = image[1:]
 
-    img = pylab.figure()
+    figure = pylab.figure()
 
     image -= mask_data
 
     pylab.figimage(image, cmap = pylab.cm.Greys_r)
 
-    img.set_size_inches(1, 1)
+    figure.set_size_inches(1, 1)
 
     pylab.savefig(out_filename + "_" + ("%06d" % index) + ".png", dpi=112)
 
     pylab.close()
 
     text_file = open(out_filename + "_" + ("%06d" % index) + ".txt", 'w')
-    for line in data:
+    for line in image:
         for item in line:
             text_file.write(str(item) + ' ')
         text_file.write('\n')
     text_file.close()
-
-    # return np.array(image)
 
     return True
 

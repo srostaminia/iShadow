@@ -1,4 +1,4 @@
-function [pred,ann_used]=hybrid_nnline(X,ann_file,chord_length,data_name,thresh)
+function [pred,ann_used]=hybrid_nnline(X,ann_file,chord_length,data_name,thresh,model)
     load(ann_file,'ind','these_results');
     
     % Contrast adjustment
@@ -34,25 +34,53 @@ function [pred,ann_used]=hybrid_nnline(X,ann_file,chord_length,data_name,thresh)
         % Run neural network (a) to get initial estimate or
         % (b) if line search failed to find pupil accurately
         if (i == 1) || no_pupil
-            pred(i,:) = [112,111] .* logisticmlp_prediction(these_results.W, [X_adjust(i,:) 1], 7, 2);
-%             pred(i,:) = ginput;
+%             pred(i,:) = [112,111] .* logisticmlp_prediction(these_results.W, [X_adjust(i,:) 1], 7, 2);
+            pred(i,:) = ginput;
             ann_used(i) = 1;
             no_pupil = 0;
             
-            [maskX, maskY] = ind2sub([111 112], ind);
-            scatter(maskX, maskY, 'rs');
+%             [maskX, maskY] = ind2sub([111 112], ind);
+%             scatter(maskX, maskY, 'rs');
             plot(pred(i,1), pred(i,2),'b+','MarkerSize',25,'LineWidth',3);
             pred(i,:)
         else
             % Apply contrast adjustment parameters to the pixel threshold
             thresh_adjust = (thresh - scale_params(i,1)) / scale_params(i,2);
-            [center, radius] = chordal_search(reshape(X_display(i,:), [111 112]), pred(i-1,:), chord_length,thresh_adjust);
             
-            if (radius == 0)
-                no_pupil = 1;
-            else
-                radii(i) = radius;
-                pred(i,:) = center;
+            switch model
+                case 'circle_thresh'
+                    [center, radius] = circle_thresh_model(reshape(X_display(i,:), [111 112]), pred(i-1,:), chord_length,thresh_adjust);
+
+                    if (radius == 0)
+                        no_pupil = 1;
+                    else
+                        radii(i) = radius;
+                        pred(i,:) = center;
+                    end
+                case 'circle_edge'
+                    [center, radius] = circle_edge_model(reshape(X_display(i,:), [111 112]), pred(i-1,:), chord_length);
+
+                    if (radius == 0)
+                        no_pupil = 1;
+                    else
+                        radii(i) = radius;
+                        pred(i,:) = center;
+                    end
+                case 'ellipse'
+                    [center, major, minor] = ellipse_model(reshape(X_display(i,:), [111 112]), pred(i-1,:), chord_length,thresh_adjust);
+                    
+                    if (major * minor == 0)
+                        no_pupil = 1;
+                    else
+                        radii(i) = major;
+                        pred(i,:) = center;
+                    end
+                case 'gaussian'
+                    gaussian_model(reshape(X_display(i,:), [111 112]), pred(i-1,:), thresh_adjust);
+                    
+                    no_pupil = 1;
+                otherwise
+                    error('Invalid model "%s" specified\n"', model);
             end
         end
         
