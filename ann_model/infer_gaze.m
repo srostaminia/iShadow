@@ -1,15 +1,16 @@
 % graphics_toolkit('fltk')
 pkg load signal
 
-data_path = '~/eye_exper/addison_nir_newframes4'; %set path to directory of pngs
-save_name = 'eye_data_addison_nir_newframes4_auto.mat';% name of mat file for output
+
+data_path = '~/eye_exper/yamin_1sm4'; %set path to directory of pngs
+save_name = 'eye_data_yamin_1sm4_auto.mat';% name of mat file for output
 display_skip = 1; %Set to >0 to display output for display_skip frames
-data_name = 'addison_nir_newframes4'
+data_name = 'yamin_1sm4'
 
 start_index = 300;
-stop_index = 6100;
+stop_index = 6200;
 
-ask_reposition = true;
+ask_reposition = false;
 reuse_template = true;
 
 res = [111,112];
@@ -43,12 +44,28 @@ else
     
     figure(1);hold off;
     imshow(disp_img);colormap gray;hold on;axis on;
-    [x,y] = ginput(1)
-    x=round(x);
-    y=round(y);
-    if(x>w && x<res-w && y>w && y<res-w)
+    [x,y] = ginput(1);
+
+    x=round(x)
+    y=round(y)
+    if(x>w && x<res && y>w && y<res)
       figure(2);
-      template(:,:,j+1) = double(img((y-w):(y+w),(x-w):(x+w)))-0.5;
+
+      if (x>res-w)
+        xrange = (res-2*w):res;
+      elseif (x<w)
+        xrange = 0:2*w;
+      else
+        xrange = (x-w):(x+w);
+      end
+
+      if (y>res-w)
+        yrange = (res-2*w):res;
+      else
+        yrange = (y-w):(y+w);
+      end
+
+      template(:,:,j+1) = double(img(yrange,xrange))-0.5;
       imagesc(template(:,:,j+1));
       colormap(gray);
       j=j+1

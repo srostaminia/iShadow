@@ -1,4 +1,4 @@
-function [c,r]=chordal_search(X,xy_target,chord_length,thresh)
+function [c,r]=ellipse_model(X,xy_target,chord_length,thresh)
     c = [0, 0];
     r = 0;
 
@@ -10,30 +10,6 @@ function [c,r]=chordal_search(X,xy_target,chord_length,thresh)
     
     v_ends = [max([-half_chord + rc_target(1) + 1, 1]), min([half_chord + rc_target(1) + 1, 111])];
     h_ends = [max([-half_chord + rc_target(2) + 1, 1]), min([half_chord + rc_target(2) + 1, 112])];
-
-%     v_grad = diff(X( v_ends(1):v_ends(2), rc_target(2) ))';
-%     h_grad = diff(X( rc_target(1), h_ends(1):h_ends(2) ));
-
-    conv_op = [-1/2 0 1/2];
-%     conv_op = [-1/12 -3/12 0 3/12 1/12];
-    
-    v_grad = conv(conv_op, X( v_ends(1):v_ends(2), rc_target(2) )');
-    v_grad = v_grad(length(conv_op):end-length(conv_op)+1);
-    h_grad = conv(conv_op, X( rc_target(1), h_ends(1):h_ends(2) ));
-    h_grad = h_grad(length(conv_op):end-length(conv_op)+1);
-
-    x_style = 'r-';
-    y_style = 'r-';
-    
-    if (any(h_grad > 2))
-        h_grad(abs(h_grad) > 2) = 0;
-        x_style = 'm-';
-    end
-    
-    if (any(v_grad > 2))
-        v_grad(abs(v_grad) > 2) = 0;
-        y_style = 'm-';
-    end
     
     xy_target = round(xy_target);
 
@@ -45,43 +21,6 @@ function [c,r]=chordal_search(X,xy_target,chord_length,thresh)
     for i=1:2
         chords = zeros(4,2);
 
-    %     all_grad = {h_grad, v_grad};
-    %     
-        % Find pupil chords from gradient lines
-    %     for i=1:2
-    %         grad = all_grad{i};
-    %         [~, sort_idx] = sort(grad(:), 'descend');
-    %         
-    %         a = 1; 
-    %         b = length(sort_idx);
-    %         while (abs(sort_idx(a) - sort_idx(b)) < 5) && a < b
-    %             a = a + 1;
-    %             b = b - 1;
-    %         end        
-    %                 
-    % %         max_pos = grad(sort_idx(a));
-    % %         max_neg = grad(sort_idx(b));
-    % %         abs_ratio = abs(max_pos / max_neg);
-    %         
-    %         % Gradient maxima need to be of opposite sign and close to the same
-    %         % magnitude
-    % %         if (max_pos * max_neg) > 0 || abs_ratio < 0.7 || abs_ratio > (10/7)
-    % %             return
-    % %         end
-    % 
-    %         if i == 1
-    %             offset = floor(x_ends(1)) + floor(length(conv_op) / 2);
-    %             chords(1,:) = [offset + sort_idx(a), xy_target(2)];
-    %             chords(2,:) = [offset + sort_idx(b), xy_target(2)];
-    %             plot(chords(1:2,1), chords(1:2,2), 'g-');
-    %         else
-    %             offset = floor(y_ends(1)) + floor(length(conv_op) / 2);
-    %             chords(3,:) = [xy_target(1), sort_idx(a) + offset];
-    %             chords(4,:) = [xy_target(1), sort_idx(b) + offset];
-    %             plot(chords(3:4,1), chords(3:4,2), 'g-');
-    %         end
-    %     end
-
         chords(1:2,2) = round(xy_target(2));
         chords(3:4,1) = round(xy_target(1));
 
@@ -90,6 +29,7 @@ function [c,r]=chordal_search(X,xy_target,chord_length,thresh)
         x_start = rc_target(2) - h_ends(1);
         y_start = rc_target(1) - v_ends(1);
 
+        % First try using the first two pixels in a row that fall below the threshold   
         if (i==1)
             find_nzpair = @(x) find(x & [x(2:end), 0],1);
 
@@ -98,13 +38,14 @@ function [c,r]=chordal_search(X,xy_target,chord_length,thresh)
             chords(3,2) = round(xy_target(2)) + find_nzpair(y_vec(y_start+1:end) >= thresh) - 1;
             chords(4,2) = round(xy_target(2)) - find_nzpair(fliplr(y_vec(1:y_start-1)) >= thresh) - 1;
         else
+            % If that doesn't give a good fit, try looking for the first single pixel that falls below the threshold
             chords(1,1) = round(xy_target(1)) + find(x_vec(x_start+1:end) >= thresh,1) - 1;
             chords(2,1) = round(xy_target(1)) - find(fliplr(x_vec(1:x_start-1)) >= thresh,1) - 1;
             chords(3,2) = round(xy_target(2)) + find(y_vec(y_start+1:end) >= thresh,1) - 1;
             chords(4,2) = round(xy_target(2)) - find(fliplr(y_vec(1:y_start-1)) >= thresh,1) - 1;
         end
 
-        % Make sure chords overlap
+        % Make sure chords overlap (probably redundant)
         if ( all(chords(1:2,1) < xy_target(1)) || all(chords(1:2,1) > xy_target(1)) || all(chords(3:4,2) > xy_target(2)) || all(chords(3:4,2) < xy_target(2)) )
             continue;
         end

@@ -24,12 +24,12 @@ def main():
 
     parser.add_argument("--debug_folder", help="debug mode output file prefix")
     parser.add_argument("--mask", help="camera mask")
-    parser.add_argument("--gen_mask", help="generate new camera mask",action="store_true")
+    parser.add_argument("--gen_mask", help="generate new camera mask with name")
 
     args = parser.parse_args()
     debug_folder = args.debug_folder
     mask_filename = args.mask
-    gen_mask = args.gen_mask
+    gen_mask_file = args.gen_mask
 
     if (debug_folder != None): 
         if os.path.isdir(debug_folder):
@@ -53,6 +53,11 @@ def main():
         mask = None
     else:
         mask = load_mask(mask_filename)
+
+    if gen_mask_file == None:
+        gen_mask = False
+    else:
+        gen_mask = True
 
     endp = get_usb_endp()
 
@@ -200,7 +205,7 @@ def main():
             # sys.exit()
 
         if (gen_mask):
-            mask_file = open("new_mask.pi","wb")
+            mask_file = open(gen_mask_file + ".pi","wb")
 
             if (TX_BITS == 16):
                 frame = np.array(frame, dtype='uint16')
@@ -214,7 +219,7 @@ def main():
             frame1 = plt.gca()
             frame1.axes.get_xaxis().set_visible(False)
             frame1.axes.get_yaxis().set_visible(False)
-            plt.savefig(debug_folder + "/" + debug_folder + ("_%06d" % (iters)) + ".png")
+            plt.savefig(gen_mask_file + ".png")
 
             sys.exit()
 
