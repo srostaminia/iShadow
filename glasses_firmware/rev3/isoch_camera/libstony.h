@@ -63,6 +63,12 @@
 // Uncomment to transmit eye-facing camera instead of out-facing
 //#define SEND_EYE
 
+// Comment out to use unmasked eye pixels
+//#define USE_FPN_EYE
+
+// Comment out to leave LEDs on at all times
+//#define LED_DUTY_CYCLE
+
 // Uncomment one or the other for pixel transmission rate
 //#define SEND_16BIT
 #define SEND_8BIT
@@ -82,7 +88,10 @@
 #endif
 
 #define LED_LOW         0
-#define LED_HIGH        0x5D1
+
+//#define LED_HIGH        0        
+#define LED_HIGH          0x59E       // 1.15V
+//#define LED_HIGH        0x5D1         // 1.25V
 //#define LED_HIGH        0x64D
 //#define LED_HIGH        0x746
 
