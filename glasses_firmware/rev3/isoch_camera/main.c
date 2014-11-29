@@ -39,8 +39,12 @@ int main()
   config_ms_timer();
   config_us_delay();
   
+  stony_init(41, 50, 41,
+            4, SMH_SELAMP_3V3);
+
   stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3,
             SMH_GAIN_3V3, SMH_SELAMP_3V3);
+
   
   Set_System();
   Set_USBClock();

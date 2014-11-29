@@ -883,13 +883,15 @@ int stony_image_single()
 
 int stony_image_dual_subsample()
 {
-  __IO uint32_t tmp = 0;
+  __IO uint32_t led1 = 0, led2 = 0;
   uint32_t DAC_Align = DAC_Align_12b_R;
   
-  tmp = (uint32_t)DAC_BASE;
-  tmp += DHR12R2_OFFSET + DAC_Align;
+  led1 = led2 = (uint32_t)DAC_BASE;
+  led1 += DHR12R1_OFFSET + DAC_Align;
+  led2 += DHR12R2_OFFSET + DAC_Align;
   
-  *(__IO uint32_t *) tmp = LED_HIGH;
+//  *(__IO uint32_t *) led1 = LED_LOW;
+//  *(__IO uint32_t *) led2 = LED_LOW;
   
   // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, 2 cameras
   // Double-buffered (2-dim array)
@@ -962,10 +964,16 @@ int stony_image_dual_subsample()
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
       if (col != 0) {
+#ifdef USE_FPN_EYE
         this_pixel = adc_values[1] - FPN((row * 112) + (col - 1));
+#else
+        this_pixel = adc_values[1];
+#endif
+        
         
         //      DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);      
-//        *(__IO uint32_t *) tmp = LED_LOW;
+//        *(__IO uint32_t *) led1 = LED_LOW;
+//        *(__IO uint32_t *) led2 = LED_LOW;
         
         pred_img[row][col - 1] = this_pixel;
         eye_pixels_collected++;
@@ -1026,7 +1034,8 @@ int stony_image_dual_subsample()
       }
       
       //      DAC_SetChannel1Data(DAC_Align_12b_R, LED_HIGH);
-//      *(__IO uint32_t *) tmp = LED_HIGH;
+//      *(__IO uint32_t *) led1 = LED_HIGH;
+//      *(__IO uint32_t *) led2 = LED_HIGH;
       
       CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
@@ -1076,11 +1085,16 @@ int stony_image_dual_subsample()
     asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
     asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
     
+#ifdef USE_FPN_EYE
     // TODO: Get subsampled pixels...
     this_pixel = adc_values[1] - FPN((row * 112) + 111);
+#else
+    this_pixel = adc_values[1];
+#endif
     
     //      DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);      
-//    *(__IO uint32_t *) tmp = LED_LOW;
+//    *(__IO uint32_t *) led1 = LED_LOW;
+//    *(__IO uint32_t *) led2 = LED_LOW;
     
     pred_img[row][111] = this_pixel;
     eye_pixels_collected++;
