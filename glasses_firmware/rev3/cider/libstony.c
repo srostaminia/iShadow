@@ -858,11 +858,13 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels, uint
   uint16_t med_buf[2], next_pixel;
   uint8_t med_idx, small_val, reg_size, edge_idx;
   uint8_t peak_after, local_regions[3], lr_idx, lr_min;
-  uint8_t peaks[53], peak_idx, spec_regions[53], spec_idx, region_means[53];
-  int16_t conv_sum, conv_abs, reg_sum, edge_mean;
+  uint8_t peaks[53], peak_idx, spec_regions[53], spec_idx;
+  int16_t conv_sum, conv_abs, reg_sum, edge_mean, region_means[53];
   int16_t edge_detect[106];
   
   uint8_t in_specular = 0, new_peak = 0; 
+  
+  int test;
   
   // First do median filtering
   med_buf[0] = pixels[0];
@@ -887,6 +889,12 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels, uint
     med_idx = !med_idx;
   }
   
+  for (uint8_t i = 0; i < 112; i++) {
+    if (pixels[i] != medfilt_check[i]) {
+      test = 0;
+    }
+  }
+  
   // Next, do convolution
   conv_sum = -pixels[0] - pixels[1] - pixels[2] + pixels[4] + pixels[5] + pixels[6];
   conv_abs = (conv_sum < 0) ? (-conv_sum) : (conv_sum);
@@ -905,36 +913,56 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels, uint
   }
   edge_mean /= 106;
   
+  for (uint8_t i = 0; i < 112; i++) {
+    if (pixels[i] != medfilt_check[i]) {
+      test = 0;
+    }
+  }
+  
   // Then peak identification (+ weeding out peaks resulting from specular reflection)
   // and calculating region means (+ identifying specular regions)
-  peaks[0] = 0; reg_sum = edge_detect[0];
+  peaks[0] = 0; reg_sum = pixels[1] + pixels[2] + pixels[3];
   peak_idx = 1; in_specular = 0; new_peak = 0; peak_after = 0;
   for (uint8_t i = 1; i < 105; i++) {
-    if (edge_detect[i] > SPEC_THRESH && !in_specular) {
-      in_specular = 1;
-      if (i > 1 && peaks[peak_idx - 1] != (i - 1)) {
-        peaks[peak_idx] = i - 1;
-        spec_regions[spec_idx] = peak_idx;
-        peak_idx++; new_peak = 1;
-      } else {
-        spec_regions[spec_idx] = peak_idx - 1;
+    if (edge_detect[i] > SPEC_THRESH) {
+      if (in_specular == 0) {
+        in_specular = 1;
+        if (i > 1 && peaks[peak_idx - 1] != (i - 1)) {
+          peaks[peak_idx] = i - 1;
+          spec_regions[spec_idx] = peak_idx;
+          peak_idx++; new_peak = 1;
+        } else {
+          spec_regions[spec_idx] = peak_idx - 1;
+        }
+        spec_idx++;
+      } else if (in_specular == 2) {
+        in_specular++;
       }
-      spec_idx++;
+      
       continue;
-    } else if (edge_detect[i] < SPEC_THRESH && in_specular) {
-      in_specular = 0;
-      peaks[peak_idx] = i;
-      peak_idx++; new_peak = 1;
+    } else if (edge_detect[i] < SPEC_THRESH && in_specular != 0) {
+      if (in_specular == 2)
+        continue;
+      else if (in_specular == 1)
+        in_specular++;
+      else {
+        in_specular = 0;
+        peaks[peak_idx] = i;
+        peak_idx++; new_peak = 1;
+      }
+      
       continue;
     }
     
-    if (edge_detect[i] > edge_detect[i - 1] && edge_detect[i] > edge_detect[i + 1] && edge_detect[i] > edge_mean) {
+    if (edge_detect[i] >= edge_detect[i - 1] && edge_detect[i] > edge_detect[i + 1] && edge_detect[i] > edge_mean) {
       peaks[peak_idx] = i;
       peak_idx++; new_peak = 1;
     }
+    
+    reg_sum += pixels[i + 3];
     
     if (new_peak == 1) {
-      reg_size = peaks[peak_idx - 1] - peaks[peak_idx - 2];
+      reg_size = peaks[peak_idx - 1] - peaks[peak_idx - 2] + (peak_idx == 2 ? 3 : 0);
       region_means[peak_idx - 2] = reg_sum / reg_size;
       reg_sum = 0;
       new_peak = 0;
@@ -942,12 +970,12 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels, uint
       if (peak_after == 0 && peaks[peak_idx - 1] > start_point)
         peak_after = peak_idx - 1;
     }
-    
-    reg_sum += edge_detect[i];
   }
   
+  // Set last peak as last pixel
   peaks[peak_idx] = 111;
   peak_idx++;
+  reg_sum += pixels[108] + pixels[109] + pixels[110] + pixels[111];
   reg_size = peaks[peak_idx - 1] - peaks[peak_idx - 2];
   region_means[peak_idx - 2] = reg_sum / reg_size;
   
