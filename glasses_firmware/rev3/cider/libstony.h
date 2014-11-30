@@ -74,8 +74,8 @@
 #define SEND_8BIT
 
 // CIDER parameters
-#define PEAK_THRESH     0.22
-#define SPEC_THRESH     1
+#define SPEC_THRESH     150
+#define CONV_OFFSET     3
 
 #if defined(SEND_16BIT) && defined(SEND_8BIT)
 #error CANNOT DEFINE BOTH SEND_16BIT AND SEND_8BIT (LIBSTONY.H)
@@ -103,10 +103,12 @@ void stony_pin_config();
 void stony_init(short vref, short nbias, short aobias, char gain, char selamp);
 void dac_init();
 int stony_read_pixel();
-int stony_image_cider();
 int stony_image_subsample();
 int stony_image_minmax();
 int stony_image_dual_subsample();
+
+int cider();
+void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels, uint16_t* medfilt_check, uint16_t* edge_check);
 
 void pulse_resv(uint8_t cam);
 void pulse_incv(uint8_t cam);

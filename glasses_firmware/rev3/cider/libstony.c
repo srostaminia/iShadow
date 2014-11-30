@@ -853,13 +853,13 @@ int run_cider()
   return 0;
 }
 
-void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
+void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels, uint16_t* medfilt_check, uint16_t* edge_check)
 {
   uint16_t med_buf[2], next_pixel;
   uint8_t med_idx, small_val, reg_size, edge_idx;
   uint8_t peak_after, local_regions[3], lr_idx, lr_min;
   uint8_t peaks[53], peak_idx, spec_regions[53], spec_idx, region_means[53];
-  int16_t conv_sum, reg_sum;
+  int16_t conv_sum, conv_abs, reg_sum, edge_mean;
   int16_t edge_detect[106];
   
   uint8_t in_specular = 0, new_peak = 0; 
@@ -889,14 +889,21 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
   
   // Next, do convolution
   conv_sum = -pixels[0] - pixels[1] - pixels[2] + pixels[4] + pixels[5] + pixels[6];
-  edge_detect[0] = conv_sum;      
+  conv_abs = (conv_sum < 0) ? (-conv_sum) : (conv_sum);
+  edge_detect[0] = conv_abs;
+  edge_mean = 0;
   for (uint8_t i = 4; i < 108; i++) {
     conv_sum += pixels[i - 4];
     conv_sum -= pixels[i - 1];
     conv_sum -= pixels[i];
     conv_sum += pixels[i + 3];
-    edge_detect[i - 3] = conv_sum;
+    
+    conv_abs = (conv_sum < 0) ? (-conv_sum) : (conv_sum);
+    
+    edge_detect[i - 3] = conv_abs;
+    edge_mean += conv_abs;
   }
+  edge_mean /= 106;
   
   // Then peak identification (+ weeding out peaks resulting from specular reflection)
   // and calculating region means (+ identifying specular regions)
@@ -921,7 +928,7 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
       continue;
     }
     
-    if (edge_detect[i] > edge_detect[i - 1] && edge_detect[i] > edge_detect[i + 1] && edge_detect[i] > PEAK_THRESH) {
+    if (edge_detect[i] > edge_detect[i - 1] && edge_detect[i] > edge_detect[i + 1] && edge_detect[i] > edge_mean) {
       peaks[peak_idx] = i;
       peak_idx++; new_peak = 1;
     }
@@ -969,19 +976,19 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
       lr_min = i;
   }
   
-  edges[0] = peaks[local_regions[lr_min]];
-  edges[1] = peaks[local_regions[lr_min]+1];
+  edges[0] = peaks[local_regions[lr_min]] + CONV_OFFSET;
+  edges[1] = peaks[local_regions[lr_min]+1] + CONV_OFFSET;
   edge_idx = 2;
   
   // Check if the region has a specular point on either end
   for (uint8_t i = 0; i < spec_idx; i++) {
     if (spec_regions[i] == local_regions[lr_min] - 1) {
-      edges[edge_idx] = peaks[local_regions[lr_min] - 1];
-      edges[edge_idx+1] = peaks[local_regions[lr_min] + 1];
+      edges[edge_idx] = peaks[local_regions[lr_min] - 1] + CONV_OFFSET;
+      edges[edge_idx+1] = peaks[local_regions[lr_min] + 1] + CONV_OFFSET;
       edge_idx += 2;
     } else if (spec_regions[i] == local_regions[lr_min] + 1) {
-      edges[edge_idx] = peaks[local_regions[lr_min]];
-      edges[edge_idx+1] = peaks[local_regions[lr_min] + 2];
+      edges[edge_idx] = peaks[local_regions[lr_min]] + CONV_OFFSET;
+      edges[edge_idx+1] = peaks[local_regions[lr_min] + 2] + CONV_OFFSET;
       edge_idx += 2;
     }
   }
