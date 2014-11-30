@@ -838,7 +838,7 @@ int run_cider()
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
-      buf16[(data_cycle * 112) + col] = adc_values[adc_idx];
+      buf16[0][(data_cycle * 112) + col] = adc_values[adc_idx];
       
       adc_idx = !adc_idx;
 
@@ -856,12 +856,13 @@ int run_cider()
 void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
 {
   uint16_t med_buf[2], next_pixel;
-  uint8_t med_idx, small_val, reg_size;
+  uint8_t med_idx, small_val, reg_size, edge_idx;
+  uint8_t peak_after, local_regions[3], lr_idx, lr_min;
   uint8_t peaks[53], peak_idx, spec_regions[53], spec_idx, region_means[53];
   int16_t conv_sum, reg_sum;
   int16_t edge_detect[106];
   
-  bool in_specular = 0, spec_before = 0, spec_after = 0, new_peak = 0; 
+  uint8_t in_specular = 0, new_peak = 0; 
   
   // First do median filtering
   med_buf[0] = pixels[0];
@@ -900,29 +901,29 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
   // Then peak identification (+ weeding out peaks resulting from specular reflection)
   // and calculating region means (+ identifying specular regions)
   peaks[0] = 0; reg_sum = edge_detect[0];
-  peak_idx = 1; in_specular = 0; new_peak = 0;
+  peak_idx = 1; in_specular = 0; new_peak = 0; peak_after = 0;
   for (uint8_t i = 1; i < 105; i++) {
     if (edge_detect[i] > SPEC_THRESH && !in_specular) {
       in_specular = 1;
       if (i > 1 && peaks[peak_idx - 1] != (i - 1)) {
         peaks[peak_idx] = i - 1;
         spec_regions[spec_idx] = peak_idx;
-        peak_idx += 1; new_peak = 1;
+        peak_idx++; new_peak = 1;
       } else {
         spec_regions[spec_idx] = peak_idx - 1;
       }
-      spec_idx += 1;
+      spec_idx++;
       continue;
     } else if (edge_detect[i] < SPEC_THRESH && in_specular) {
       in_specular = 0;
       peaks[peak_idx] = i;
-      peak_idx += 1; new_peak = 1;
+      peak_idx++; new_peak = 1;
       continue;
     }
     
     if (edge_detect[i] > edge_detect[i - 1] && edge_detect[i] > edge_detect[i + 1] && edge_detect[i] > PEAK_THRESH) {
       peaks[peak_idx] = i;
-      peak_idx += 1; new_peak = 1;
+      peak_idx++; new_peak = 1;
     }
     
     if (new_peak == 1) {
@@ -930,323 +931,367 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
       region_means[peak_idx - 2] = reg_sum / reg_size;
       reg_sum = 0;
       new_peak = 0;
+      
+      if (peak_after == 0 && peaks[peak_idx - 1] > start_point)
+        peak_after = peak_idx - 1;
     }
     
     reg_sum += edge_detect[i];
   }
   
   peaks[peak_idx] = 111;
-  peak_idx += 1;
+  peak_idx++;
   reg_size = peaks[peak_idx - 1] - peaks[peak_idx - 2];
   region_means[peak_idx - 2] = reg_sum / reg_size;
   
-  // TODO: Write the region-choosing logic
-  // TODO: Test all this against real row / col data from offline images...
-}
-
-int stony_image_dual_subsample()
-{
-  __IO uint32_t led1 = 0, led2 = 0;
-  uint32_t DAC_Align = DAC_Align_12b_R;
+  if (peak_after == 0)
+    peak_after = peak_idx - 1;
   
-  led1 = led2 = (uint32_t)DAC_BASE;
-  led1 += DHR12R1_OFFSET + DAC_Align;
-  led2 += DHR12R2_OFFSET + DAC_Align;
-  
-//  *(__IO uint32_t *) led1 = LED_LOW;
-//  *(__IO uint32_t *) led2 = LED_LOW;
-  
-  // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, 2 cameras
-  // Double-buffered (2-dim array)
-  uint8_t buf8[2][USB_PIXELS * 2];
-  
-  uint32_t pixel_sum = 0;
-  float M = 0.0, S = 0.0;
-  float value, tmpM;
-  int k = 1;
-  
-  uint16_t pred_img[112][112];
-  uint8_t buf_idx = 0;
-  
-  uint16_t this_pixel = 0;
-  uint32_t eye_pixels_collected = -1;
-  uint32_t current_subsample = 0;
-
-#ifdef SEND_8BIT
-  for (int i = 0; i < 2; i++) {
-    for (int j = 0; j < USB_PIXELS * 2; j++) {
-      buf8[i][j] = 0;
-    }
-  }
-#endif
-
-#ifdef SEND_16BIT
-  uint16_t *buf16 = (uint16_t *)buf8[0];
-#else
-  uint8_t *buf8_active = (uint8_t *)buf8[0];
-#endif
-  
-  set_pointer_value(REG_ROWSEL, 0, CAM1);
-  set_pointer_value(REG_ROWSEL, 0, CAM2);
-  
-//  max = 0;
-//  min = 1000;
-
-//  int data_cycle = 0;
-  int data_cycle = 2; // Start at 2 b/c first two "pixels" transmitted are prediction values from previous cycle
-
-#ifdef SEND_16BIT  
-//  buf16[0] = pred[0];
-//  buf16[1] = pred[1];
-  buf8[0][0] = pred[0];
-  buf8[0][1] = 0;
-  buf8[0][2] = pred[1];
-  buf8[0][3] = 0;
-#else
-  buf8_active[0] = pred[0];
-  buf8_active[1] = pred[1];
-#endif  
-  
-  uint16_t packets_sent = 0;  // For debug purposes only
-//  uint16_t start = 0, total = 0;
-  for (int row = 0; row < 112; row++) {
-    set_pointer_value(REG_COLSEL, 0, CAM1);
-    set_pointer_value(REG_COLSEL, 0, CAM2);
-    
-    delay_us(1);
-    
-    for (int col = 0; col < 112; col++) {        
-      CAM1_INPH_BANK->ODR |= CAM1_INPH_PIN;
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      CAM1_INPH_BANK->ODR &= ~CAM1_INPH_PIN;
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      
-      if (col != 0) {
-#ifdef USE_FPN_EYE
-        this_pixel = adc_values[1] - FPN((row * 112) + (col - 1));
-#else
-        this_pixel = adc_values[1];
-#endif
-        
-        
-        //      DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);      
-//        *(__IO uint32_t *) led1 = LED_LOW;
-//        *(__IO uint32_t *) led2 = LED_LOW;
-        
-        pred_img[row][col - 1] = this_pixel;
-        eye_pixels_collected++;
-//        min = (this_pixel < min) ? (this_pixel) : (min);
-//        max = (this_pixel > max) ? (this_pixel) : (max);
-        
-        if (MASK(current_subsample, 0) == row && 
-            MASK(current_subsample, 1) == col - 1)
-        {
-          pixel_sum += this_pixel;
-          
-          // Standard deviation computation
-          value = (float)this_pixel;
-          tmpM = M;
-          M += (value - tmpM) / k;
-          S += (value - tmpM) * (value - M);
-          k++;
-          current_subsample++;
-        }
-
-#ifdef SEND_EYE
-
-#ifdef SEND_16BIT
-//        buf16[data_cycle] = adc_values[1];
-        buf16[data_cycle] = this_pixel;
-#else
-        buf8_active[data_cycle] = CONV_8BIT(this_pixel);
-#endif
-        
-        if (data_cycle == (USB_PIXELS - 1)) {
-          while (packet_sending == 1);
-          
-          data_cycle = -1;
-          send_packet(buf8[buf_idx], PACKET_SIZE);
-          packet_sending = 1;
-          
-          buf_idx = !buf_idx;
-          
-#ifdef SEND_16BIT
-          buf16 = (uint16_t *)buf8[buf_idx];
-#else
-          buf8_active = (uint8_t *)buf8[buf_idx];
-#endif
-          
-          packets_sent += 1;
-        }
-        data_cycle++;
-#endif
-        
-      }
-      
-      // Do conversion for CAM1
-      ADC_SoftwareStartConv(ADC1);
-      
-      if (col != 0) {
-        CAM2_INCV_BANK->ODR |= CAM2_INCV_PIN;
-        CAM2_INCV_BANK->ODR &= ~CAM2_INCV_PIN;
-      }
-      
-      //      DAC_SetChannel1Data(DAC_Align_12b_R, LED_HIGH);
-//      *(__IO uint32_t *) led1 = LED_HIGH;
-//      *(__IO uint32_t *) led2 = LED_HIGH;
-      
-      CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      
-#if !defined(SEND_EYE)
-      
-#ifdef SEND_16BIT
-      buf16[data_cycle] = adc_values[0];
-#else
-      buf8_active[data_cycle] = CONV_8BIT(adc_values[0]);
-#endif
-      
-      if (data_cycle == (USB_PIXELS - 1)) {
-        while (packet_sending == 1);
-        
-        data_cycle = -1;
-        send_packet(buf8[buf_idx], PACKET_SIZE);
-        packet_sending = 1;
-        
-        buf_idx = !buf_idx;
-        
-#ifdef SEND_16BIT
-        buf16 = (uint16_t *)buf8[buf_idx];
-#else
-        buf8_active = (uint8_t *)buf8[buf_idx];
-#endif
-        
-        packets_sent += 1;
-      }
-    
-      data_cycle++;
-#endif  // !defined(SEND_EYE)
-      
-      // Do conversion for CAM2
-      ADC_SoftwareStartConv(ADC1);
-
-      CAM1_INCV_BANK->ODR |= CAM1_INCV_PIN;
-      CAM1_INCV_BANK->ODR &= ~CAM1_INCV_PIN;
-    } // for (col)
-    
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    
-#ifdef USE_FPN_EYE
-    // TODO: Get subsampled pixels...
-    this_pixel = adc_values[1] - FPN((row * 112) + 111);
-#else
-    this_pixel = adc_values[1];
-#endif
-    
-    //      DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);      
-//    *(__IO uint32_t *) led1 = LED_LOW;
-//    *(__IO uint32_t *) led2 = LED_LOW;
-    
-    pred_img[row][111] = this_pixel;
-    eye_pixels_collected++;
-//    min = (pred_img[row][111] < min) ? (pred_img[row][111]) : (min);
-//    max = (pred_img[row][111] > max) ? (pred_img[row][111]) : (max);
-    
-        if (MASK(current_subsample, 0) == row && 
-            MASK(current_subsample, 1) == 111)
-        {
-          pixel_sum += this_pixel;
-          
-          // Standard deviation computation
-          value = (float)this_pixel;
-          tmpM = M;
-          M += (value - tmpM) / k;
-          S += (value - tmpM) * (value - M);
-          k++;
-          current_subsample++;
-        }
-    
-#ifdef SEND_EYE
-    
-#ifdef SEND_16BIT
-//    buf16[data_cycle] = adc_values[1];
-    buf16[data_cycle] = pred_img[row][111];
-#else
-    buf8_active[data_cycle] = CONV_8BIT(pred_img[row][111]);
-#endif
-    
-    if (data_cycle == (USB_PIXELS - 1)) {
-      while (packet_sending == 1);
-      
-      data_cycle = -1;
-      send_packet(buf8[buf_idx], PACKET_SIZE);
-      packet_sending = 1;
-      
-      buf_idx = !buf_idx;
-      
-#ifdef SEND_16BIT
-      buf16 = (uint16_t *)buf8[buf_idx];
-#else
-      buf8_active = (uint8_t *)buf8[buf_idx];
-#endif
-      
-      packets_sent += 1;
-    }
-    data_cycle++;
-#endif
-    
-    inc_pointer_value(REG_ROWSEL, 1, CAM1);
-    inc_pointer_value(REG_ROWSEL, 1, CAM2);
-  } // for (row)
-  
-  if (data_cycle != -1) {
-    for (int i = data_cycle; i < USB_PIXELS; i++) {
-#ifdef SEND_16BIT
-      buf16[i] = 0;
-#else
-      buf8_active[i] = 0;
-#endif
-    }
-    
-    while (packet_sending == 1);
-    send_packet(buf8[buf_idx], PACKET_SIZE);
-    
-    packet_sending = 1;
-    while (packet_sending == 1);
-    
-    packets_sent += 1;
+  // Identify the local regions around the start point
+  lr_idx = 0;
+  if (peak_after > 2) {
+    local_regions[lr_idx] = peak_after - 2;
+    lr_idx++;
   }
   
-//  clear_ENDP1_packet_buffers();
-  send_empty_packet();
-  while(packet_sending == 1);
+  local_regions[lr_idx] = peak_after - 1;
+  lr_idx++;
   
-//  packet_sending = 1;
-  send_empty_packet();
-  while(packet_sending == 1);
+  if (peak_after < peak_idx - 1) {
+    local_regions[lr_idx] = peak_after;
+    lr_idx++;
+  }
   
-//  float mean = (float)pixel_sum / (112 * 112);
-  float mean = (float)pixel_sum / (NUM_SUBSAMPLE);
-  float std = sqrt(S / (k-1));
+  // Select the local region with the lowest mean
+  lr_min = 0;
+  for (uint8_t i = 1; i < lr_idx - 1; i++) {
+    if (region_means[local_regions[i]] < region_means[local_regions[lr_min]])
+      lr_min = i;
+  }
   
-  // Predict gaze, store results in global variable pred[]
-//  predict_gaze_fullimg((uint16_t*)pred_img, min, max);
-  predict_gaze_fullmean((uint16_t*)pred_img, mean, std);
+  edges[0] = peaks[local_regions[lr_min]];
+  edges[1] = peaks[local_regions[lr_min]+1];
+  edge_idx = 2;
   
-  return 0;
+  // Check if the region has a specular point on either end
+  for (uint8_t i = 0; i < spec_idx; i++) {
+    if (spec_regions[i] == local_regions[lr_min] - 1) {
+      edges[edge_idx] = peaks[local_regions[lr_min] - 1];
+      edges[edge_idx+1] = peaks[local_regions[lr_min] + 1];
+      edge_idx += 2;
+    } else if (spec_regions[i] == local_regions[lr_min] + 1) {
+      edges[edge_idx] = peaks[local_regions[lr_min]];
+      edges[edge_idx+1] = peaks[local_regions[lr_min] + 2];
+      edge_idx += 2;
+    }
+  }
+  
+  return;       // Edge data is stored in argument array
 }
+
+//int stony_image_dual_subsample()
+//{
+//  __IO uint32_t led1 = 0, led2 = 0;
+//  uint32_t DAC_Align = DAC_Align_12b_R;
+//  
+//  led1 = led2 = (uint32_t)DAC_BASE;
+//  led1 += DHR12R1_OFFSET + DAC_Align;
+//  led2 += DHR12R2_OFFSET + DAC_Align;
+//  
+////  *(__IO uint32_t *) led1 = LED_LOW;
+////  *(__IO uint32_t *) led2 = LED_LOW;
+//  
+//  // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, 2 cameras
+//  // Double-buffered (2-dim array)
+//  uint8_t buf8[2][USB_PIXELS * 2];
+//  
+//  uint32_t pixel_sum = 0;
+//  float M = 0.0, S = 0.0;
+//  float value, tmpM;
+//  int k = 1;
+//  
+//  uint16_t pred_img[112][112];
+//  uint8_t buf_idx = 0;
+//  
+//  uint16_t this_pixel = 0;
+//  uint32_t eye_pixels_collected = -1;
+//  uint32_t current_subsample = 0;
+//
+//#ifdef SEND_8BIT
+//  for (int i = 0; i < 2; i++) {
+//    for (int j = 0; j < USB_PIXELS * 2; j++) {
+//      buf8[i][j] = 0;
+//    }
+//  }
+//#endif
+//
+//#ifdef SEND_16BIT
+//  uint16_t *buf16 = (uint16_t *)buf8[0];
+//#else
+//  uint8_t *buf8_active = (uint8_t *)buf8[0];
+//#endif
+//  
+//  set_pointer_value(REG_ROWSEL, 0, CAM1);
+//  set_pointer_value(REG_ROWSEL, 0, CAM2);
+//  
+////  max = 0;
+////  min = 1000;
+//
+////  int data_cycle = 0;
+//  int data_cycle = 2; // Start at 2 b/c first two "pixels" transmitted are prediction values from previous cycle
+//
+//#ifdef SEND_16BIT  
+////  buf16[0] = pred[0];
+////  buf16[1] = pred[1];
+//  buf8[0][0] = pred[0];
+//  buf8[0][1] = 0;
+//  buf8[0][2] = pred[1];
+//  buf8[0][3] = 0;
+//#else
+//  buf8_active[0] = pred[0];
+//  buf8_active[1] = pred[1];
+//#endif  
+//  
+//  uint16_t packets_sent = 0;  // For debug purposes only
+////  uint16_t start = 0, total = 0;
+//  for (int row = 0; row < 112; row++) {
+//    set_pointer_value(REG_COLSEL, 0, CAM1);
+//    set_pointer_value(REG_COLSEL, 0, CAM2);
+//    
+//    delay_us(1);
+//    
+//    for (int col = 0; col < 112; col++) {        
+//      CAM1_INPH_BANK->ODR |= CAM1_INPH_PIN;
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      CAM1_INPH_BANK->ODR &= ~CAM1_INPH_PIN;
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      
+//      if (col != 0) {
+//#ifdef USE_FPN_EYE
+//        this_pixel = adc_values[1] - FPN((row * 112) + (col - 1));
+//#else
+//        this_pixel = adc_values[1];
+//#endif
+//        
+//        
+//        //      DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);      
+////        *(__IO uint32_t *) led1 = LED_LOW;
+////        *(__IO uint32_t *) led2 = LED_LOW;
+//        
+//        pred_img[row][col - 1] = this_pixel;
+//        eye_pixels_collected++;
+////        min = (this_pixel < min) ? (this_pixel) : (min);
+////        max = (this_pixel > max) ? (this_pixel) : (max);
+//        
+//        if (MASK(current_subsample, 0) == row && 
+//            MASK(current_subsample, 1) == col - 1)
+//        {
+//          pixel_sum += this_pixel;
+//          
+//          // Standard deviation computation
+//          value = (float)this_pixel;
+//          tmpM = M;
+//          M += (value - tmpM) / k;
+//          S += (value - tmpM) * (value - M);
+//          k++;
+//          current_subsample++;
+//        }
+//
+//#ifdef SEND_EYE
+//
+//#ifdef SEND_16BIT
+////        buf16[data_cycle] = adc_values[1];
+//        buf16[data_cycle] = this_pixel;
+//#else
+//        buf8_active[data_cycle] = CONV_8BIT(this_pixel);
+//#endif
+//        
+//        if (data_cycle == (USB_PIXELS - 1)) {
+//          while (packet_sending == 1);
+//          
+//          data_cycle = -1;
+//          send_packet(buf8[buf_idx], PACKET_SIZE);
+//          packet_sending = 1;
+//          
+//          buf_idx = !buf_idx;
+//          
+//#ifdef SEND_16BIT
+//          buf16 = (uint16_t *)buf8[buf_idx];
+//#else
+//          buf8_active = (uint8_t *)buf8[buf_idx];
+//#endif
+//          
+//          packets_sent++;
+//        }
+//        data_cycle++;
+//#endif
+//        
+//      }
+//      
+//      // Do conversion for CAM1
+//      ADC_SoftwareStartConv(ADC1);
+//      
+//      if (col != 0) {
+//        CAM2_INCV_BANK->ODR |= CAM2_INCV_PIN;
+//        CAM2_INCV_BANK->ODR &= ~CAM2_INCV_PIN;
+//      }
+//      
+//      //      DAC_SetChannel1Data(DAC_Align_12b_R, LED_HIGH);
+////      *(__IO uint32_t *) led1 = LED_HIGH;
+////      *(__IO uint32_t *) led2 = LED_HIGH;
+//      
+//      CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      
+//#if !defined(SEND_EYE)
+//      
+//#ifdef SEND_16BIT
+//      buf16[data_cycle] = adc_values[0];
+//#else
+//      buf8_active[data_cycle] = CONV_8BIT(adc_values[0]);
+//#endif
+//      
+//      if (data_cycle == (USB_PIXELS - 1)) {
+//        while (packet_sending == 1);
+//        
+//        data_cycle = -1;
+//        send_packet(buf8[buf_idx], PACKET_SIZE);
+//        packet_sending = 1;
+//        
+//        buf_idx = !buf_idx;
+//        
+//#ifdef SEND_16BIT
+//        buf16 = (uint16_t *)buf8[buf_idx];
+//#else
+//        buf8_active = (uint8_t *)buf8[buf_idx];
+//#endif
+//        
+//        packets_sent++;
+//      }
+//    
+//      data_cycle++;
+//#endif  // !defined(SEND_EYE)
+//      
+//      // Do conversion for CAM2
+//      ADC_SoftwareStartConv(ADC1);
+//
+//      CAM1_INCV_BANK->ODR |= CAM1_INCV_PIN;
+//      CAM1_INCV_BANK->ODR &= ~CAM1_INCV_PIN;
+//    } // for (col)
+//    
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    
+//#ifdef USE_FPN_EYE
+//    // TODO: Get subsampled pixels...
+//    this_pixel = adc_values[1] - FPN((row * 112) + 111);
+//#else
+//    this_pixel = adc_values[1];
+//#endif
+//    
+//    //      DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);      
+////    *(__IO uint32_t *) led1 = LED_LOW;
+////    *(__IO uint32_t *) led2 = LED_LOW;
+//    
+//    pred_img[row][111] = this_pixel;
+//    eye_pixels_collected++;
+////    min = (pred_img[row][111] < min) ? (pred_img[row][111]) : (min);
+////    max = (pred_img[row][111] > max) ? (pred_img[row][111]) : (max);
+//    
+//        if (MASK(current_subsample, 0) == row && 
+//            MASK(current_subsample, 1) == 111)
+//        {
+//          pixel_sum += this_pixel;
+//          
+//          // Standard deviation computation
+//          value = (float)this_pixel;
+//          tmpM = M;
+//          M += (value - tmpM) / k;
+//          S += (value - tmpM) * (value - M);
+//          k++;
+//          current_subsample++;
+//        }
+//    
+//#ifdef SEND_EYE
+//    
+//#ifdef SEND_16BIT
+////    buf16[data_cycle] = adc_values[1];
+//    buf16[data_cycle] = pred_img[row][111];
+//#else
+//    buf8_active[data_cycle] = CONV_8BIT(pred_img[row][111]);
+//#endif
+//    
+//    if (data_cycle == (USB_PIXELS - 1)) {
+//      while (packet_sending == 1);
+//      
+//      data_cycle = -1;
+//      send_packet(buf8[buf_idx], PACKET_SIZE);
+//      packet_sending = 1;
+//      
+//      buf_idx = !buf_idx;
+//      
+//#ifdef SEND_16BIT
+//      buf16 = (uint16_t *)buf8[buf_idx];
+//#else
+//      buf8_active = (uint8_t *)buf8[buf_idx];
+//#endif
+//      
+//      packets_sent++;
+//    }
+//    data_cycle++;
+//#endif
+//    
+//    inc_pointer_value(REG_ROWSEL, 1, CAM1);
+//    inc_pointer_value(REG_ROWSEL, 1, CAM2);
+//  } // for (row)
+//  
+//  if (data_cycle != -1) {
+//    for (int i = data_cycle; i < USB_PIXELS; i++) {
+//#ifdef SEND_16BIT
+//      buf16[i] = 0;
+//#else
+//      buf8_active[i] = 0;
+//#endif
+//    }
+//    
+//    while (packet_sending == 1);
+//    send_packet(buf8[buf_idx], PACKET_SIZE);
+//    
+//    packet_sending = 1;
+//    while (packet_sending == 1);
+//    
+//    packets_sent++;
+//  }
+//  
+////  clear_ENDP1_packet_buffers();
+//  send_empty_packet();
+//  while(packet_sending == 1);
+//  
+////  packet_sending = 1;
+//  send_empty_packet();
+//  while(packet_sending == 1);
+//  
+////  float mean = (float)pixel_sum / (112 * 112);
+//  float mean = (float)pixel_sum / (NUM_SUBSAMPLE);
+//  float std = sqrt(S / (k-1));
+//  
+//  // Predict gaze, store results in global variable pred[]
+////  predict_gaze_fullimg((uint16_t*)pred_img, min, max);
+//  predict_gaze_fullmean((uint16_t*)pred_img, mean, std);
+//  
+//  return 0;
+//}
 
 //void test_predict()
 //{

@@ -73,6 +73,10 @@
 //#define SEND_16BIT
 #define SEND_8BIT
 
+// CIDER parameters
+#define PEAK_THRESH     0.22
+#define SPEC_THRESH     1
+
 #if defined(SEND_16BIT) && defined(SEND_8BIT)
 #error CANNOT DEFINE BOTH SEND_16BIT AND SEND_8BIT (LIBSTONY.H)
 #elif !defined(SEND_16BIT) && !defined(SEND_8BIT)
