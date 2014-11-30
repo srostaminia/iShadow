@@ -75,7 +75,7 @@
 
 // CIDER parameters
 #define SPEC_THRESH     150
-#define CONV_OFFSET     3
+#define CONV_OFFSET     4
 
 #if defined(SEND_16BIT) && defined(SEND_8BIT)
 #error CANNOT DEFINE BOTH SEND_16BIT AND SEND_8BIT (LIBSTONY.H)

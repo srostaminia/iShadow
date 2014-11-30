@@ -9,7 +9,7 @@ TriggerName=main
 LimitSize=0
 ByteLimit=50
 [DebugChecksum]
-Checksum=172144212
+Checksum=-546912879
 [Exceptions]
 StopOnUncaught=_ 0
 StopOnThrow=_ 0
@@ -40,6 +40,7 @@ Fmt1=uint8_t[6]	3	0
 [watch_formats]
 Fmt0={W}0:i	3	0
 Fmt1={W}0:peak_idx	3	0
+Fmt2={W}0:reg_size	3	0
 [DataLog]
 LogEnabled=0
 SumEnabled=0
@@ -57,7 +58,8 @@ SumSortOrder=0
 mode=0
 [Breakpoints2]
 Bp0=_ 1 "EMUL_CODE" "{$PROJ_DIR$\main.c}.48.3" 0 0 1 "" 0 "" 0
-Count=1
+Bp1=_ 1 "EMUL_CODE" "{$PROJ_DIR$\libstony.c}.982.3" 0 0 1 "" 0 "" 0
+Count=2
 [Log file]
 LoggingEnabled=_ 0
 LogFile=_ ""
