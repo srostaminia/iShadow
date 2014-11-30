@@ -68,7 +68,7 @@ function [chord_length,pred,radii,ann_used]=cider(X,ann_file,chord_length,thresh
                         pred(i,:) = center;
                     end
                 case 'circle_edge'
-                    [center, radius] = circle_edge_model(reshape(X_display(i,:), [111 112]), pred(i-1,:), chord_length, thresh, radii(i-1), make_vid);
+                    [center, radius] = circle_edge_model(reshape(X(i,:), [111 112]), pred(i-1,:), chord_length, thresh, radii(i-1), make_vid);
 
                     if (radius == 0)
                         no_pupil = 1;

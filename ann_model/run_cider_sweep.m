@@ -1,4 +1,6 @@
 function run_cider_sweep(result_dir, X, gout)
+    addpath('~/iShadow/ann_model');
+
     origin = pwd;
     
     cd(result_dir);
