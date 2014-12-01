@@ -108,7 +108,7 @@ int stony_image_minmax();
 int stony_image_dual_subsample();
 
 int cider();
-void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels, uint16_t* medfilt_check, uint16_t* edge_check);
+void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels);
 
 void pulse_resv(uint8_t cam);
 void pulse_incv(uint8_t cam);

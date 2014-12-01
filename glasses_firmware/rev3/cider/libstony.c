@@ -853,7 +853,7 @@ int run_cider()
   return 0;
 }
 
-void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels, uint16_t* medfilt_check, uint16_t* edge_check)
+void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
 {
   uint16_t med_buf[2], next_pixel;
   uint8_t med_idx, small_val, reg_size, edge_idx;
@@ -889,12 +889,6 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels, uint
     med_idx = !med_idx;
   }
   
-  for (uint8_t i = 0; i < 112; i++) {
-    if (pixels[i] != medfilt_check[i]) {
-      test = 0;
-    }
-  }
-  
   // Next, do convolution
   conv_sum = -pixels[0] - pixels[1] - pixels[2] + pixels[4] + pixels[5] + pixels[6];
   conv_abs = (conv_sum < 0) ? (-conv_sum) : (conv_sum);
@@ -912,12 +906,6 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels, uint
     edge_mean += conv_abs;
   }
   edge_mean /= 106;
-  
-  for (uint8_t i = 0; i < 112; i++) {
-    if (pixels[i] != medfilt_check[i]) {
-      test = 0;
-    }
-  }
   
   // Then peak identification (+ weeding out peaks resulting from specular reflection)
   // and calculating region means (+ identifying specular regions)
@@ -938,35 +926,36 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels, uint
       } else if (in_specular == 2) {
         in_specular++;
       }
-      
-      continue;
     } else if (edge_detect[i] < SPEC_THRESH && in_specular != 0) {
-      if (in_specular == 2)
-        continue;
-      else if (in_specular == 1)
+      if (in_specular == 1)
         in_specular++;
-      else {
+      else if (in_specular == 3) {
         in_specular = 0;
         peaks[peak_idx] = i;
         peak_idx++; new_peak = 1;
       }
-      
-      continue;
-    }
-    
-    if (edge_detect[i] >= edge_detect[i - 1] && edge_detect[i] > edge_detect[i + 1] && edge_detect[i] > edge_mean) {
-      peaks[peak_idx] = i;
-      peak_idx++; new_peak = 1;
+    } else {
+      if (edge_detect[i] >= edge_detect[i - 1] && edge_detect[i] > edge_detect[i + 1] && edge_detect[i] > edge_mean) {
+        peaks[peak_idx] = i;
+        peak_idx++; new_peak = 1;
+      }
     }
     
     reg_sum += pixels[i + 3];
     
     if (new_peak == 1) {
       reg_size = peaks[peak_idx - 1] - peaks[peak_idx - 2] + (peak_idx == 2 ? 3 : 0);
-      region_means[peak_idx - 2] = reg_sum / reg_size;
-      reg_sum = 0;
-      new_peak = 0;
       
+      // If we retroactively made the previous point a peak, need to adjust the mean calculation
+      if (in_specular == 1) {
+        region_means[peak_idx - 2] = (reg_sum - pixels[i + 3]) / reg_size;
+        reg_sum = pixels[i + 3];
+      } else {
+        region_means[peak_idx - 2] = reg_sum / reg_size;
+        reg_sum = 0;
+      }
+      
+      new_peak = 0;
       if (peak_after == 0 && peaks[peak_idx - 1] > start_point)
         peak_after = peak_idx - 1;
     }
@@ -999,13 +988,15 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels, uint
   
   // Select the local region with the lowest mean
   lr_min = 0;
-  for (uint8_t i = 1; i < lr_idx - 1; i++) {
+  for (uint8_t i = 1; i < lr_idx; i++) {
     if (region_means[local_regions[i]] < region_means[local_regions[lr_min]])
       lr_min = i;
   }
   
-  edges[0] = peaks[local_regions[lr_min]] + CONV_OFFSET;
-  edges[1] = peaks[local_regions[lr_min]+1] + CONV_OFFSET;
+  edges[0] = peaks[local_regions[lr_min]];
+  edges[0] += (edges[0] == 0 ? 0 : CONV_OFFSET);
+  edges[1] = peaks[local_regions[lr_min]+1];
+  edges[1] += (edges[1] == 111 ? 0 : CONV_OFFSET);
   edge_idx = 2;
   
   // Check if the region has a specular point on either end
