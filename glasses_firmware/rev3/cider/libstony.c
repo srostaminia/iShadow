@@ -22,7 +22,8 @@
 
 //#define USB_PIXELS      92
 
-extern int8_t pred[3];
+extern int8_t pred[2];
+extern float pred_radius;
 //uint16_t pred_img[112][112];
 
 extern __IO  uint32_t Receive_length ;
@@ -799,58 +800,58 @@ int stony_read_pixel()
 //  return 0;
 //}
 
-int run_cider()
+void run_cider(float last_r)
 {
-  // 112 pixels per row, 2 bytes per row
-  // Two buffers - one for row and one for column
-  uint16_t buf16[2][112];
+  uint16_t row[112], col[112];
+  uint8_t row_edges[6] = {0, 0, 0, 0, 0, 0}, col_edges[6] = {0, 0, 0, 0, 0, 0};
+  uint8_t row_start, col_start;
   
-  volatile uint16_t start, total;
-  uint8_t buf_idx = 0;
-//  uint16_t min = 65535, max = 0;
+  float best_ratio = 0, best_r = 0;
+  uint8_t best_center[2] = {0, 0};
   
-  ADC_RegularChannelConfig(ADC1, CAM1_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
-  ADC_RegularChannelConfig(ADC1, CAM1_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
+//  find_pupil_edge(row_start, row_edges, row);
+//  find_pupil_edge(col_start, col_edges, col);
   
-  set_pointer_value(REG_ROWSEL, 0, CAM1);
-
-  for (int row = 0, data_cycle = 0; row < 112; row++, data_cycle++) {
-    set_pointer_value(REG_COLSEL, 0, CAM1);
+  row_start = 82; col_start = 53;
+  col_edges[0] = 47; col_edges[1] = 63;
+  row_edges[0] = 80; row_edges[1] = 85;
+  row_edges[2] = 72; row_edges[3] = 85;
+  
+  for (uint8_t i = 0; row_edges[i] != 0 || i==0; i += 2) {
+    // Pupil can't be smaller than 4 pixels across
+    if ((row_edges[i] - row_edges[i + 1]) < 4 && (row_edges[i] - row_edges[i + 1]) > -4)
+      continue;
     
-    delay_us(1);
-    
-    for (int col = 0; col < 112; col++) {      
-      CAM1_INPH_BANK->ODR |= CAM1_INPH_PIN;
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      CAM1_INPH_BANK->ODR &= ~CAM1_INPH_PIN;
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    for (uint8_t j = 0; col_edges[j] != 0 || j==0; j += 2) {
+      // Pupil can't be smaller than 4 pixels across
+      if ((col_edges[j] - col_edges[j + 1]) < 4 && (col_edges[j] - col_edges[j + 1]) > -4)
+        continue;
       
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      float x_mid, y_mid;
+      x_mid = (row_edges[i] + row_edges[i + 1]) / (float)2;
+      y_mid = (col_edges[j] + col_edges[j + 1]) / (float)2;
       
-      // Do conversion for CAM1
-      ADC_SoftwareStartConv(ADC1);
+      float r1, r2;
+      r1 = sqrt(((x_mid - row_edges[i]) * (x_mid - row_edges[i])) + ((y_mid - col_start) * (y_mid - col_start)));
+      r2 = sqrt(((x_mid - row_start) * (x_mid - row_start)) + ((y_mid - col_edges[j]) * (y_mid - col_edges[j])));
       
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      float ratio = r1 / r2;
+      if ((ratio < 0.6) || (ratio > (1/0.6)) || fabs(ratio - 1) > fabs(best_ratio - 1))
+          continue;
       
-      buf16[0][(data_cycle * 112) + col] = adc_values[adc_idx];
+      float r = (r1 + r2) / 2;
+      if (last_r != 0 && (r / last_r < 0.75 || r / last_r > 1/0.75))
+          continue;
       
-      adc_idx = !adc_idx;
-
-      CAM1_INCV_BANK->ODR |= CAM1_INCV_PIN;
-      CAM1_INCV_BANK->ODR &= ~CAM1_INCV_PIN;
-    } // for (col)
-    
-    inc_pointer_value(REG_ROWSEL, 1, CAM1);
-    
-  } // for (row)
-
-  return 0;
+      best_ratio = ratio; best_r = r;
+      best_center[0] = x_mid >= 0 ? (uint8_t)(x_mid+0.5) : (uint8_t)(x_mid-0.5);
+      best_center[1] = y_mid >= 0 ? (uint8_t)(y_mid+0.5) : (uint8_t)(y_mid-0.5);
+    }
+  }
+          
+  pred[0] = best_center[0];
+  pred[1] = best_center[1];
+  pred_radius = best_r;
 }
 
 void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
@@ -863,8 +864,6 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
   int16_t edge_detect[106];
   
   uint8_t in_specular = 0, new_peak = 0; 
-  
-  int test;
   
   // First do median filtering
   med_buf[0] = pixels[0];

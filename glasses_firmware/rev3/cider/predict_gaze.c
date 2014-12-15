@@ -6,6 +6,7 @@
 
 extern unsigned short val[112*112];
 int8_t pred[2];
+float pred_radius;
 
 unsigned short num_subsample;
 unsigned short num_hidden;
