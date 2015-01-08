@@ -2,16 +2,16 @@
 pkg load signal
 
 
-data_path = '~/eye_exper/yamin_1sm4'; %set path to directory of pngs
-save_name = 'eye_data_yamin_1sm4_auto.mat';% name of mat file for output
+data_path = '~/eye_exper/shuo_calib'; %set path to directory of pngs
+save_name = 'eye_data_shuo_calib_auto.mat';% name of mat file for output
 display_skip = 1; %Set to >0 to display output for display_skip frames
-data_name = 'yamin_1sm4'
+data_name = 'shuo_calib'
 
-start_index = 300;
-stop_index = 6200;
+start_index = 100;
+stop_index = 6299;
 
 ask_reposition = false;
-reuse_template = true;
+reuse_template = false;
 
 res = [111,112];
 instances = start_index:stop_index;
@@ -81,6 +81,7 @@ end
 Out = zeros(length(instances),prod(res));
 Eye = zeros(length(instances),prod(res));
 gaze= zeros(length(instances),2);
+gaze_label_idx= zeros(length(instances),1);
 
 j=1;
 c=0;
@@ -127,7 +128,7 @@ for i=instances
       best_x = -1;
       best_y = -1;
         
-      if(maxXC>0.90)
+      if(maxXC>0.95)
         [y,x]=find(XC==maxXC);
         x=x-w;
         y=y-w;
@@ -182,6 +183,7 @@ for i=instances
         cmd = yes_or_no('Gaze point jumped unexpectedly - is new position accurate (yes / no)?');
         if (cmd == 0)
           template(:,:,best_template)=[];
+          save(sprintf('%s_template.mat', data_name),'template');  
 
           cmd2 = yes_or_no('Enter with mouse (yes) or skip (no)?>>');
           if (cmd2 == 1)
@@ -225,10 +227,12 @@ for i=instances
     %Try to determine if gaze target is outside of frame based on last 
     %known location. Wait max_skip steps for it to come back in.
     if(found_gaze == 0 && jumped == 0)
-      if((xold<2*w || xold>res-2*w || yold<2*w || yold>res-2*w) && c<100)
+      % if((xold<2*w || xold>res-2*w || yold<2*w || yold>res-2*w) && c<100)
+      if((xold<2*w || xold>res-2*w || yold<2*w || yold>res-2*w) && c<200)
         %if the frame has changed, update the skip counter
         c=c+1;
-      elseif(xold>w && xold<res-w && yold>w && yold<res-w && c<25)  
+      % elseif(xold>w && xold<res-w && yold>w && yold<res-w && c<25)  
+      elseif(xold>w && xold<res-w && yold>w && yold<res-w && c<200)  
         c=c+1;
       else
         %If more than max_skip steps have elapsed, get the gaze point from the user
@@ -277,6 +281,7 @@ for i=instances
         Eye(j,:) = img_eye(:);
         gaze(j,:) = [x,y];
         j=j+1;
+        gaze_label_idx(j) = i;
     end 
     j
     
@@ -285,7 +290,9 @@ end
 
 Eye = Eye(1:j-1,:);
 Out = Out(1:j-1,:);
+gaze_label_idx = gaze_label_idx(1:j-1,:);
+gaze = gaze(1:j-1,:);
 
 X=Eye*1000;
-gout=gaze;
-save('-V7',save_name,'Out','X','gout','template');
+% gout=gaze;
+save('-V7',save_name,'Out','X','gaze','gaze_label_idx','template');

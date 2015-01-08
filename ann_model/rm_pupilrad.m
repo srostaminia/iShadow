@@ -1,9 +1,9 @@
 clear all; close all;
-graphics_toolkit('fltk')
-addpath('~/ann_model')
-addpath(genpath('~/ann_model/minConf'))
-addpath(genpath('~/ann_model/PQNexamples'))
+addpath(genpath('minConf'))
+addpath(genpath('PQNexamples'))
 pkg load statistics;
+
+debug_on_error(1);
 
 % params(1).data_name = 'james';
 % params(1).exper_type = 'full';
@@ -16,7 +16,7 @@ pkg load statistics;
 % * gout: gaze coordinates in (n x 2) matrix
 % gaze_data_file = sprintf('~/training_sets/eye_data_%s_auto.mat',params(1).data_name);
 
-gaze_data_file = 'eye_data.mat'
+gaze_data_file = 'eye_data_addison_microbench1_pupilrad_auto.mat'
 
 % results_folder = sprintf('~/output/%s/%s/results',params(1).data_name,params(1).exper_type);
 % model_folder = sprintf('~/output/%s/%s/models',params(1).data_name,params(1).exper_type);
@@ -27,15 +27,15 @@ model_folder = 'model'
 %Regularization parameter range.  
 %Must go from low to high values
 %Larger values give sparser models
-params(1).lambdas = [logspace(-4,-1,10)]
+% params(1).lambdas = [logspace(-4,-1,10)]
 %params(1).lambdas = [logspace(-3,-2,2)];
-%params(1).lambdas = [0.000100, 0.001000, 0.010000]
-%params(1).lambdas = [0.001000, 0.0021544, 0.0046416, 0.010000]
+% params(1).lambdas = [0.001000, 0.010000, 0.100000]
+params(1).lambdas = [0.000100];
 
 %Set to 1 to remove duplicate data from the training set
 params(1).uniquefy = 0;
 
-params(1).data_limit = load('data_limit.txt');
+params(1).data_limit = 0;
 
 %Number of hidden units. nHidden-1 will be real hidden units
 %and 1 will be a bias unit
@@ -48,7 +48,7 @@ params(1).hiddenShape = [2,3];
 %Initialization method. Can be 'strips' or 'rand'
 params(1).init   = 'strips';
 
-sub_idx = load('init.txt')
+sub_idx = 0
 
 if sub_idx == 0
   params(1).subset = 'l1';
@@ -59,7 +59,7 @@ elseif sub_idx == 2
 end
 
 %Max number of neural network training epochs/function evals
-params(1).maxiter = 500;
+params(1).maxiter = 50;
 
 %Run all results from scratch
 %Set to 0 to continue a partial run
@@ -82,7 +82,7 @@ X2=X; %Non-scaled data
 g          = bsxfun(@times,gout,1./[111,112,112]); %Normalize gaze matrix
 X          = [mean_contrast_adjust_nosave(X), ones(size(X,1),1)];
 [N,nVars]  = size(X); %get data matrix size
-num_reps   = 5;
+num_reps   = 1;
 
 % for c=[1]
   % r=1
@@ -106,7 +106,7 @@ for r = 1:num_reps
   Xtest2 = X2(ind(1:Ntest),:);
 
   if (params(c).uniquefy)
-    %[~, unique_train_ind, ~] = unique(round(gout(ind(Ntest+1:end),:)), 'rows');
+    % Round to nearest 0.5 before performing uniquefy operation
     [~, unique_train_ind, ~] = unique(round(gout(ind(Ntest+1:end),:) * 2) / 2, 'rows');
     unique_train_ind = unique_train_ind(randperm(length(unique_train_ind)));  % Undo the sorting done by the unique function
 
@@ -209,7 +209,7 @@ for r = 1:num_reps
       
       %Save model for glasses hardware
       fname = sprintf('%s/%s/rep%d',model_folder,local_suffix,r);
-      save_model_pupilrad(W_groupSparse,params,fname)
+      save_model(W_groupSparse,params,fname)
       
     else
       %continue 

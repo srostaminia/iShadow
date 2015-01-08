@@ -29,11 +29,10 @@ model_folder = 'model'
 %Larger values give sparser models
 params(1).lambdas = [logspace(-4,-1,10)]
 %params(1).lambdas = [logspace(-3,-2,2)];
-%params(1).lambdas = [0.000100, 0.001000, 0.010000]
-%params(1).lambdas = [0.001000, 0.0021544, 0.0046416, 0.010000]
+% params(1).lambdas = [0.001000, 0.010000, 0.100000]
 
 %Set to 1 to remove duplicate data from the training set
-params(1).uniquefy = 0;
+params(1).uniquefy = 1;
 
 params(1).data_limit = load('data_limit.txt');
 
@@ -59,7 +58,7 @@ elseif sub_idx == 2
 end
 
 %Max number of neural network training epochs/function evals
-params(1).maxiter = 500;
+params(1).maxiter = 250;
 
 %Run all results from scratch
 %Set to 0 to continue a partial run
@@ -79,7 +78,7 @@ randn('seed',seed); %set randn seed
 
 X2=X; %Non-scaled data
 
-g          = bsxfun(@times,gout,1./[111,112,112]); %Normalize gaze matrix
+g          = bsxfun(@times,gout,1./[111,112]); %Normalize gaze matrix
 X          = [mean_contrast_adjust_nosave(X), ones(size(X,1),1)];
 [N,nVars]  = size(X); %get data matrix size
 num_reps   = 5;
@@ -106,7 +105,6 @@ for r = 1:num_reps
   Xtest2 = X2(ind(1:Ntest),:);
 
   if (params(c).uniquefy)
-    %[~, unique_train_ind, ~] = unique(round(gout(ind(Ntest+1:end),:)), 'rows');
     [~, unique_train_ind, ~] = unique(round(gout(ind(Ntest+1:end),:) * 2) / 2, 'rows');
     unique_train_ind = unique_train_ind(randperm(length(unique_train_ind)));  % Undo the sorting done by the unique function
 
@@ -143,9 +141,8 @@ for r = 1:num_reps
       yinit(:,1)=1;
       b{1} = regress(ytrain(:,1), yinit);
       b{2} = regress(ytrain(:,2), yinit);
-      b{3} = regress(ytrain(:,3), yinit);
 
-      Winit0 = [Winit(:); b{1}; b{2}; b{3}];
+      Winit0 = [Winit(:); b{1}; b{2}];
       alpha0 = [];
   end
   Winitsub = Winit0;
@@ -161,7 +158,7 @@ for r = 1:num_reps
       switch(params(c).subset)
         case 'l1'
           [Winit0,alpha0] = train_mlp(Xtrain,ytrain,params(c).nHidden,lambda,Winitsub,alpha0,params(c).maxiter);
-          [Winitsub,ind] = params_mask_pupilrad(Winit0,nVars,params(c).nHidden);
+          [Winitsub,ind] = params_mask(Winit0,nVars,params(c).nHidden);
 
         case 'rand'
           K = max(1,round(111*112*(1-lambda)));
@@ -189,7 +186,7 @@ for r = 1:num_reps
       Xtrain_sub  = [mean_contrast_adjust_nosave(Xtrain2(:,ind(1:end-1) )),ones(size(Xtrain2,1),1)];
 
       W_groupSparse = train_mlp(Xtrain_sub,ytrain,params(c).nHidden,0,Winitsub,[],params(c).maxiter);
-      W_groupSparse = params_expand_pupilrad(W_groupSparse,ind,nVars,params(c).nHidden);
+      W_groupSparse = params_expand(W_groupSparse,ind,nVars,params(c).nHidden);
       Winitsub      = W_groupSparse;
 
       Xtrain_rescale = [Xtrain2(:,:), ones(size(Xtrain2,1),1)];
@@ -209,7 +206,7 @@ for r = 1:num_reps
       
       %Save model for glasses hardware
       fname = sprintf('%s/%s/rep%d',model_folder,local_suffix,r);
-      save_model_pupilrad(W_groupSparse,params,fname)
+      save_model(W_groupSparse,params,fname)
       
     else
       %continue 

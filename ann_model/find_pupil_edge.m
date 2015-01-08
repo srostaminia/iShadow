@@ -1,14 +1,22 @@
-function edges = find_pupil_edge(start, pixels, peak_thresh)
+function edges = find_pupil_edge(start, pixels, peak_thresh, do_round)
 
     % First do median filtering
     pixels = medfilt1(pixels,3);
     
     % Next, do convolution
     conv_op = [-1 -1 -1 0 1 1 1];
-    conv_op = conv_op / (sum(abs(conv_op(:))));
+%     conv_op = conv_op / (sum(abs(conv_op(:))));
     conv_offset = [floor(length(conv_op) / 2), ceil(length(conv_op) / 2)];
     
-    edge_detect = abs(conv(pixels, conv_op, 'valid'));
+    if (nargin == 3)
+        do_round = 0;
+    end
+    
+    if do_round == 1
+        edge_detect = floor(abs(conv(pixels, conv_op, 'valid')));
+    else
+        edge_detect = abs(conv(pixels, conv_op, 'valid'));
+    end
     
     peak_thresh = mean(edge_detect);
     
@@ -16,12 +24,14 @@ function edges = find_pupil_edge(start, pixels, peak_thresh)
     peaks = find(edge_detect(2:end-1) > edge_detect(3:end) & edge_detect(2:end-1) >= edge_detect(1:end-2) & edge_detect(2:end-1) >= peak_thresh);
     peaks = peaks + 1;
     
+    spec_thresh = 150;
+    
     % Weed out peaks resulting from specular reflections
     i = 1;
     specular_regions = [];
     while i < length(peaks)
-        if edge_detect(peaks(i)) > 25
-            tmp = find(edge_detect(1:peaks(i)) < 25,1,'last');
+        if edge_detect(peaks(i)) > 150
+            tmp = find(edge_detect(1:peaks(i)) < 150,1,'last');
             
             if isempty(tmp)
                 peaks(i) = [];
@@ -33,7 +43,7 @@ function edges = find_pupil_edge(start, pixels, peak_thresh)
             end
             
             if (i <= length(peaks))
-                tmp = find(edge_detect(peaks(i):end) < 25,1);
+                tmp = find(edge_detect(peaks(i):end) < 150,1);
                 
                 if isempty(tmp)
                     peaks(i:end) = [];
