@@ -1,10 +1,10 @@
 
 import code
 import sys
-import scipy.sparse
-import cPickle as pickle
-import numpy as np
-import matplotlib
+# import scipy.sparse
+# import cPickle as pickle
+# import numpy as np
+# import matplotlib
 
 def keyboard(banner=None):
     ''' Function that mimics the matlab keyboard command '''
