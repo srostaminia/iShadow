@@ -34,7 +34,7 @@ out_prefix = 'pupilclean_mu5_500x'
 
 start_path = '/Users/ammayber/senseye/ann_model/awesomeness_pupil_modstrip_uniquefy05_500x/'
 
-output_file = open(out_prefix + '.csv','w')
+output_file = open('data/' + out_prefix + '.csv','w')
 writer = csv.writer(output_file)
 
 writer.writerow(['name', 'struct_name', 'lambda', 'mean_pixels', 'stderr_pixels', 'mean_error', 'stderr_error', 'var_error'])
@@ -133,7 +133,7 @@ all_error_means = np.array(all_error_means)
 all_error_stderrs = np.array(all_error_stderrs)
 all_error_vars = np.array(all_error_vars)
 
-save_file = open(out_prefix + ".pi", 'w')
+save_file = open('data/' + out_prefix + ".pi", 'w')
 
 pickle.dump(all_pixel_means, save_file)
 pickle.dump(all_pixel_stderrs, save_file)
