@@ -1,9 +1,9 @@
 clear all; close all;
-graphics_toolkit('fltk')
-addpath('~/ann_model')
-addpath(genpath('~/ann_model/minConf'))
-addpath(genpath('~/ann_model/PQNexamples'))
+addpath(genpath('minConf'))
+addpath(genpath('PQNexamples'))
 pkg load statistics;
+
+debug_on_error(1);
 
 % params(1).data_name = 'james';
 % params(1).exper_type = 'full';
@@ -16,7 +16,8 @@ pkg load statistics;
 % * gout: gaze coordinates in (n x 2) matrix
 % gaze_data_file = sprintf('~/training_sets/eye_data_%s_auto.mat',params(1).data_name);
 
-gaze_data_file = 'eye_data.mat'
+gaze_data_file = 'eye_data_addison_microbench1_auto.mat'
+pupil_data_file = 'eye_data_addison_microbench1_pupil_auto.mat'
 
 % results_folder = sprintf('~/output/%s/%s/results',params(1).data_name,params(1).exper_type);
 % model_folder = sprintf('~/output/%s/%s/models',params(1).data_name,params(1).exper_type);
@@ -27,28 +28,26 @@ model_folder = 'model'
 %Regularization parameter range.  
 %Must go from low to high values
 %Larger values give sparser models
-params(1).lambdas = [logspace(-4,-1,10)]
+% params(1).lambdas = [logspace(-4,-1,10)]
 %params(1).lambdas = [logspace(-3,-2,2)];
-%params(1).lambdas = [0.000100, 0.001000, 0.010000]
-%params(1).lambdas = [0.001000, 0.0021544, 0.0046416, 0.010000]
+% params(1).lambdas = [0.001000, 0.010000, 0.100000]
+% params(1).lambdas = [0.000100];
+params(1).lambdas = [0];
 
-%Set to 1 to remove duplicate data from the training set
-params(1).uniquefy = 0;
-
-params(1).data_limit = load('data_limit.txt');
+params(1).data_limit = 0;
 
 %Number of hidden units. nHidden-1 will be real hidden units
 %and 1 will be a bias unit
-params(1).nHidden = 7;
+params(1).nHidden = 5;
 
 %Layout of hidden units for plotting. The product of these values
 %must be equal to nHidden-1.
-params(1).hiddenShape = [2,3];
+params(1).hiddenShape = [2,2];
 
 %Initialization method. Can be 'strips' or 'rand'
 params(1).init   = 'strips';
 
-sub_idx = load('init.txt')
+sub_idx = 0
 
 if sub_idx == 0
   params(1).subset = 'l1';
@@ -59,12 +58,11 @@ elseif sub_idx == 2
 end
 
 %Max number of neural network training epochs/function evals
-params(1).maxiter = 500;
+params(1).maxiter = 250;
 
 %Run all results from scratch
 %Set to 0 to continue a partial run
 from_scratch = 1;
-
 
 %Set randomization seed
 seed = 136824521;
@@ -72,16 +70,21 @@ seed = 136824521;
 %Do not modify code below this point
 %-----------------------------------
 fprintf('Loading data...');
-load(gaze_data_file); %load data file
+load(gaze_data_file,'gaze_label_idx','gaze'); %load data file
+load(pupil_data_file,'pupil_label_idx','gout'); %load data file
 fprintf('Done.\n');
 rand('seed',seed); %set rand seed
 randn('seed',seed); %set randn seed
 
-X2=X; %Non-scaled data
+pupil_loc = gout; % FIXME - need to rename gout to pupil_loc in data file
 
-g          = bsxfun(@times,gout,1./[111,112,112]); %Normalize gaze matrix
-X          = [mean_contrast_adjust_nosave(X), ones(size(X,1),1)];
-[N,nVars]  = size(X); %get data matrix size
+params(1).gp_map = find(ismember(gaze_label_idx, pupil_label_idx));
+params(1).pg_map = find(ismember(pupil_label_idx, gaze_label_idx));
+
+g          = bsxfun(@times,gaze(params(1).gp_map),1./[111,112]); %Normalize gaze matrix
+p          = bsxfun(@times,pupil_loc(params(1).pg_map),1./[111,112]); %Normalize pupil matrix
+p          = [p, ones(size(p,1),1)]; % Add bias
+[N,nVars]  = size(p); %get data matrix size
 num_reps   = 5;
 
 % for c=[1]
@@ -92,7 +95,7 @@ for r = 1:num_reps
   % sparsities(1:2)=[];
   global_suffix = sprintf('subset_%s_init_%s_k%d',params(c).subset,params(c).init,params(c).nHidden)
 
-  N = size(X,1);
+  N = size(p,1);
 
   if params(c).data_limit > 0
     Ntest = (N - params(c).data_limit);
@@ -102,28 +105,13 @@ for r = 1:num_reps
 
   ind = randperm(N);
   
-  Xtest = X(ind(1:Ntest),:);
-  Xtest2 = X2(ind(1:Ntest),:);
+  ptest = p(ind(1:Ntest),:);
+  ptrain= p(ind(Ntest+1:end),:);
 
-  if (params(c).uniquefy)
-    %[~, unique_train_ind, ~] = unique(round(gout(ind(Ntest+1:end),:)), 'rows');
-    [~, unique_train_ind, ~] = unique(round(gout(ind(Ntest+1:end),:) * 2) / 2, 'rows');
-    unique_train_ind = unique_train_ind(randperm(length(unique_train_ind)));  % Undo the sorting done by the unique function
+  ytest = g(ind(1:Ntest),:);
+  ytrain = g(ind(Ntest+1:end),:);
 
-    Xtrain= X(unique_train_ind,:);
-    Xtrain2= X2(unique_train_ind,:);
-
-    ytest = g(ind(1:Ntest),:);
-    ytrain = g(unique_train_ind,:);
-  else
-    Xtrain= X(ind(Ntest+1:end),:);
-    Xtrain2= X2(ind(Ntest+1:end),:);
-
-    ytest = g(ind(1:Ntest),:);
-    ytrain = g(ind(Ntest+1:end),:);
-  end
-
-  Ntrain = size(Xtrain,1);
+  Ntrain = size(ptrain,1);
 
   switch(params(c).init)
     case 'rand'
@@ -138,14 +126,13 @@ for r = 1:num_reps
         yinit(:,1+s) = define_target(ytrain,[0,1, -s*col_covered(2)/(ns+1) - col_covered(1)],'linear');
         yinit(:,(ns+1)+s) = define_target(ytrain,[1,0, -s*row_covered(2)/(ns+1) - row_covered(1)],'linear');
       end
-      Winit = train_mlp(Xtrain,yinit,[],0,[],[],params(c).maxiter);
+      Winit = train_mlp(ptrain,yinit,[],0,[],[],params(c).maxiter);
       Winit = reshape(Winit,nVars,params(c).nHidden);
       yinit(:,1)=1;
       b{1} = regress(ytrain(:,1), yinit);
       b{2} = regress(ytrain(:,2), yinit);
-      b{3} = regress(ytrain(:,3), yinit);
 
-      Winit0 = [Winit(:); b{1}; b{2}; b{3}];
+      Winit0 = [Winit(:); b{1}; b{2}];
       alpha0 = [];
   end
   Winitsub = Winit0;
@@ -160,8 +147,8 @@ for r = 1:num_reps
 
       switch(params(c).subset)
         case 'l1'
-          [Winit0,alpha0] = train_mlp(Xtrain,ytrain,params(c).nHidden,lambda,Winitsub,alpha0,params(c).maxiter);
-          [Winitsub,ind] = params_mask_pupilrad(Winit0,nVars,params(c).nHidden);
+          [Winit0,alpha0] = train_mlp(ptrain,ytrain,params(c).nHidden,lambda,Winitsub,alpha0,params(c).maxiter);
+          [Winitsub,ind] = params_mask(Winit0,nVars,params(c).nHidden);
 
         case 'rand'
           K = max(1,round(111*112*(1-lambda)));
@@ -181,35 +168,25 @@ for r = 1:num_reps
           end
       end   
 
-      if (ind(end) ~= 12433)
+      if (ind(end) ~= 3)
         error('Bias not included in subsampled model!!')
         exit
       end
-      
-      Xtrain_sub  = [mean_contrast_adjust_nosave(Xtrain2(:,ind(1:end-1) )),ones(size(Xtrain2,1),1)];
 
-      W_groupSparse = train_mlp(Xtrain_sub,ytrain,params(c).nHidden,0,Winitsub,[],params(c).maxiter);
-      W_groupSparse = params_expand_pupilrad(W_groupSparse,ind,nVars,params(c).nHidden);
+      W_groupSparse = train_mlp(ptrain,ytrain,params(c).nHidden,0,Winitsub,[],params(c).maxiter);
+      W_groupSparse = params_expand(W_groupSparse,ind,nVars,params(c).nHidden);
       Winitsub      = W_groupSparse;
 
-      Xtrain_rescale = [Xtrain2(:,:), ones(size(Xtrain2,1),1)];
-      Xtrain_rescale(:,ind) = Xtrain_sub;
-
-      Xtest_sub = [mean_contrast_adjust_nosave(Xtest2(:,ind(1:end-1) )),ones(size(Xtest2,1),1)];
-      Xtest_rescale = [Xtest2(:,:), ones(size(Xtest2,1),1)];
-      Xtest_rescale(:,ind) = Xtest_sub;
-
-      these_results= test_model(W_groupSparse,Xtrain_rescale,ytrain,Xtest_rescale,ytest,params(c));
+      these_results= test_model(W_groupSparse,ptrain,ytrain,ptest,ytest,params(c));
       these_results.alpha0 = alpha0;
 
       these_params = params(c);
       fname = sprintf('%s/%s/rep%d.mat',results_folder,local_suffix,r);
       save(fname,'these_results','lambda','these_params','r','c','l','ind');
-
       
       %Save model for glasses hardware
-      fname = sprintf('%s/%s/rep%d',model_folder,local_suffix,r);
-      save_model_pupilrad(W_groupSparse,params,fname)
+      % fname = sprintf('%s/%s/rep%d',model_folder,local_suffix,r);
+      % save_model_pg(W_groupSparse,params,fname)
       
     else
       %continue 

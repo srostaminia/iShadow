@@ -12,8 +12,8 @@ function filtered=plot_vec_filtered(v, conv_op, title_str)
     plot(v);
     title(title_str);
     
-    conv_op_adj = conv_op / (sum(abs(conv_op(:))));
-    filtered = abs(conv(v, conv_op_adj, 'valid'));
+%     conv_op_adj = conv_op / (sum(abs(conv_op(:))));
+    filtered = abs(conv(v, conv_op, 'valid'));
     
     coff = [floor(length(conv_op) / 2), ceil(length(conv_op) / 2)];
     subplot(3,1,2);

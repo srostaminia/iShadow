@@ -161,6 +161,7 @@ def main():
 
         # TODO: Fix this so we're not copying the entire image every time...
         frame=np.reshape(frame,(112,112))   
+        frame = 255 - frame
         
         # mask = np.right_shift(mask, 2)
         # mask = np.bitwise_and(mask, 0xFF)
