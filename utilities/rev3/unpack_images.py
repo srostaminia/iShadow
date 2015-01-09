@@ -14,7 +14,7 @@ def main():
     parser.add_argument("out_mask", help="outward-facing camera mask")
     parser.add_argument("eye_mask", help="eye-facing camera mask")
     parser.add_argument("num_pairs", type = int, help="number of interleaved image pairs stored in the input file")
-    parser.add_argument("--reuse-raw", required=False, action="store_true", help="Reuse previously stored raw image data files")
+    parser.add_argument("--reuse-raw", action="store_true", help="Reuse previously stored raw image data files")
 
     args = parser.parse_args()
 
@@ -152,18 +152,6 @@ def load_mask(mask_filename):
 
 
 def disp_save_images(image_file, mask_data, out_filename, num_images):
-    # images = read_all_packed_images(image_file)
-
-    # img = pylab.figure()
-    # for i, image in enumerate(images):
-    #     image -= mask_data
-
-    #     pylab.figimage(image, cmap = pylab.cm.Greys_r)
-
-    #     img.set_size_inches(1, 1)
-
-    #     pylab.savefig(out_filename + "_" + ("%06d" % i) + ".png", dpi=112)
-
     success = True
 
     print "Saving", out_filename + ":"
@@ -221,15 +209,5 @@ def read_packed_image(image_file, mask_data, out_filename, index):
     text_file.close()
 
     return True
-
-# def read_all_packed_images(image_file):
-#     images = []
-    
-#     current_image = read_packed_image(image_file)
-#     while (len(current_image) != 0):
-#         images.append(current_image)
-#         current_image = read_packed_image(image_file)
-        
-#     return images
 
 main()
