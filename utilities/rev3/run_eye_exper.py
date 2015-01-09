@@ -17,7 +17,15 @@ GRAN=20
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("logfile")
+    parser.add_argument("-i", "--inverse", action='store_true')
     args = parser.parse_args()
+
+    if args.inverse == True:
+        forecolor = 'white'
+        backcolor = 'black'
+    else:
+        forecolor = 'black'
+        backcolor = 'white'
 
     # Check to see if we are adding on to existing data
     if os.path.exists(args.logfile + ".csv") and not os.path.isdir(args.logfile + ".csv"):
@@ -43,9 +51,9 @@ def main():
 
     # Setup graphics window
     win = graphics.GraphWin("Eye Experiment", X_DIM + X_ADDITIONAL, Y_DIM)
-    win.setBackground('white')
+    win.setBackground(backcolor)
     circle = graphics.Circle(graphics.Point(X_ADDITIONAL / 2, 0), GRAN)
-    circle.setFill('black')
+    circle.setFill(forecolor)
     circle.draw(win)
 
     print index
@@ -54,13 +62,13 @@ def main():
 
     for point in points:
     	moveCircle(circle, point, win, index)
-    	circle.setFill('black')
+    	circle.setFill(forecolor)
 
     	time.sleep(0.5)
     	writer.writerow([index, point[0], point[1], X_DIM, Y_DIM])
     	
     	index += 1
-    	circle.setFill('black')
+    	circle.setFill(forecolor)
 
 def readExisting(logfile, points):
     lines = 0
