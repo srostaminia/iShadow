@@ -1,5 +1,7 @@
 function run_cider_sweep(result_dir, X, gout)
-    addpath('~/iShadow/ann_model');
+    addpath('~/iShadow/algorithms/cider');
+    addpath('../ann/lib');
+    addpath('../ann/run_ann');
 
     origin = pwd;
     
@@ -21,7 +23,8 @@ function run_cider_sweep(result_dir, X, gout)
             err = mean(dist);            
             
             save('-V7',sprintf('cider_rep%d.mat',j),'chord_length','pred','radii','ann_used','dist','err','gout');
-            
+            %pred=predicted center, gout=ground truth center,
+            %radii=estimated radii
         end
         
         cd('..');
@@ -29,4 +32,5 @@ function run_cider_sweep(result_dir, X, gout)
     
     cd(origin);
 
+    fprintf('FINISHED');
 end

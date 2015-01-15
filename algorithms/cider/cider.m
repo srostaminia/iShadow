@@ -1,4 +1,6 @@
 function [chord_length,pred,radii,ann_used]=cider(X,ann_file,chord_length,thresh,model,make_vid)
+    addpath('~/iShadow/algorithms/ann/lib');
+    addpath('~/iShadow/algorithms/ann/run_ann');
     load(ann_file,'ind','these_results');
     
     % Contrast adjustment

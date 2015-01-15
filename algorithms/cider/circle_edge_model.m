@@ -1,4 +1,6 @@
 function [best_c,best_r]=circle_edge_model(X,xy_target,chord_length,thresh,last_r,do_plot)
+    xy_target(1) = min(max(xy_target(1), 1), 112);
+    xy_target(2) = min(max(xy_target(2), 1), 111);
 
     % Calculate row-column (rc) coordinates from xy
     rc_target = [xy_target(2), xy_target(1)];
@@ -17,8 +19,8 @@ function [best_c,best_r]=circle_edge_model(X,xy_target,chord_length,thresh,last_
     v_line = X( v_ends(1):v_ends(2), rc_target(2) )';
     h_line = X( rc_target(1), h_ends(1):h_ends(2) );
     
-    v_pupil_possible = find_pupil_edge(xy_target(2), v_line, thresh) + y_ends(1) - 1
-    h_pupil_possible = find_pupil_edge(xy_target(1), h_line, thresh) + x_ends(1) - 1
+    v_pupil_possible = find_pupil_edge(xy_target(2), v_line, thresh) + y_ends(1) - 1;
+    h_pupil_possible = find_pupil_edge(xy_target(1), h_line, thresh) + x_ends(1) - 1;
     
     if do_plot == 1
         plot(x_ends, [xy_target(2), xy_target(2)], 'r-');
@@ -71,7 +73,7 @@ function [best_c,best_r]=circle_edge_model(X,xy_target,chord_length,thresh,last_
             best_c = c;
         end
     end
-    best_r
+    %best_r
     
     if (best_h == 0)
         best_r = 0;
