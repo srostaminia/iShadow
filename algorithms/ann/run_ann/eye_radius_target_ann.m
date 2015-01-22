@@ -88,14 +88,15 @@ results_folder = 'results'
 model_folder = 'models'
 
 fprintf('Loading data...');
-load(gaze_data_file); %load data file
+load(params(1).gaze_data_file); %load data file
 fprintf('Done.\n');
 rand('seed',seed); %set rand seed
 randn('seed',seed); %set randn seed
 
 X2=X; %Non-scaled data
 
-g          = bsxfun(@times,gout,1./[111,112,112]); %Normalize gaze matrix
+all_targets= [gout avgRadEllipse];
+g          = bsxfun(@times,all_targets,1./[111,112,112]); %Normalize gaze matrix
 X          = [mean_contrast_adjust_nosave(X), ones(size(X,1),1)];
 [N,nVars]  = size(X); %get data matrix size
 num_reps   = 5;
