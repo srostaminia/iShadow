@@ -1,9 +1,5 @@
 clear all; close all;
-addpath(genpath('minConf'))
-addpath(genpath('PQNexamples'))
 pkg load statistics;
-
-debug_on_error(1);
 
 % params(1).data_name = 'james';
 % params(1).exper_type = 'full';
@@ -16,61 +12,81 @@ debug_on_error(1);
 % * gout: gaze coordinates in (n x 2) matrix
 % gaze_data_file = sprintf('~/training_sets/eye_data_%s_auto.mat',params(1).data_name);
 
-gaze_data_file = 'eye_data_addison_microbench1_pupilrad_auto.mat'
+% Set to 1 if running on the cluster environment, 0 for running direct from the GitHub repo on a local machine
+params(1).on_cluster = 0;
 
-% results_folder = sprintf('~/output/%s/%s/results',params(1).data_name,params(1).exper_type);
-% model_folder = sprintf('~/output/%s/%s/models',params(1).data_name,params(1).exper_type);
+if (params(1).on_cluster == 0)
+  addpath(genpath('../lib/'))
+  addpath(genpath('../lib/minConf'))
+  addpath(genpath('../lib/PQNexamples'))
 
-results_folder = 'results'
-model_folder = 'model'
+  params(1).gaze_data_file = 'eye_data_addison_pupilclean_auto.mat';
 
-%Regularization parameter range.  
-%Must go from low to high values
-%Larger values give sparser models
-% params(1).lambdas = [logspace(-4,-1,10)]
-%params(1).lambdas = [logspace(-3,-2,2)];
-% params(1).lambdas = [0.001000, 0.010000, 0.100000]
-params(1).lambdas = [0.000100];
+  %Set to 1 to remove duplicate data from the training set
+  params(1).uniquefy = 0;
 
-%Set to 1 to remove duplicate data from the training set
-params(1).uniquefy = 0;
+  params(1).data_limit = 0;
 
-params(1).data_limit = 0;
+  %Number of hidden units. nHidden-1 will be real hidden units
+  %and 1 will be a bias unit
+  params(1).nHidden = 7;
 
-%Number of hidden units. nHidden-1 will be real hidden units
-%and 1 will be a bias unit
-params(1).nHidden = 7;
+  %Layout of hidden units for plotting. The product of these values
+  %must be equal to nHidden-1.
+  params(1).hiddenShape = [2,3];
 
-%Layout of hidden units for plotting. The product of these values
-%must be equal to nHidden-1.
-params(1).hiddenShape = [2,3];
+  %Initialization method. Can be 'strips' or 'rand'
+  params(1).init   = 'strips';
 
-%Initialization method. Can be 'strips' or 'rand'
-params(1).init   = 'strips';
-
-sub_idx = 0
-
-if sub_idx == 0
   params(1).subset = 'l1';
-elseif sub_idx == 1
-  params(1).subset = 'kmed';
-elseif sub_idx == 2
-  params(1).subset = 'rand';
+
+  %Max number of neural network training epochs/function evals
+  params(1).maxiter = 50;
+
+  %Regularization parameter range.  
+  %Must go from low to high values
+  %Larger values give sparser models
+  % params(1).lambdas = [logspace(-4,-1,10)]
+  %params(1).lambdas = [logspace(-3,-2,2)];
+  % params(1).lambdas = [0.001000, 0.010000, 0.100000]
+  params(1).lambdas = [0.000100];
+
+% Running on cluster
+else
+  addpath('~/ann_model')
+  addpath(genpath('~/ann_model/minConf'))
+  addpath(genpath('~/ann_model/PQNexamples'))
+
+  params_file = fopen('params.txt');
+
+  params(1).gaze_data_file = 'eye_data.mat'
+
+  % See above for parameter definitions
+  params(1).uniquefy = str2num(fgetl(params_file));
+  params(1).data_limit = str2num(fgetl(params_file));
+  params(1).hiddenShape = str2num(fgetl(params_file));
+  params(1).init = fgetl(params_file);
+  params(1).subset = fgetl(params_file);
+  params(1).maxiter = str2num(fgetl(params_file));
+  params(1).lambdas = str2num(fgetl(params_file));
+
+  params(1).nHidden = prod(params(1).hiddenShape) + 1;
 end
 
-%Max number of neural network training epochs/function evals
-params(1).maxiter = 50;
+params
 
 %Run all results from scratch
 %Set to 0 to continue a partial run
 from_scratch = 1;
-
 
 %Set randomization seed
 seed = 136824521;
 
 %Do not modify code below this point
 %-----------------------------------
+results_folder = 'results'
+model_folder = 'models'
+
 fprintf('Loading data...');
 load(gaze_data_file); %load data file
 fprintf('Done.\n');
@@ -82,7 +98,7 @@ X2=X; %Non-scaled data
 g          = bsxfun(@times,gout,1./[111,112,112]); %Normalize gaze matrix
 X          = [mean_contrast_adjust_nosave(X), ones(size(X,1),1)];
 [N,nVars]  = size(X); %get data matrix size
-num_reps   = 1;
+num_reps   = 5;
 
 % for c=[1]
   % r=1
@@ -203,9 +219,16 @@ for r = 1:num_reps
       these_results.alpha0 = alpha0;
 
       these_params = params(c);
+
+      if (~isdir(sprintf('%s',results_folder)))
+        mkdir(pwd(), results_folder);
+        mkdir(sprintf('%s/%s',pwd(),results_folder), local_suffix);
+      elseif (~isdir(sprintf('%s/%s',results_folder, local_suffix)))
+        mkdir(sprintf('%s/%s',pwd(),results_folder), local_suffix);
+      end
+
       fname = sprintf('%s/%s/rep%d.mat',results_folder,local_suffix,r);
       save(fname,'these_results','lambda','these_params','r','c','l','ind');
-
       
       %Save model for glasses hardware
       fname = sprintf('%s/%s/rep%d',model_folder,local_suffix,r);
