@@ -3,25 +3,10 @@
 #include "main.h"
 #include "diskio.h"
 
-#define TX_ROWS         48
-
-#define CAM2_OFFSET     TX_ROWS * 112
-//#define CAM2_OFFSET     5376
-#define TX_BLOCKS       (TX_ROWS * 112 * 4) / 512
-
-#if (112 % TX_ROWS != 0)
-#define CAM2_MOD_OFFSET (112 % TX_ROWS) * 112
-#define TX_MOD_BLOCKS   ((112 % TX_ROWS) * 112 * 4 ) / 512
-
-#if ((112 % TX_ROWS) * 112 * 4 ) % 512 != 0
-#error TX_ROWS invalid, does not align to 512B boundary
-#endif
-
-#endif
-
 extern __IO  uint32_t Receive_length ;
 extern uint32_t sd_ptr;
 
+int adc_idx = 0;
 __IO uint16_t adc_values[2];
 
 // ----------------Small helper functions, not to be exported-------------------
@@ -175,6 +160,82 @@ void set_biases(short vref,short nbias,short aobias, uint8_t cam)
 }
 
 // ----------------Primary library functions------------------------------------
+void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
+{
+  short config;
+  char flagUseAmplifier;
+  
+  // Set MCU pins to interface with CPLD
+  stony_pin_config();
+  
+  // Set all pins low
+  set_pin(CAM1_RESV_BANK, CAM1_RESV_PIN, 0);
+  set_pin(CAM1_INCV_BANK, CAM1_INCV_PIN, 0);
+  set_pin(CAM1_RESP_BANK, CAM1_RESP_PIN, 0);
+  set_pin(CAM1_INCP_BANK, CAM1_INCP_PIN, 0);
+  set_pin(CAM1_INPH_BANK, CAM1_INPH_PIN, 0);
+  set_pin(CAM2_RESV_BANK, CAM2_RESV_PIN, 0);
+  set_pin(CAM2_INCV_BANK, CAM2_INCV_PIN, 0);
+  set_pin(CAM2_RESP_BANK, CAM2_RESP_PIN, 0);
+  set_pin(CAM2_INCP_BANK, CAM2_INCP_PIN, 0);
+  set_pin(CAM2_INPH_BANK, CAM2_INPH_PIN, 0);
+
+  //clear all chip register values
+  clear_values(CAM1);
+  clear_values(CAM2);
+
+  //set up biases
+  // TODO russ: haven't looked at what this function does
+  set_biases(vref,nbias,aobias,CAM1);
+  set_biases(vref,nbias,aobias,CAM2);
+
+  // sanitize this input before use
+  flagUseAmplifier=selamp ? 1:0;
+
+  config = gain + (flagUseAmplifier * 8) + 16;
+
+  //turn chip on with config value
+  set_pointer_value(REG_CONFIG,config,CAM1);
+  set_pointer_value(REG_CONFIG,config,CAM2);
+  
+  dac_init();
+}
+
+void dac_init() {
+  GPIO_InitTypeDef GPIO_InitStructure;
+  DAC_InitTypeDef DAC_InitStructure;
+
+  /* DAC Periph clock enable */
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_DAC, ENABLE);
+
+  /* GPIOA clock enable */
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
+  /* Configure PA.04 (DAC_OUT1), PA.05 (DAC_OUT2) as analog */
+  GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_5;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+  
+  GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_4;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+  
+  DAC_DeInit();
+  
+  DAC_InitStructure.DAC_Trigger = DAC_Trigger_None;
+  DAC_InitStructure.DAC_WaveGeneration = DAC_WaveGeneration_None;
+  DAC_InitStructure.DAC_OutputBuffer = DAC_OutputBuffer_Enable;
+  
+  /* DAC Channel2 Init */
+  DAC_Init(DAC_Channel_2, &DAC_InitStructure);
+  DAC_Init(DAC_Channel_1, &DAC_InitStructure);
+
+  /* Enable DAC Channel2 */
+  DAC_Cmd(DAC_Channel_2, ENABLE);
+  DAC_Cmd(DAC_Channel_1, ENABLE);
+  
+  DAC_SetChannel2Data(DAC_Align_12b_R, LED_HIGH);
+  DAC_SetChannel1Data(DAC_Align_12b_R, LED_HIGH);
+}
 
 void stony_pin_config()
 {
@@ -290,136 +351,6 @@ void stony_pin_config()
   while (ADC_GetFlagStatus(ADC1, ADC_FLAG_ADONS) == RESET);
 }
 
-///**
-//  * @brief  Configure the ADC1 channel18 using DMA channel1.
-//  * @param  None
-//  * @retval None
-//  */
-//void ADC_DMA_Config(void)
-//{
-//  /*------------------------ DMA1 configuration ------------------------------*/
-//  /* Enable DMA1 clock */
-//  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, ENABLE);
-//  /* DMA1 channel1 configuration */
-//  DMA_DeInit(DMA1_Channel1);
-//  DMA_InitStructure.DMA_PeripheralBaseAddr = ADC1_DR_ADDRESS;
-//  DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)&ADC_ConvertedValue;
-//  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
-//  DMA_InitStructure.DMA_BufferSize = 1;
-//  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
-//  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Disable;
-////  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
-////  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
-//  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_Word;       // AMM
-//  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_Word;               // AMM
-//  DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
-//  DMA_InitStructure.DMA_Priority = DMA_Priority_High;
-//  DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
-//  DMA_Init(DMA1_Channel1, &DMA_InitStructure);
-//  
-//  /* Enable DMA1 channel1 */
-//  DMA_Cmd(DMA1_Channel1, ENABLE);
-//
-//  /*----------------- ADC1 configuration with DMA enabled --------------------*/
-//  /* Enable the HSI oscillator */
-//  RCC_HSICmd(ENABLE);
-//
-//#if defined (USE_STM32L152_EVAL)
-//  /* Enable GPIOB clock */
-//  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);
-//  /* Configure PB.12 (ADC Channel18) in analog mode */
-//  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12;
-//  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
-//  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-//  GPIO_Init(GPIOB, &GPIO_InitStructure);
-//#elif defined (USE_STM32L152D_EVAL)
-//  /* Enable GPIOF clock */
-//  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOF, ENABLE);
-//  /* Configure PF.10 (ADC Channel31) in analog mode */
-//  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_10;
-//  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
-//  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-//  GPIO_Init(GPIOC, &GPIO_InitStructure);  
-//#endif
-//
-//  /* Check that HSI oscillator is ready */
-//  while(RCC_GetFlagStatus(RCC_FLAG_HSIRDY) == RESET);
-//
-//  /* Enable ADC1 clock */
-//  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
-//  /* ADC1 configuration */
-//  ADC_InitStructure.ADC_ScanConvMode = ENABLE;
-//  ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;
-//  ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
-//  ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
-//  ADC_InitStructure.ADC_NbrOfConversion = 1;
-//  ADC_Init(ADC1, &ADC_InitStructure);
-//
-//#if defined (USE_STM32L152_EVAL)
-//  /* ADC1 regular channel18 configuration */ 
-//  ADC_RegularChannelConfig(ADC1, ADC_Channel_18, 1, ADC_SampleTime_4Cycles);
-//#elif defined (USE_STM32L152D_EVAL)
-//  /* ADC1 regular channel14 configuration */ 
-//  ADC_RegularChannelConfig(ADC1, ADC_Channel_31, 1, ADC_SampleTime_4Cycles);
-//#endif
-//
-//  /* Enable the request after last transfer for DMA Circular mode */
-//  ADC_DMARequestAfterLastTransferCmd(ADC1, ENABLE);
-//  
-//  /* Enable ADC1 DMA */
-//  ADC_DMACmd(ADC1, ENABLE);
-//  
-//  /* Enable ADC1 */
-//  ADC_Cmd(ADC1, ENABLE);
-//
-//  /* Wait until the ADC1 is ready */
-//  while(ADC_GetFlagStatus(ADC1, ADC_FLAG_ADONS) == RESET)
-//  {
-//  }
-//
-//  /* Start ADC1 Software Conversion */ 
-//  ADC_SoftwareStartConv(ADC1);
-//}
-
-void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
-{
-  short config;
-  char flagUseAmplifier;
-  
-  // Set MCU pins to interface with CPLD
-  stony_pin_config();
-  
-  // Set all pins low
-  set_pin(CAM1_RESV_BANK, CAM1_RESV_PIN, 0);
-  set_pin(CAM1_INCV_BANK, CAM1_INCV_PIN, 0);
-  set_pin(CAM1_RESP_BANK, CAM1_RESP_PIN, 0);
-  set_pin(CAM1_INCP_BANK, CAM1_INCP_PIN, 0);
-  set_pin(CAM1_INPH_BANK, CAM1_INPH_PIN, 0);
-  set_pin(CAM2_RESV_BANK, CAM2_RESV_PIN, 0);
-  set_pin(CAM2_INCV_BANK, CAM2_INCV_PIN, 0);
-  set_pin(CAM2_RESP_BANK, CAM2_RESP_PIN, 0);
-  set_pin(CAM2_INCP_BANK, CAM2_INCP_PIN, 0);
-  set_pin(CAM2_INPH_BANK, CAM2_INPH_PIN, 0);
-
-  //clear all chip register values
-  clear_values(CAM1);
-  clear_values(CAM2);
-
-  //set up biases
-  // TODO russ: haven't looked at what this function does
-  set_biases(vref,nbias,aobias,CAM1);
-  set_biases(vref,nbias,aobias,CAM2);
-
-  // sanitize this input before use
-  flagUseAmplifier=selamp ? 1:0;
-
-  config = gain + (flagUseAmplifier * 8) + 16;
-
-  //turn chip on with config value
-  set_pointer_value(REG_CONFIG,config,CAM1);
-  set_pointer_value(REG_CONFIG,config,CAM2);
-}
-
 int stony_read_pixel()
 {
   uint16_t ADCdata;
@@ -435,234 +366,8 @@ int stony_read_pixel()
   return ADCdata;
 }
 
-//uint16_t test_audio(void)
-//{
-//  uint16_t ADCdata;
-//  ADC_InitTypeDef ADC_InitStructure;
-//  GPIO_InitTypeDef GPIO_InitStructure;
-//  
-//  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOC, ENABLE);
-//  GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_1;
-//  GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AN;
-//  GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
-//  GPIO_Init(GPIOC, &GPIO_InitStructure);
-//
-//  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
-//
-//  ADC_BankSelection(ADC1, ADC_Bank_A);
-//  
-//  ADC_StructInit(&ADC_InitStructure);
-//  ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
-//  ADC_InitStructure.ADC_ScanConvMode = DISABLE;
-//  ADC_InitStructure.ADC_ContinuousConvMode = DISABLE;
-//  ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
-//  ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
-//  ADC_InitStructure.ADC_NbrOfConversion = 1;
-//  ADC_Init(ADC1, &ADC_InitStructure);
-//  
-//  ADC_RegularChannelConfig(ADC1, ADC_Channel_11, 1, ADC_SampleTime_4Cycles);
-//  
-//  /* Enable ADC1 */
-//  ADC_Cmd(ADC1, ENABLE);
-//
-//  /* Wait until ADC1 ON status */
-//  while (ADC_GetFlagStatus(ADC1, ADC_FLAG_ADONS) == RESET)
-//  {
-//  }
-//  
-//  /* Start ADC1 Software Conversion */
-//  ADC_SoftwareStartConv(ADC1);
-//
-//  /* Wait until ADC Channel 5 or 1 end of conversion */
-//  while (ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) == RESET)
-//  {
-//  }
-//  
-//  ADCdata = ADC_GetConversionValue(ADC1);
-//  
-//  return ADCdata;
-//}
-
-//int stony_read_pixel()
-//{
-//  GPIO_InitTypeDef GPIO_InitStructure;
-//  unsigned int pixel_val = 0;
-//  
-////  // Trigger read process
-////  READ_EN_BANK->ODR |= READ_EN_PIN;
-////  
-////  // Wait for CAM_OUT to go high, indicating that the ADC is ready to transmit
-////  while (!(CAM_OUT_BANK->IDR & CAM_OUT_PIN));
-////  
-////  // Stop the ADC clock so we can read the bits one at a time
-////  TIM_Cmd(PWM_TIM, DISABLE);
-//  
-//  // Set the clock pin to GPIO so we can toggle it manually
-//  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_OUT;
-//  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
-//  GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
-//  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_40MHz;
-//  GPIO_InitStructure.GPIO_Pin = PWM_PIN;
-//  GPIO_Init(PWM_BANK, &GPIO_InitStructure);
-//  
-//  // Pull clock low to prepare for read
-//  PWM_BANK->ODR &= ~PWM_PIN;
-//  
-//  __istate_t s = __get_interrupt_state();
-//  __disable_interrupt();
-//  
-//  // Trigger read process
-//  READ_EN_BANK->ODR |= READ_EN_PIN;
-//  
-//  pulse_clock();
-//  asm volatile("nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n");
-//  
-//  pulse_clock();
-//  
-//  // Read ADC bits
-//  for (int i = 0; i < 12; i++) {
-//    pixel_val <<= 1;
-//    
-//    int test = read_adc_bit();
-//    
-//    if (test)
-//      pixel_val += 1;
-//  }
-//  
-//  // Trigger end of read sequence
-//  READ_EN_BANK->ODR &= ~READ_EN_PIN;
-//  
-//  __set_interrupt_state(s);
-//  
-//  pulse_clock();
-//  
-//  // Turn camera clock back on
-////  stony_pwm();
-//  
-//  return pixel_val;
-//}
-//
-//short read_adc_bit()
-//{
-//  short val = CAM_OUT_BANK->IDR & CAM_OUT_PIN;
-//  
-//  PWM_BANK->ODR |= PWM_PIN;
-//  asm volatile("nop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\nnop\n");
-////  delay_us(1);
-//  PWM_BANK->ODR &= ~PWM_PIN;
-////  delay_us(1);
-//  
-//  return val;
-//}
-
-//void stony_test()
-//{
-//  stony_pin_config();
-//  
-//  while (1)
-//    pulse_inph(1);
-//}
-
-//int stony_image()
-//{
-//  UINT num_written;
-//  unsigned char buf8[112 * 2];
-//  unsigned short *buf16 = (unsigned short*)buf8;
-//  
-//  set_pointer_value(REG_ROWSEL, 0);
-//
-//  for (int row = 0; row < 112; row++) {
-//    set_pointer_value(REG_COLSEL, 0);
-//    
-//    delay_us(1);
-//    
-//    for (int col = 0; col < 112; col++) {
-//      pulse_inph(1);
-////      delay_us(1);
-//      
-////      short tmp = stony_read_pixel();
-////      buf16[col] = tmp;
-//      
-//      buf16[col] = stony_read_pixel();
-//      
-//      pulse_incv();
-//    } // for (col)
-//    
-//    inc_pointer_value(REG_ROWSEL, 1);
-//    
-////    if (f_write(file, buf8, 112 * 2, &num_written))      return -1;
-//
-//  } // for (row)
-//  
-//  return 0;
-//}
-
-//int stony_image_inline()
-//{
-//  UINT num_written;
-//  uint8_t buf8[2][112 * 16 * 2];
-//  uint16_t *buf16 = (uint16_t *)buf8[0];
-//  uint16_t start, total;
-//  uint8_t buf_idx = 0;
-//  
-//  set_pointer_value(REG_ROWSEL, 0, CAM1);
-//
-//  for (int row = 0, data_cycle = 0; row < 112; row++, data_cycle++) {
-//    set_pointer_value(REG_COLSEL, 0, CAM1);
-//    
-//    delay_us(1);
-//    
-//    for (int col = 0; col < 112; col++) {
-//      CAM1_INPH_BANK->ODR |= INPH_PIN;
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      CAM1_INPH_BANK->ODR &= ~INPH_PIN;
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      
-//      /* Start ADC1 Software Conversion */
-//      ADC_SoftwareStartConv(ADC1);
-//
-//      /* Wait until ADC Channel 5 or 1 end of conversion */
-//      while (ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) == RESET);
-//      
-//      buf16[(data_cycle * 112) + col] = ADC_GetConversionValue(ADC1);
-//      
-////      buf16[(data_cycle * 112) + col] = 0xAAAA;
-//      
-//      INCV_BANK->ODR |= INCV_PIN;
-//      INCV_BANK->ODR &= ~INCV_PIN;
-//    } // for (col)
-//    
-//    inc_pointer_value(REG_ROWSEL, 1);
-//
-//    if (data_cycle == 15) {
-//      if (row > 15) {
-//        f_finish_write();
-//      }
-//      
-//      if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, 7) != RES_OK)      return -1;
-////      f_finish_write();
-//      
-//      buf_idx = !buf_idx;
-//      buf16 = (uint16_t *)buf8[buf_idx];
-//      
-//      sd_ptr += 7;
-//      data_cycle = -1;
-//      
-////      if (row == 31)    return 0;
-//    }
-//
-//  } // for (row)
-//  
-//  f_finish_write();
-//  
-//  return 0;
-//}
-
 int stony_image_dual()
 {
-  UINT num_written;
   // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, 2 cameras
   // Double-buffered (2-dim array)
   uint8_t buf8[2][112 * TX_ROWS * 2 * 2];
@@ -765,6 +470,138 @@ int stony_image_dual()
 #endif
   
   f_finish_write();
+  
+  return 0;
+}
+
+
+int stony_image_single()
+{
+  // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row
+  // Double-buffered (2-dim array)
+  uint8_t buf8[2][112 * TX_ROWS * 2];
+  uint16_t *buf16 = (uint16_t *)buf8[0];
+  
+  volatile uint16_t start, total;
+  uint8_t buf_idx = 0;
+//  uint16_t min = 65535, max = 0;
+  
+  ADC_RegularChannelConfig(ADC1, SINGLE_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
+  ADC_RegularChannelConfig(ADC1, SINGLE_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
+  
+  set_pointer_value(REG_ROWSEL, 0, SINGLE_CAM);
+
+  for (int row = 0, data_cycle = 0; row < 112; row++, data_cycle++) {
+    set_pointer_value(REG_COLSEL, 0, SINGLE_CAM);
+    
+    delay_us(1);
+    
+    for (int col = 0; col < 112; col++) {      
+      SINGLE_PARAM(INPH_BANK)->ODR |= SINGLE_PARAM(INPH_PIN);
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      SINGLE_PARAM(INPH_BANK)->ODR &= ~SINGLE_PARAM(INPH_PIN);
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      
+      // Do conversion for 
+      ADC_SoftwareStartConv(ADC1);
+      
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      
+      buf16[(data_cycle * 112) + col] = adc_values[adc_idx];
+      
+//      min = (adc_values[adc_idx] < min) ? (adc_values[adc_idx]) : (min);
+//      max = (adc_values[adc_idx] > max) ? (adc_values[adc_idx]) : (max);
+      
+      adc_idx = !adc_idx;
+
+      SINGLE_PARAM(INCV_BANK)->ODR |= SINGLE_PARAM(INCV_PIN);
+      SINGLE_PARAM(INCV_BANK)->ODR &= ~SINGLE_PARAM(INCV_PIN);
+    } // for (col)
+    
+    inc_pointer_value(REG_ROWSEL, 1, SINGLE_CAM);
+
+    if (data_cycle == TX_ROWS - 1) {
+      if (row > TX_ROWS - 1) {
+        f_finish_write();
+      }
+      
+      if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, TX_BLOCKS / 2) != RES_OK)      return -1;
+      
+      buf_idx = !buf_idx;
+      buf16 = (uint16_t *)buf8[buf_idx];
+      
+      sd_ptr += TX_BLOCKS / 2;
+      data_cycle = -1;      
+//      if (row == 31)    return 0;
+    }
+  } // for (row)
+
+#if (112 % TX_ROWS != 0)
+  f_finish_write();
+  
+  if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, TX_MOD_BLOCKS / 2) != RES_OK)      return -1;
+  sd_ptr += TX_MOD_BLOCKS / 2;
+#endif
+  
+  f_finish_write();
+  
+//  last_max = max;
+//  last_min = min;
+  
+  return 0;
+}
+
+int stony_cider_line(uint8_t rowcol_num, uint8_t *sd_buf, uint8_t rowcol_sel)
+{
+  // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, only 1 camera
+  // Double-buffered (2-dim array)
+//  uint8_t buf8[2][112 * TX_ROWS * 2];
+  uint16_t *buf16 = (uint16_t *)sd_buf;
+  
+  volatile uint16_t start, total;
+  
+  if (rowcol_sel == 1) {
+    set_pointer_value(REG_COLSEL, rowcol_num, SINGLE_CAM);
+    set_pointer_value(REG_ROWSEL, 0, SINGLE_CAM);
+  } else {
+    set_pointer_value(REG_ROWSEL, rowcol_num, SINGLE_CAM);
+    set_pointer_value(REG_COLSEL, 0, SINGLE_CAM);
+  }
+  
+  delay_us(1);
+  
+  for (int i = 0; i < 112; i++) {      
+    SINGLE_PARAM(INPH_BANK)->ODR |= SINGLE_PARAM(INPH_PIN);
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    SINGLE_PARAM(INPH_BANK)->ODR &= ~SINGLE_PARAM(INPH_PIN);
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    
+    // Do conversion for SINGLE_CAM
+    ADC_SoftwareStartConv(ADC1);
+    
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    
+    buf16[i] = adc_values[0];
+    
+    SINGLE_PARAM(INCV_BANK)->ODR |= SINGLE_PARAM(INCV_PIN);
+    SINGLE_PARAM(INCV_BANK)->ODR &= ~SINGLE_PARAM(INCV_PIN);
+  } // for (col)
   
   return 0;
 }
