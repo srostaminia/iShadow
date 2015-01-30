@@ -21,7 +21,8 @@
 
 #endif
 
-extern short pred[512];
+extern int8_t pred[2];
+extern float pred_radius;
 
 extern __IO  uint32_t Receive_length ;
 extern uint32_t sd_ptr;
@@ -745,6 +746,221 @@ int stony_image_minmax()
   last_max = max;
   
   return 0;
+}
+
+
+void run_cider(float last_r)
+{
+  uint16_t row[112], col[112];
+  uint8_t row_edges[6] = {0, 0, 0, 0, 0, 0}, col_edges[6] = {0, 0, 0, 0, 0, 0};
+  uint8_t row_start, col_start;
+  
+  float best_ratio = 0, best_r = 0;
+  uint8_t best_center[2] = {0, 0};
+  
+//  find_pupil_edge(row_start, row_edges, row);
+//  find_pupil_edge(col_start, col_edges, col);
+  
+  row_start = 82; col_start = 53;
+  col_edges[0] = 47; col_edges[1] = 63;
+  row_edges[0] = 80; row_edges[1] = 85;
+  row_edges[2] = 72; row_edges[3] = 85;
+  
+  for (uint8_t i = 0; row_edges[i] != 0 || i==0; i += 2) {
+    // Pupil can't be smaller than 4 pixels across
+    if ((row_edges[i] - row_edges[i + 1]) < 4 && (row_edges[i] - row_edges[i + 1]) > -4)
+      continue;
+    
+    for (uint8_t j = 0; col_edges[j] != 0 || j==0; j += 2) {
+      // Pupil can't be smaller than 4 pixels across
+      if ((col_edges[j] - col_edges[j + 1]) < 4 && (col_edges[j] - col_edges[j + 1]) > -4)
+        continue;
+      
+      float x_mid, y_mid;
+      x_mid = (row_edges[i] + row_edges[i + 1]) / (float)2;
+      y_mid = (col_edges[j] + col_edges[j + 1]) / (float)2;
+      
+      float r1, r2;
+      r1 = sqrt(((x_mid - row_edges[i]) * (x_mid - row_edges[i])) + ((y_mid - col_start) * (y_mid - col_start)));
+      r2 = sqrt(((x_mid - row_start) * (x_mid - row_start)) + ((y_mid - col_edges[j]) * (y_mid - col_edges[j])));
+      
+      float ratio = r1 / r2;
+      if ((ratio < 0.6) || (ratio > (1/0.6)) || fabs(ratio - 1) > fabs(best_ratio - 1))
+          continue;
+      
+      float r = (r1 + r2) / 2;
+      if (last_r != 0 && (r / last_r < 0.75 || r / last_r > 1/0.75))
+          continue;
+      
+      best_ratio = ratio; best_r = r;
+      best_center[0] = x_mid >= 0 ? (uint8_t)(x_mid+0.5) : (uint8_t)(x_mid-0.5);
+      best_center[1] = y_mid >= 0 ? (uint8_t)(y_mid+0.5) : (uint8_t)(y_mid-0.5);
+    }
+  }
+          
+  pred[0] = best_center[0];
+  pred[1] = best_center[1];
+  pred_radius = best_r;
+}
+
+void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
+{
+  uint16_t med_buf[2], next_pixel;
+  uint8_t med_idx, small_val, reg_size, edge_idx;
+  uint8_t peak_after, local_regions[3], lr_idx, lr_min;
+  uint8_t peaks[53], peak_idx, spec_regions[53], spec_idx;
+  int16_t conv_sum, conv_abs, reg_sum, edge_mean, region_means[53];
+  int16_t edge_detect[106];
+  
+  uint8_t in_specular = 0, new_peak = 0; 
+  
+  // First do median filtering
+  med_buf[0] = pixels[0];
+  med_buf[1] = pixels[1];
+  med_idx = 0;
+  small_val = (pixels[0] < pixels[1]) ? 0 : 1;
+  
+  for (uint8_t i = 2; i < 112; i++) {
+    next_pixel = pixels[i];
+    
+    if (next_pixel < med_buf[small_val]) {
+      pixels[i - 1] = med_buf[small_val];
+      small_val = med_idx;
+    } else if (next_pixel > med_buf[!small_val]) {
+      pixels[i - 1] = med_buf[!small_val];
+      small_val = !med_idx;
+    } else {
+      pixels[i - 1] = next_pixel;
+    }
+    
+    med_buf[med_idx] = next_pixel;
+    med_idx = !med_idx;
+  }
+  
+  // Next, do convolution
+  conv_sum = -pixels[0] - pixels[1] - pixels[2] + pixels[4] + pixels[5] + pixels[6];
+  conv_abs = (conv_sum < 0) ? (-conv_sum) : (conv_sum);
+  edge_detect[0] = conv_abs;
+  edge_mean = 0;
+  for (uint8_t i = 4; i < 108; i++) {
+    conv_sum += pixels[i - 4];
+    conv_sum -= pixels[i - 1];
+    conv_sum -= pixels[i];
+    conv_sum += pixels[i + 3];
+    
+    conv_abs = (conv_sum < 0) ? (-conv_sum) : (conv_sum);
+    
+    edge_detect[i - 3] = conv_abs;
+    edge_mean += conv_abs;
+  }
+  edge_mean /= 106;
+  
+  // Then peak identification (+ weeding out peaks resulting from specular reflection)
+  // and calculating region means (+ identifying specular regions)
+  peaks[0] = 0; reg_sum = pixels[1] + pixels[2] + pixels[3];
+  peak_idx = 1; in_specular = 0; new_peak = 0; peak_after = 0;
+  for (uint8_t i = 1; i < 105; i++) {
+    if (edge_detect[i] > SPEC_THRESH) {
+      if (in_specular == 0) {
+        in_specular = 1;
+        if (i > 1 && peaks[peak_idx - 1] != (i - 1)) {
+          peaks[peak_idx] = i - 1;
+          spec_regions[spec_idx] = peak_idx;
+          peak_idx++; new_peak = 1;
+        } else {
+          spec_regions[spec_idx] = peak_idx - 1;
+        }
+        spec_idx++;
+      } else if (in_specular == 2) {
+        in_specular++;
+      }
+    } else if (edge_detect[i] < SPEC_THRESH && in_specular != 0) {
+      if (in_specular == 1)
+        in_specular++;
+      else if (in_specular == 3) {
+        in_specular = 0;
+        peaks[peak_idx] = i;
+        peak_idx++; new_peak = 1;
+      }
+    } else {
+      if (edge_detect[i] >= edge_detect[i - 1] && edge_detect[i] > edge_detect[i + 1] && edge_detect[i] > edge_mean) {
+        peaks[peak_idx] = i;
+        peak_idx++; new_peak = 1;
+      }
+    }
+    
+    reg_sum += pixels[i + 3];
+    
+    if (new_peak == 1) {
+      reg_size = peaks[peak_idx - 1] - peaks[peak_idx - 2] + (peak_idx == 2 ? 3 : 0);
+      
+      // If we retroactively made the previous point a peak, need to adjust the mean calculation
+      if (in_specular == 1) {
+        region_means[peak_idx - 2] = (reg_sum - pixels[i + 3]) / reg_size;
+        reg_sum = pixels[i + 3];
+      } else {
+        region_means[peak_idx - 2] = reg_sum / reg_size;
+        reg_sum = 0;
+      }
+      
+      new_peak = 0;
+      if (peak_after == 0 && peaks[peak_idx - 1] > start_point)
+        peak_after = peak_idx - 1;
+    }
+  }
+  
+  // Set last peak as last pixel
+  peaks[peak_idx] = 111;
+  peak_idx++;
+  reg_sum += pixels[108] + pixels[109] + pixels[110] + pixels[111];
+  reg_size = peaks[peak_idx - 1] - peaks[peak_idx - 2];
+  region_means[peak_idx - 2] = reg_sum / reg_size;
+  
+  if (peak_after == 0)
+    peak_after = peak_idx - 1;
+  
+  // Identify the local regions around the start point
+  lr_idx = 0;
+  if (peak_after > 2) {
+    local_regions[lr_idx] = peak_after - 2;
+    lr_idx++;
+  }
+  
+  local_regions[lr_idx] = peak_after - 1;
+  lr_idx++;
+  
+  if (peak_after < peak_idx - 1) {
+    local_regions[lr_idx] = peak_after;
+    lr_idx++;
+  }
+  
+  // Select the local region with the lowest mean
+  lr_min = 0;
+  for (uint8_t i = 1; i < lr_idx; i++) {
+    if (region_means[local_regions[i]] < region_means[local_regions[lr_min]])
+      lr_min = i;
+  }
+  
+  edges[0] = peaks[local_regions[lr_min]];
+  edges[0] += (edges[0] == 0 ? 0 : CONV_OFFSET);
+  edges[1] = peaks[local_regions[lr_min]+1];
+  edges[1] += (edges[1] == 111 ? 0 : CONV_OFFSET);
+  edge_idx = 2;
+  
+  // Check if the region has a specular point on either end
+  for (uint8_t i = 0; i < spec_idx; i++) {
+    if (spec_regions[i] == local_regions[lr_min] - 1) {
+      edges[edge_idx] = peaks[local_regions[lr_min] - 1] + CONV_OFFSET;
+      edges[edge_idx+1] = peaks[local_regions[lr_min] + 1] + CONV_OFFSET;
+      edge_idx += 2;
+    } else if (spec_regions[i] == local_regions[lr_min] + 1) {
+      edges[edge_idx] = peaks[local_regions[lr_min]] + CONV_OFFSET;
+      edges[edge_idx+1] = peaks[local_regions[lr_min] + 2] + CONV_OFFSET;
+      edge_idx += 2;
+    }
+  }
+  
+  return;       // Edge data is stored in argument array
 }
 
 int stony_image_subsample()
