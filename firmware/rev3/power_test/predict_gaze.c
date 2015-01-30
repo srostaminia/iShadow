@@ -4,7 +4,8 @@
 #include "predict_gaze.h"
 
 extern unsigned short val[112*112];
-short pred[512];
+float pred_radius;
+int8_t pred[2];
 
 unsigned short num_subsample;
 unsigned short num_hidden;

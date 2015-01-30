@@ -6,6 +6,9 @@
 #define CAM1                 1
 #define CAM2                 2
 
+#define DHR12R1_OFFSET             ((uint32_t)0x00000008)
+#define DHR12R2_OFFSET             ((uint32_t)0x00000014)
+
 #define CAM_AHB         RCC_AHBPeriph_GPIOA | RCC_AHBPeriph_GPIOB | RCC_AHBPeriph_GPIOC
 
 #define CAM1_RESP_BANK       GPIOB
@@ -52,15 +55,60 @@
 #define SMH_GAIN_3V3    2//3   //amp gain for 3.3 volts 
 #define SMH_SELAMP_3V3  1
 
+#define SMH_VREF_OUT    48
+
 #define ADC1_DR_ADDRESS                 ((uint32_t)0x40012458)
 #define DMA_DIR_PeripheralToMemory      ((uint32_t)0x00000000)
 
+// Uncomment to transmit eye-facing camera instead of out-facing
+//#define SEND_EYE
+
+// Comment out to use unmasked eye pixels
+//#define USE_FPN_EYE
+
+// Comment out to leave LEDs on at all times
+//#define LED_DUTY_CYCLE
+
+// Uncomment one or the other for pixel transmission rate
+//#define SEND_16BIT
+#define SEND_8BIT
+
+// CIDER parameters
+#define SPEC_THRESH     150
+#define CONV_OFFSET     4
+
+#if defined(SEND_16BIT) && defined(SEND_8BIT)
+#error CANNOT DEFINE BOTH SEND_16BIT AND SEND_8BIT (LIBSTONY.H)
+#elif !defined(SEND_16BIT) && !defined(SEND_8BIT)
+#error MUST DEFINE ONE OF SEND_16BIT OR SEND_8BIT (LIBSTONY.H)
+#endif
+
+#ifdef SEND_16BIT
+#define USB_PIXELS      92
+#else
+//#define USB_PIXELS      184
+#define USB_PIXELS      112
+#define CONV_8BIT(X)    (((X) >> 2) & 0xFF)
+#endif
+
+#define LED_LOW         0
+
+//#define LED_HIGH        0        
+#define LED_HIGH          0x59E       // 1.15V
+//#define LED_HIGH        0x5D1         // 1.25V
+//#define LED_HIGH        0x64D
+//#define LED_HIGH        0x746
+
 void stony_pin_config();
 void stony_init(short vref, short nbias, short aobias, char gain, char selamp);
+void dac_init();
 int stony_read_pixel();
-int stony_image_single();
 int stony_image_subsample();
 int stony_image_minmax();
+int stony_image_dual_subsample();
+
+int cider();
+void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels);
 
 void pulse_resv(uint8_t cam);
 void pulse_incv(uint8_t cam);
