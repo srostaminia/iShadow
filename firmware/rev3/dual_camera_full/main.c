@@ -38,25 +38,28 @@ int main()
 ////    total = TIM4->CNT - start;
 //  }
   
-  stony_image_single();
+//  stony_image_single();
   
-//  total = cider_line_test();
+//  cider_line_test(-1, 1);
+  cider_line_test(70, 1);
   
   return total;
 }
 
-int cider_line_test()
+int cider_line_test(int8_t rowcol_num, int8_t rowcol_sel)
 {
   //   112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, only 1 camera
 //   Double-buffered (2-dim array)
   uint8_t sd_buf[2][TX_ROWS][112 * 2];
   uint8_t buf_idx = 0;
+  uint16_t this_rowcol;
   
-  ADC_RegularChannelConfig(ADC1, CAM1_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
-  ADC_RegularChannelConfig(ADC1, CAM1_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
+  ADC_RegularChannelConfig(ADC1, SINGLE_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
+  ADC_RegularChannelConfig(ADC1, SINGLE_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
   
   for (int i = 0, buf_line = 1; i < 112; i++, buf_line++) {
-    stony_cider_line(i, sd_buf[buf_idx][buf_line - 1], 1);
+    this_rowcol = (rowcol_num < 0) ? (i) : (rowcol_num);
+    stony_cider_line(this_rowcol, sd_buf[buf_idx][buf_line - 1], rowcol_sel);
     
     if (buf_line == TX_ROWS) {
       buf_line = 0;

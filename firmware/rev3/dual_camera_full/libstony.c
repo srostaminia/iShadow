@@ -568,7 +568,7 @@ int stony_cider_line(uint8_t rowcol_num, uint8_t *sd_buf, uint8_t rowcol_sel)
   
   volatile uint16_t start, total;
   
-  if (rowcol_sel == 1) {
+  if (rowcol_sel == 0) {
     set_pointer_value(REG_COLSEL, rowcol_num, SINGLE_CAM);
     set_pointer_value(REG_ROWSEL, 0, SINGLE_CAM);
   } else {
