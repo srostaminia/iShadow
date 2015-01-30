@@ -4,7 +4,7 @@
 #include "stm32l1xx.h"
 
 // Camera to use for single-camera functions
-#define SINGLE_CAM      CAM1
+#define SINGLE_CAM      CAM2
 
 #define LED_LOW         0
 
