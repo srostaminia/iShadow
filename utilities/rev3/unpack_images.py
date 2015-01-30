@@ -17,7 +17,7 @@ def main():
     parser.add_argument("--no-interleave", action="store_true", help="Images are stored singly, not interleaved")
     
     group = parser.add_mutually_exclusive_group()
-    group.add_argument("-o", "--offset", help="Number of images / pairs to skip on SD card")
+    group.add_argument("-o", "--offset", help="Number of images / pairs to skip on SD card", type=int)
     group.add_argument("--reuse-raw", action="store_true", help="Reuse previously stored raw image data files")
 
     args = parser.parse_args()
@@ -56,9 +56,11 @@ def main():
             sys.exit()
 
         if interleaved:
-            input_file.seek(num_skip * 25088)
+            input_file.seek(num_skip * 50176)
         else:
-            input_file.seek(num_skip * 12544)
+            input_file.seek(num_skip * 25088)
+
+        print "tell:", input_file.tell()
 
         if not os.path.exists(file_prefix):
             os.makedirs(file_prefix)
@@ -97,6 +99,8 @@ def main():
 
                 data = input_file.read(3584)
                 output_a.write(data)
+
+                print "tell:", input_file.tell()
 
                 if (interleaved):
                     data = input_file.read(3584)
@@ -180,7 +184,7 @@ def load_mask(mask_filename):
         print "Mask file", mask_filename, "is corrupted."
         sys.exit()
 
-    mask_data = mask_data[1:]
+    # mask_data = mask_data[1:]
 
     mask_file.close()
 
@@ -223,7 +227,7 @@ def read_packed_image(image_file, mask_data, out_filename, index):
             image[i].append(value)
 
     # print image[0]
-    image = image[1:]
+    # image = image[1:]
 
     figure = pylab.figure()
 
