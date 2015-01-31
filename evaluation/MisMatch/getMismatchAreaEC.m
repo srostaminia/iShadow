@@ -1,4 +1,4 @@
-function [mismatchArea]=getMismatchAreaEC(w,h,circleSt,ellipseSt,plotMode)
+function [mismatchArea,overlapArea,trueArea]=getMismatchAreaEC(w,h,circleSt,ellipseSt,plotMode)
 
 r_circ=circleSt.radius;
 x_circ=circleSt.centX;
@@ -24,6 +24,7 @@ el(isinellipse)=1;
 el=imrotate(el,phi_ell,'crop');  %***important to rotate before circshift
 el=circshift(el,round([h/2+y_ell w/2+x_ell]));
 
+trueArea=sum(el(:));
 %trueArea=sum(el(:));
 %matrix for circle
 circ=zeros(h,w);
@@ -34,6 +35,8 @@ circ(isincircle)=1;
 
 mismatchBW=xor(el,circ);
 overlapBW=and(el,circ);
+
+%fprintf('ellipseArea%.2f, mismatch%i\n',sum(el(:)),sum(mismatchBW(:)));
 
 mismatchArea=sum(mismatchBW(:));
 overlapArea=sum(overlapBW(:));
@@ -60,7 +63,7 @@ if strcmp(plotMode,'all')
     axis tight
     hold on;
     scatter(x_ell,y_ell,'xr');
-    ellipse(majorlen_ell/2,minorlen_ell/2,phi_ell*pi/180, x_ell,y_ell,'g')
+    ellipse(majorlen_ell/2,minorlen_ell/2,-1*phi_ell*pi/180, x_ell,y_ell,'g');
     %pdeellip(x_ell,y_ell,majorlen_ell,minorlen_ell,phi_ell);
     hold off;
     
@@ -70,13 +73,12 @@ if strcmp(plotMode,'all')
     axis tight
     hold on;
     scatter(x_ell,y_ell,'xr');
-    ellipse(majorlen_ell/2,minorlen_ell/2,phi_ell*pi/180, x_ell,y_ell,'g')
+    ellipse(majorlen_ell/2,minorlen_ell/2,-1*phi_ell*pi/180, x_ell,y_ell,'g');
     %pdeellip(x_ell,y_ell,majorlen_ell,minorlen_ell,phi_ell);
     hold off;
     
 end
 
-fprintf('Overlap Area=%i, Mismatch Area=%i\n',overlapArea,mismatchArea);
 %pdeellip(xc,yc,majorlen_ell,minorlen_ell,phi_ell)
 %pdecirc(xc,yc,radius)
 

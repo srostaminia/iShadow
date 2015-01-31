@@ -1,4 +1,4 @@
-function pred=ann(X,ann_file)
+function pred=ann(X,ann_file,nDim,scaleVect)
 
 %pred= predicted pupil center
     
@@ -12,7 +12,7 @@ function pred=ann(X,ann_file)
 
     %%%
     for i = 1:size(X,1)
-        pred(i,:) = [112,111] .* logisticmlp_prediction(these_results.W, [X_adjust(i,:) 1], 7, 2);
+        pred(i,:) = scaleVect .* logisticmlp_prediction(these_results.W, [X_adjust(i,:) 1], 7, nDim);
     end
 
     if isequal(size(pred),[size(X,1) 2])

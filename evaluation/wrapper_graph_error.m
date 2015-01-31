@@ -2,7 +2,7 @@ clear;
 close all;
 
 addpath('~/iShadow/evaluation')
-subList={'yamin','addison','duncan','mike'};
+subList={'malai'};%{'yamin','addison','duncan','mike'};
 rootDir='~/iShadow/algorithms/cider/data/';
 
 % CHANGE HERE:
@@ -11,8 +11,8 @@ modelName='ann'; % 'ANN' %'both'
 [annErrStEachSub,annMeanErrorMat,annStdErrorMat]=graph_error_model(modelName,subList,rootDir);
 
 % CHANGE HERE:
-modelName='cider'; % 'ANN' %'both'
-[ciderErrStEachSub,ciderMeanErrorMat,ciderStdErrorMat,lineMeanErrorMat,lineStdErrorMat]=graph_error_model(modelName,subList,rootDir);
+% modelName='cider'; % 'ANN' %'both'
+% [ciderErrStEachSub,ciderMeanErrorMat,ciderStdErrorMat,lineMeanErrorMat,lineStdErrorMat]=graph_error_model(modelName,subList,rootDir);
 
 %%
 size(ciderMeanErrorMat)
