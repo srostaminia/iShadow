@@ -17,6 +17,8 @@
 function [errStEachSub,meanErrAllSub,stdErrAllSub,meanErr_line_ForAllSub,stdErr_line_ForAllSub]=graph_error_model(modelName,subList,rootDir)
     cd ~
 
+    lighting='outdoors';
+    
     uniFolderList={'uniquefy_0'};%,'uniquefy_1'};
     lambdaFolderList={'subset_l1_init_strips_k7_lambda0.000100','subset_l1_init_strips_k7_lambda0.000215','subset_l1_init_strips_k7_lambda0.000464','subset_l1_init_strips_k7_lambda0.001000','subset_l1_init_strips_k7_lambda0.002154','subset_l1_init_strips_k7_lambda0.004642','subset_l1_init_strips_k7_lambda0.010000','subset_l1_init_strips_k7_lambda0.021544','subset_l1_init_strips_k7_lambda0.046416','subset_l1_init_strips_k7_lambda0.100000'};
     lambdaStrList={'lambda0.000100','lambda0.000215','lambda0.000464','lambda0.001000','lambda0.002154','lambda0.004642','lambda0.010000','lambda0.021544','lambda0.046416','lambda0.100000'};
@@ -73,7 +75,8 @@ function [errStEachSub,meanErrAllSub,stdErrAllSub,meanErr_line_ForAllSub,stdErr_
                         dir=fullfile(rootDir, 'awesomeness_pupil_1sm4_uniquefy/yamin_1sm4_pupil/full/results',lambdaFolder,strcat(modelName,'_rep',num2str(m),'.mat'));
 
                     else
-                        dir= fullfile(rootDir,'awesomeness_irb_pupil',strcat(subName,'_calib_pupil'),uni,'results',lambdaFolder,strcat(modelName,'_rep',num2str(m),'.mat'));
+                        dir= fullfile(rootDir,'awesomeness_irb_pupil',strcat(subName,'_',lighting,'_pupil'),uni,'results',lambdaFolder,strcat(modelName,'_rep',num2str(m),'.mat'));
+                        dir
                     end
 
                     %dir

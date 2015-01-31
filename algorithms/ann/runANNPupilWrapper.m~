@@ -7,30 +7,23 @@
 
 clear;
 
-% nDim=3;
-% scaleVect=[112 111 112];
-nDim=2;
-scaleVect=[112 111];
+nDim=3;
+scaleVect=[112 111 112];
 
 addpath('~/iShadow/algorithms/ann');
-addpath('~/iShadow/algorithms/ann/lib');
 
 dataRootDir='~/iShadow/algorithms/cider';
 
 cd ~
 cd (dataRootDir)
 
-subLists={'malai'};%{'yamin','addison','akshaya','mike','shuo','duncan'};
-lightingLists={'outdoors'};%{'dark','calib'};
+subLists={'yamin','addison','akshaya','mike','shuo','duncan'};
 
 for k=1:length(subLists)
       
     subName=subLists{k};
     
     for m=1:length(lightingLists)
-        
-        lighting=lightingLists{m};
-        
         if strcmp(subName,'addison')
             result_dir=fullfile(dataRootDir,'data/awesomeness_pupil_microbench1_uniquefy/addison_microbench1_pupil/full/results');
             data=load(fullfile('data','eye_data_addison_microbench1_pupil_auto.mat'));
@@ -40,14 +33,11 @@ for k=1:length(subLists)
             data=load(fullfile('data','eye_data_yamin_1sm4_pupil_auto.mat'));
             
         else
-            %data=load(fullfile('data','eye_data_addison_microbench1_pupil_auto.mat'));
             
             subFolderName=strcat(subName,'_',lighting,'_pupil');
             data=load(fullfile('data',strcat(subFolderName,'.mat')));
             result_dir=fullfile(dataRootDir,'data/awesomeness_irb_pupil',subFolderName,'uniquefy_0','results');
-            %result_dir=fullfile(dataRootDir,'data/awesomeness_pupil_microbench1_uniquefy/addison_microbench1_pupil/full/results');
-            subFolderName
-            result_dir
+            
         end
     end
     

@@ -1,4 +1,4 @@
-function run_ann_sweep(result_dir, X, gout)
+function run_ann_sweep(result_dir, X, gout,nDim,scaleVect)
 %     addpath('~/iShadow/algorithms/cider');
 %     addpath('../ann/lib');
 %     addpath('../ann/run_ann');
@@ -16,10 +16,10 @@ function run_ann_sweep(result_dir, X, gout)
         for j=1:length(rep_files)-1
             fprintf('%s - %d\n',lambda_folders{i},j);
             
-            pred = ann(X, rep_files{j});
+            pred = ann(X, rep_files{j},nDim,scaleVect);
             
             filter = logical(sum(pred,2));
-            dist = sqrt(sum((gout(filter) - pred(filter)).^2,2));
+            dist = sqrt(sum((gout(filter,:) - pred(filter,:)).^2,2));
             err = mean(dist);
             
             save('-V7',sprintf('ann_rep%d.mat',j),'pred','err','gout');
