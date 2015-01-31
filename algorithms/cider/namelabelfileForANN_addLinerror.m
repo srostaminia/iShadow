@@ -30,7 +30,7 @@ for z=1:length(names)
         labelEll=load(fullfile(labeldir,a));
         bestFitsMat=labelEll.bestFitsMat;
         %1st var
-        avgRadEllipse=(bestFitsMat(:,3)+bestFitsMat(:,4))/4; % /2 for radius, another /2 for averaging
+        avgRadEllipse=(bestFitsMat(:,3)+bestFitsMat(:,4))/2; % /2 for radius, another /2 for averaging
         
         %b='addison_benchmark_pupil.mat';%'addison_outdoor_pupil.mat';
         b=strcat(name,'_',lighting,'_pupil.mat');
