@@ -1,4 +1,4 @@
-function [chord_length,pred,radii,ann_used]=cider(X,ann_file,chord_length,thresh,model,make_vid)
+function [chord_length,pred,radii,ann_used]=cider(X,ann_file,chord_length,thresh,model,make_vid,nDim,scaleVect)
     addpath('~/iShadow/algorithms/ann/lib');
     addpath('~/iShadow/algorithms/ann/run_ann');
     load(ann_file,'ind','these_results');
@@ -44,8 +44,15 @@ function [chord_length,pred,radii,ann_used]=cider(X,ann_file,chord_length,thresh
         % Run neural network (a) to get initial estimate or
         % (b) if line search failed to find pupil accurately
         if (i == 1) || no_pupil
-            pred(i,:) = [112,111] .* logisticmlp_prediction(these_results.W, [X_adjust(i,:) 1], 7, 2);
-%             pred(i,:) = ginput;
+            %pred(i,:) = [112,111] .* logisticmlp_prediction(these_results.W, [X_adjust(i,:) 1], 7, 2);
+            
+            
+          
+            
+            predVect = scaleVect .* logisticmlp_prediction(these_results.W, [X_adjust(i,:) 1], 7, nDim);
+            pred(i,:) = predVect(1:2);
+            radii(i) = predVect(3);
+             %             pred(i,:) = ginput;
             ann_used(i) = 1;
             no_pupil = 0;
             
