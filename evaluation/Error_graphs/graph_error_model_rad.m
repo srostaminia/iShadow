@@ -72,7 +72,7 @@ for i=1:nUsers
                 
                 % if strcmp(subName,'addison')
                 % dir=fullfile(rootDir, 'awesomeness_pupil_microbench1_uniquefy/addison_microbench1_pupil/full/results',lambdaFolder,strcat(modelName,'_rep',num2str(m),'.mat'));
-                %  dir= fullfile(rootDir,strcat('awesomeness_irb_',object),strcat(subName,'_','benchmark',object),uni,'results',lambdaFolder,strcat(modelName,'_rep',num2str(m),'.mat'));
+                %  dir= fullfile(rootDir,strcat('awesomeness_irb_',object),strcat(subName,'_','benchmark','_pupil'),uni,'results',lambdaFolder,strcat(modelName,'_rep',num2str(m),'.mat'));
                 
                 %elseif strcmp(subName, 'yamin')
                 %  dir=fullfile(rootDir, 'awesomeness_pupil_1sm4_uniquefy/yamin_1sm4_pupil/full/results',lambdaFolder,strcat(modelName,'_rep',num2str(m),'.mat'));
@@ -84,7 +84,7 @@ for i=1:nUsers
                     lighting='calib';
                 end
                 
-                subFolderName=strcat(subName,'_',lighting,'_',object);
+                subFolderName=strcat(subName,'_',lighting,'_pupil');
                 
                 %                 i
                 %                 m
@@ -93,12 +93,12 @@ for i=1:nUsers
                 %                 subName
                 %                 rootDir
                 %                 strcat('awesomeness_irb_',object)
-                %                 strcat(subName,'_',lighting,object)
+                %                 strcat(subName,'_',lighting,'_pupil')
                 %                 uni
                 %                 lambdaFolder
                 %                 strcat(modelName,'_rep',num2str(m),'.mat')
                 
-                repdir= fullfile(rootDir,strcat('awesomeness_irb_',object),strcat(subName,'_',lighting,'_',object),uni,'results',lambdaFolder,strcat(modelName,'_rep',num2str(m),'.mat'));
+                repdir= fullfile(rootDir,strcat('awesomeness_irb_',object),strcat(subName,'_',lighting,'_pupil'),uni,'results',lambdaFolder,strcat(modelName,'_rep',num2str(m),'.mat'));
                 data=load(fullfile(rootDir,strcat(subFolderName,'.mat')));%'eye_rep_addison_microbench1_pupil_auto.mat'));
                 % end
                 
@@ -113,7 +113,7 @@ for i=1:nUsers
                 
                 
                 repdir
-         %       bool=rep.radii>0 & data.avgRadEllipse>0;
+                bool=rep.radii>0 & data.avgRadEllipse>0;
 %                 max(rep.radii(bool))
 %                 min(rep.radii(bool))
 %                 max(data.avgRadEllipse(bool))
@@ -124,30 +124,35 @@ for i=1:nUsers
 %                 diffRatio=abs(circRad-ellRad)./ellRad;
 %                 meandiff=mean(diffRatio);
 %                 mean_areadiff=100*meandiff
+                
+                %                 circRad=(rep.radii(bool)).^2;
+%                 ellRad=(data.avgRadEllipse(bool)).^2;
+%                 diffRatio=abs(circRad-ellRad)./ellRad;
+%                 meandiff=mean(diffRatio);
+%                 mean_areadiff=100*meandiff
+
+                diff=(rep.radii(bool)-data.avgRadEllipse(bool));
                 %errMatEachSub(m,k,j)=100*abs(mean(rep.radii(rep.radii>0)).^2-(mean(rep.avgRadEllipse(rep.avgRadEllipse>0)).^2))./mean(rep.avgRadEllipse(rep.avgRadEllipse>0)).^2;
                 %size(errMatEachSub(m,k,j))
                 %size(mean_areadiff)
-             %   errMatEachSub(m,k,j)=%mean_areadiff;%100*mean_raddiff/((data.avgRadEllipse(bool)).^2)
+                errMatEachSub(m,k,j)=mean(diff);%mean_areadiff;%100*mean_raddiff/((data.avgRadEllipse(bool)).^2)
                 
                 % mean_areadiff
-                                    filter_Line=sum(data.gout,2)>-2;
-size(data.gout)
-                                    size(filter_Line)
-                                    size(rep.err)
-                errMatEachSub(m,k,j)=rep.err(filter_Line);
+                %errMatEachSub(m,k,j)=rep.err;
                 
                 
                 if strcmp(modelName,'cider')
                     
-                   % filter_Line = logical(sum(rep.pred(bool),2)) & ~rep.ann_used(bool);
+                    filter_Line = logical(sum(rep.pred(bool),2)) & ~rep.ann_used(bool);
                     
                     %                      size(filter_Line)
                     %                      size(diffRatio)
                     %                      size(diffRatio(filter_Line))
                     
-                  %  err_line_MatEachSub(m,k,j)=100*mean(diffRatio(filter_Line));
+                    err_line_MatEachSub(m,k,j)=mean(diff(filter_Line));%100*mean(diffRatio(filter_Line)));
                     
-                    err_line_MatEachSub(m,k,j)=rep.err_Line(filter_Line);
+                    
+                    %err_line_MatEachSub(m,k,j)=rep.err_Line;
                     annUsedMatEachSub(m,k,j)=sum(rep.ann_used);
                     
                 end
@@ -285,9 +290,6 @@ meanErrAllSub=mean(meanErrMatForAllSub,1);
 stdErrAllSub=std(meanErrMatForAllSub,1);
 
 figure;
-size(stdErrAllSub)
-size(meanErrAllSub)
-size(stdErrAllSub)
 errorbar(1:1:nLambda,meanErrAllSub,stdErrAllSub);
 ylim([0 max(meanErrAllSub+stdErrAllSub+0.5)])
 xlim([0 nLambda+1])

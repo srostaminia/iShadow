@@ -1,4 +1,5 @@
 function run_cider_sweep(result_dir, X, gout,nDim,scaleVect)
+%function run_cider_sweep(result_dir, X, gout,avgEllipseRad,nDim,scaleVect)
     addpath('~/iShadow/algorithms/cider');
     addpath('../ann/lib');
     addpath('../ann/run_ann');
@@ -28,7 +29,9 @@ function run_cider_sweep(result_dir, X, gout,nDim,scaleVect)
             dist_Line = sqrt(sum((gout(filter_Line,:) - pred(filter_Line,:)).^2,2));
             err_Line = mean(dist_Line); 
             
-            save('-V7',sprintf('cider_rep%d.mat',j),'chord_length','pred','radii','ann_used','dist','err','gout','err_Line');
+                        save('-V7',sprintf('cider_rep%d.mat',j),'chord_length','pred','radii','ann_used','dist','err','gout','err_Line');
+
+          %  save('-V7',sprintf('cider_rep%d.mat',j),'chord_length','pred','radii','ann_used','dist','err','gout','err_Line','avgEllipseRad');
             %pred=predicted center, gout=ground truth center,
             %radii=estimated radii
             %err=cider error

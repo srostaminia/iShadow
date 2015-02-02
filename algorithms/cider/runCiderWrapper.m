@@ -6,12 +6,13 @@
 %result file: cider_rep1.mat(for each lambda and rep)
 
 clear;
-
-%  nDim=3;
-%  scaleVect=[112 111 112];
-nDim=2;
-scaleVect=[112 111];
-irbFolderName='awesomeness_irb_radius_target';
+modelName='ann';
+ %nDim=3;
+ %scaleVect=[112 111 112];
+ nDim=2;
+ scaleVect=[112 111];
+irbFolderName='awesomeness_irb_gaze';
+object='gaze';
 
 addpath('~/iShadow/algorithms/cider');
 
@@ -20,7 +21,7 @@ dataRootDir='~/iShadow/algorithms/cider';
 cd ~
 cd (dataRootDir)
 
-subLists={'duncan','mike','shuo'}; %'akshaya','shuo'
+subLists={'addison'}; %'akshaya','shuo','duncan','mike','shuo',
 
 for i=1:length(subLists)
       
@@ -47,7 +48,7 @@ for i=1:length(subLists)
     %%
     if strcmp(subName,'addison')
         %result_dir=fullfile(dataRootDir,'data/awesomeness_pupil_microbench1_uniquefy/addison_microbench1_pupil/full/results');
-        subFolderName=strcat(subName,'_benchmark_pupil');
+        subFolderName=strcat(subName,'_benchmark_',object);
         data=load(fullfile('data','eye_data_addison_microbench1_pupil_auto.mat'));
         result_dir=fullfile(dataRootDir,'data',irbFolderName,subFolderName,'uniquefy_0','results');
         
@@ -65,8 +66,14 @@ for i=1:length(subLists)
     end
     
     fprintf('\n\nStarted %s\n\n',subName)
-    run_cider_sweep(result_dir, data.X, data.gout,nDim,scaleVect);
-
+   % run_cider_sweep(result_dir, data.X, data.gout,data.avgRadEllipse,nDim,scaleVect);
+   
+   if strcmp(modelName,'ann')
+       run_ann_sweep(result_dir, data.X, data.gout,nDim,scaleVect);
+       
+   elseif strcmp(modelName,'cider')
+       run_cider_sweep(result_dir, data.X, data.gout,nDim,scaleVect);
+   end
 end
 
 
