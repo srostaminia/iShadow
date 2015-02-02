@@ -51,7 +51,10 @@ function [chord_length,pred,radii,ann_used]=cider(X,ann_file,chord_length,thresh
             
             predVect = scaleVect .* logisticmlp_prediction(these_results.W, [X_adjust(i,:) 1], 7, nDim);
             pred(i,:) = predVect(1:2);
-            radii(i) = predVect(3);
+            
+            if  size(predVect)==3
+                radii(i) = predVect(3);
+            end
              %             pred(i,:) = ginput;
             ann_used(i) = 1;
             no_pupil = 0;

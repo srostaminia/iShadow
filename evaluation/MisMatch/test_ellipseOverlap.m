@@ -31,25 +31,25 @@ dataRootDir='~/iShadow/algorithms/cider';
 cd ~
 cd (labeldir)
 
-subLists={'duncan','mike'}; %'akshaya','shuo''addison','yamin',
+subLists={'duncan','mike','shuo','addison'}; %'akshaya','shuo''addison','yamin',
 
 for i=1:length(subLists)
       
     subName=subLists{i};
     
     if strcmp(subName,'addison')
-        subFolderName=fullfile(labeldir,'eye_data_addison_microbench1_pupil_auto');
-        result_dir=fullfile(dataRootDir,'data/awesomeness_pupil_microbench1_uniquefy/addison_microbench1_pupil/full/results');
+        subFolderName=fullfile(labeldir,'eye_data_addison_microbench1_radius_target_auto');
+        result_dir=fullfile(dataRootDir,'data/awesomeness_radius_target_microbench1_uniquefy/addison_microbench1_radius_target/full/results');
         
         
     elseif strcmp(subName,'yamin')
-        result_dir=fullfile(dataRootDir,'data/awesomeness_pupil_1sm4_uniquefy/yamin_1sm4_pupil/full/results');
-        %%???data=load(fullfile('data','eye_data_yamin_1sm4_pupil_auto.mat'));
+        result_dir=fullfile(dataRootDir,'data/awesomeness_radius_target_1sm4_uniquefy/yamin_1sm4_radius_target/full/results');
+        %%???data=load(fullfile('data','eye_data_yamin_1sm4_radius_target_auto.mat'));
         
     else
         
         subFolderName=strcat(subName,'_calib_raw');
-        result_dir=fullfile(dataRootDir,'data/awesomeness_irb_pupil',strcat(subName,'_calib_pupil'),'uniquefy_0','results');
+        result_dir=fullfile(dataRootDir,'data/awesomeness_irb_radius_target',strcat(subName,'_calib_radius_target'),'uniquefy_0','results');
         
         
     end
