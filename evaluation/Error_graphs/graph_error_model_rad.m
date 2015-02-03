@@ -14,7 +14,7 @@
 
 
 
-function [errStEachSub,meanErrAllSub,stdErrAllSub,meanErr_line_ForAllSub,stdErr_line_ForAllSub]=graph_error_model(modelName,subList,rootDir,object,objForTitle,ylabelunit)
+function [errStEachSub,meanErrAllSub,stdErrAllSub,meanErr_line_ForAllSub,stdErr_line_ForAllSub]=graph_error_model_rad(modelName,subList,rootDir,object,objForTitle,ylabelunit)
 cd ~
 
 %lighting='outdoors';
@@ -86,20 +86,9 @@ for i=1:nUsers
                 
                 subFolderName=strcat(subName,'_',lighting,'_pupil');
                 
-                %                 i
-                %                 m
-                %                 k
-                %                 j
-                %                 subName
-                %                 rootDir
-                %                 strcat('awesomeness_irb_',object)
-                %                 strcat(subName,'_',lighting,'_pupil')
-                %                 uni
-                %                 lambdaFolder
-                %                 strcat(modelName,'_rep',num2str(m),'.mat')
                 
                 repdir= fullfile(rootDir,strcat('awesomeness_irb_',object),strcat(subName,'_',lighting,'_pupil'),uni,'results',lambdaFolder,strcat(modelName,'_rep',num2str(m),'.mat'));
-                data=load(fullfile(rootDir,strcat(subFolderName,'.mat')));%'eye_rep_addison_microbench1_pupil_auto.mat'));
+             %   data=load(fullfile(rootDir,strcat(subFolderName,'.mat')));%'eye_rep_addison_microbench1_pupil_auto.mat'));
                 % end
                 
                 %dir
@@ -107,13 +96,13 @@ for i=1:nUsers
                 %
                 %                     else
                 %repdir
+                %repdir
                 rep=load(repdir);
                 %rep
                 
                 
                 
-                repdir
-                bool=rep.radii>0 & data.avgRadEllipse>0;
+                %bool=rep.radii>0 & data.avgRadEllipse>0;
 %                 max(rep.radii(bool))
 %                 min(rep.radii(bool))
 %                 max(data.avgRadEllipse(bool))
@@ -131,28 +120,56 @@ for i=1:nUsers
 %                 meandiff=mean(diffRatio);
 %                 mean_areadiff=100*meandiff
 
-                diff=(rep.radii(bool)-data.avgRadEllipse(bool));
+        %        diff=(rep.radii(bool)-data.avgRadEllipse(bool));
                 %errMatEachSub(m,k,j)=100*abs(mean(rep.radii(rep.radii>0)).^2-(mean(rep.avgRadEllipse(rep.avgRadEllipse>0)).^2))./mean(rep.avgRadEllipse(rep.avgRadEllipse>0)).^2;
                 %size(errMatEachSub(m,k,j))
                 %size(mean_areadiff)
-                errMatEachSub(m,k,j)=mean(diff);%mean_areadiff;%100*mean_raddiff/((data.avgRadEllipse(bool)).^2)
+                areaDiffPercent=rep.areaDiffPercent;
+                bool=(areaDiffPercent~=Inf) & (areaDiffPercent<1000);
+                
+               % a=size(areaDiffPercent(areaDiffPercent~=Inf & areaDiffPercent>1000));
+               
+                %areaDiffPercent(1:3)
+                                diff=areaDiffPercent(bool);
+
+%                 if (a>0 )& (k==3)
+%                     aaa=areaDiffPercent(areaDiffPercent<0)
+%                     mean(diff)
+%                     aaa(1:3)
+%                     repdir
+%                 end
+%                 a=areaDiffPercent(areaDiffPercent~=Inf & areaDiffPercent>400);
+%                 
+%                 if k==3 %size(a)>0
+%                     fprintf('ASS');
+%                     min(areaDiffPercent(areaDiffPercent<0))
+%                     aa=max(areaDiffPercent((areaDiffPercent)~=Inf));
+%                     
+%                     if size(trueArea(aa>300))>0
+%                         trueArea(aa>300)
+%                         predArea(aa>300)
+%                     
+%                 end
+                
+%                 if (k==3) & (strcmp(subName,'shuo'))
+%                     areaDiffPercent(1:3)
+%                     mean(diff)
+%                     
+%                 end
+              %  errMatEachSub(m,k,j)=mean(diff);%mean_areadiff;%100*mean_raddiff/((data.avgRadEllipse(bool)).^2)
                 
                 % mean_areadiff
-                %errMatEachSub(m,k,j)=rep.err;
+                errMatEachSub(m,k,j)=rep.err;
                 
                 
                 if strcmp(modelName,'cider')
                     
                     filter_Line = logical(sum(rep.pred(bool),2)) & ~rep.ann_used(bool);
                     
-                    %                      size(filter_Line)
-                    %                      size(diffRatio)
-                    %                      size(diffRatio(filter_Line))
-                    
-                    err_line_MatEachSub(m,k,j)=mean(diff(filter_Line));%100*mean(diffRatio(filter_Line)));
+                    %err_line_MatEachSub(m,k,j)=mean(diff(filter_Line));%100*mean(diffRatio(filter_Line)));
                     
                     
-                    %err_line_MatEachSub(m,k,j)=rep.err_Line;
+                    err_line_MatEachSub(m,k,j)=rep.err_Line;
                     annUsedMatEachSub(m,k,j)=sum(rep.ann_used);
                     
                 end
@@ -175,7 +192,20 @@ for i=1:nUsers
         annUsedStEachLambdaEachSub.mean.(uni).(subName)=round(mean(annUsedMatEachSub,1));
         annUsedStEachLambdaEachSub.std.(uni).(subName)=std(annUsedMatEachSub,1);
         
+        
         fprintf('ANNused1');
+        
+        totalFrameEachSub(i,:)=length(rep.ann_used);
+        
+        
+        %fprintf('annused')
+        %size(rep.ann_used)
+        %size(rep.gout,1)
+        if size(rep.ann_used,1)~=size(rep.gout,1)
+            fprintf('ERROR: totalFrame is wrong. Check dimension\n\n');
+            
+        end
+        
     end
     
     
@@ -193,20 +223,20 @@ for i=1:nUsers
     %         size(errStEachSub.raw.(uni).(subName))
     err_line_StEachSub.std.(uni).(subName)=std(err_line_MatEachSub,1);
 end
-
-if strcmp(modelName,'cider')
-    totalFrameEachSub(i,:)=length(rep.ann_used);
-    
-    
-    %fprintf('annused')
-    %size(rep.ann_used)
-    %size(rep.gout,1)
-    if size(rep.ann_used,1)~=size(rep.gout,1)
-        fprintf('ERROR: totalFrame is wrong. Check dimension\n\n');
-        
-    end
-    
-end
+% 
+% if strcmp(modelName,'cider')
+%     totalFrameEachSub(i,:)=length(rep.ann_used);
+%     
+%     
+%     %fprintf('annused')
+%     %size(rep.ann_used)
+%     %size(rep.gout,1)
+%     if size(rep.ann_used,1)~=size(rep.gout,1)
+%         fprintf('ERROR: totalFrame is wrong. Check dimension\n\n');
+%         
+%     end
+%     
+% end
 
 
 
@@ -253,7 +283,7 @@ for i=1:nUsers
     
     subplot(2,3,i);
     errorbar(1:1:nLambda,errStEachSub.mean.(uni).(subName),errStEachSub.std.(uni).(subName));
-    ylim([0, max(errStEachSub.mean.(uni).(subName))+max(errStEachSub.std.(uni).(subName))+0.1])
+    ylim([0, max(errStEachSub.mean.(uni).(subName)(:))+max(errStEachSub.std.(uni).(subName)(:))+0.5])
     xlim([0 nLambda+1])
     ylabel(ylabelunit);
     xlabel('ANN size (incrementing)');
@@ -275,7 +305,7 @@ for i=1:nUsers
 end
 
 hold off;
-%ylim([0, 2.9]) %10.1
+ylim([0, max(errStEachSub.mean.(uni).(subName)(:))+max(errStEachSub.std.(uni).(subName)(:))+2]) %10.1
 xlim([0 nLambda+1])
 ylabel(ylabelunit);
 xlabel('ANN size (incrementing)');
@@ -291,7 +321,7 @@ stdErrAllSub=std(meanErrMatForAllSub,1);
 
 figure;
 errorbar(1:1:nLambda,meanErrAllSub,stdErrAllSub);
-ylim([0 max(meanErrAllSub+stdErrAllSub+0.5)])
+ylim([0 max(meanErrAllSub(:))+max(stdErrAllSub(:))+0.5])
 xlim([0 nLambda+1])
 ylabel(strcat('Average ', ylabelunit));
 xlabel('ANN size (incrementing)');
@@ -324,7 +354,7 @@ if strcmp(modelName,'cider')
         
         subplot(2,3,i);
         errorbar(1:1:nLambda,err_line_StEachSub.mean.(uni).(subName),err_line_StEachSub.std.(uni).(subName));
-        ylim([0, max(err_line_StEachSub.mean.(uni).(subName))+max(err_line_StEachSub.std.(uni).(subName))+0.1])
+        ylim([0, max(err_line_StEachSub.mean.(uni).(subName)(:))+max(err_line_StEachSub.std.(uni).(subName)(:))+0.5])
         xlim([0 nLambda+1])
         ylabel(ylabelunit);
         xlabel('ANN size (incrementing)');
@@ -336,8 +366,13 @@ if strcmp(modelName,'cider')
     
     %% Line CIDER: One Graph Subplot individual user's error
     
+    meanErr_line_ForAllSub=mean(meanErrMat_line_ForAllSub,1);
+    stdErr_line_ForAllSub=std(meanErrMat_line_ForAllSub,1);
+    
     figure;
     for i=1:nUsers
+        
+        err_line_StEachSub.mean.(uni).(subName)
         
         subName=subList{i};
         errorbar(1:1:nLambda,err_line_StEachSub.mean.(uni).(subName),err_line_StEachSub.std.(uni).(subName));
@@ -346,7 +381,7 @@ if strcmp(modelName,'cider')
     end
     
     hold off;
-    %ylim([0, 2.9]) %10.1
+    ylim([0, max(meanErrMat_line_ForAllSub(:))+max(stdErr_line_ForAllSub(:))+0.5]) %10.1
     xlim([0 nLambda+1])
     ylabel(ylabelunit);
     xlabel('ANN size (incrementing)');
@@ -357,12 +392,11 @@ if strcmp(modelName,'cider')
     
     %% Line CIDER: AVG Graph over all user's errors
     
-    meanErr_line_ForAllSub=mean(meanErrMat_line_ForAllSub,1);
-    stdErr_line_ForAllSub=std(meanErrMat_line_ForAllSub,1);
+    
     
     figure;
     errorbar(1:1:nLambda,meanErr_line_ForAllSub,stdErr_line_ForAllSub);
-    ylim([0 max(meanErr_line_ForAllSub+stdErr_line_ForAllSub+0.5)])
+    ylim([0 max(meanErr_line_ForAllSub(:))+max(stdErr_line_ForAllSub(:))+0.5])
     xlim([0 nLambda+1])
     ylabel(strcat('Average ', ylabelunit));
     xlabel('ANN size (incrementing)');
@@ -387,6 +421,9 @@ if strcmp(modelName,'cider')
    % size(meanAnnUsedForEachLambdaEachSub,2)
    % size(std(meanAnnUsedForEachLambdaEachSub,2))
    % size(meanAnnUsedForEachLambdaEachSub)
+   
+   
+   
     meanAnnUsedForAllLambdaEachSub=100*(round(mean(meanAnnUsedForEachLambdaEachSub,2))./totalFrameEachSub);
     %stdAnnUsedForAllLambdaEachSub=100*(round(std(meanAnnUsedForEachLambdaEachSub,2))./totalFrameEachSub);
     meanAnnUsedForAllLambdaEachSub
@@ -401,6 +438,7 @@ if strcmp(modelName,'cider')
     %errorb(meanAnnUsedForAllLambdaEachSub,stdAnnUsedForAllLambdaEachSub);
     set(gca, 'XTick',1:nUsers, 'XTickLabel',subList)
     ylabel('% of annUsedFreq');
+    ylim([0 100]);
     suptitle({strcat(modelName,': Average number of times ANN is being used in CIDER model for different users')});
     
 end

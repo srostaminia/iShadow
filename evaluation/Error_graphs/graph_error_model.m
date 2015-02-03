@@ -49,13 +49,13 @@ nRep=5;
 
 totalFrameEachSub=zeros(nUsers,1);
 
-for i=1:nUsers
+for i=1:length(subList)
     
     subName=subList{i};
     %subName=subList{i}; %subject name
-    errMatEachSub=zeros(nRep,nLambda); %errSt 5x10
-    err_line_MatEachSub=zeros(nRep,nLambda);
-    annUsedMatEachSub=zeros(nRep,nLambda);
+    errMatEachSub=zeros(nRep,length(lambdaFolderList)); %errSt 5x10
+    err_line_MatEachSub=zeros(nRep,length(lambdaFolderList));
+    annUsedMatEachSub=zeros(nRep,length(lambdaFolderList));
     
     subName
     
@@ -63,7 +63,7 @@ for i=1:nUsers
         
         uni=uniFolderList{j};
         
-        for k=1:nLambda
+        for k=1:length(lambdaFolderList)
             
             lambdaFolder=lambdaFolderList{k};
             %lambdaStr=lambdaStrList{k};
@@ -72,7 +72,7 @@ for i=1:nUsers
                 
                 % if strcmp(subName,'addison')
                 % dir=fullfile(rootDir, 'awesomeness_pupil_microbench1_uniquefy/addison_microbench1_pupil/full/results',lambdaFolder,strcat(modelName,'_rep',num2str(m),'.mat'));
-                %  dir= fullfile(rootDir,strcat('awesomeness_irb_',object),strcat(subName,'_','benchmark',object),uni,'results',lambdaFolder,strcat(modelName,'_rep',num2str(m),'.mat'));
+                %  dir= fullfile(rootDir,strcat('awesomeness_irb_',object),strcat(subName,'_','benchmark','_pupil'),uni,'results',lambdaFolder,strcat(modelName,'_rep',num2str(m),'.mat'));
                 
                 %elseif strcmp(subName, 'yamin')
                 %  dir=fullfile(rootDir, 'awesomeness_pupil_1sm4_uniquefy/yamin_1sm4_pupil/full/results',lambdaFolder,strcat(modelName,'_rep',num2str(m),'.mat'));
@@ -84,21 +84,21 @@ for i=1:nUsers
                     lighting='calib';
                 end
                 
-                subFolderName=strcat(subName,'_',lighting,'_',object);
+                subFolderName=strcat(subName,'_',lighting,'_pupil');
                 
-                %                 i
-                %                 m
-                %                 k
-                %                 j
-                %                 subName
-                %                 rootDir
-                %                 strcat('awesomeness_irb_',object)
-                %                 strcat(subName,'_',lighting,object)
-                %                 uni
-                %                 lambdaFolder
-                %                 strcat(modelName,'_rep',num2str(m),'.mat')
+%                 i
+%                 m
+%                 k
+%                 j
+%                 subName
+%                 rootDir
+%                 strcat('awesomeness_irb_',object)
+%                 strcat(subName,'_',lighting,'_pupil')
+%                 uni
+%                 lambdaFolder
+%                 strcat(modelName,'_rep',num2str(m),'.mat')
                 
-                repdir= fullfile(rootDir,strcat('awesomeness_irb_',object),strcat(subName,'_',lighting,'_',object),uni,'results',lambdaFolder,strcat(modelName,'_rep',num2str(m),'.mat'));
+                repdir= fullfile(rootDir,strcat('awesomeness_irb_',object),strcat(subName,'_',lighting,'_pupil'),uni,'results',lambdaFolder,strcat(modelName,'_rep',num2str(m),'.mat'));
                 data=load(fullfile(rootDir,strcat(subFolderName,'.mat')));%'eye_rep_addison_microbench1_pupil_auto.mat'));
                 % end
                 
@@ -112,42 +112,32 @@ for i=1:nUsers
                 
                 
                 
-                repdir
-         %       bool=rep.radii>0 & data.avgRadEllipse>0;
-%                 max(rep.radii(bool))
-%                 min(rep.radii(bool))
-%                 max(data.avgRadEllipse(bool))
-%                                 min(data.avgRadEllipse(bool))
-
-%                 circRad=(rep.radii(bool)).^2;
-%                 ellRad=(data.avgRadEllipse(bool)).^2;
-%                 diffRatio=abs(circRad-ellRad)./ellRad;
-%                 meandiff=mean(diffRatio);
-%                 mean_areadiff=100*meandiff
+                
+                bool=rep.radii>0 & data.avgRadEllipse>0;
+                circRad=(rep.radii(bool)).^2;
+                ellRad=(data.avgRadEllipse(bool)).^2;
+                diffRatio=abs(circRad-ellRad)./ellRad;
+                meandiff=mean(diffRatio);
+                mean_areadiff=100*meandiff
                 %errMatEachSub(m,k,j)=100*abs(mean(rep.radii(rep.radii>0)).^2-(mean(rep.avgRadEllipse(rep.avgRadEllipse>0)).^2))./mean(rep.avgRadEllipse(rep.avgRadEllipse>0)).^2;
                 %size(errMatEachSub(m,k,j))
                 %size(mean_areadiff)
-             %   errMatEachSub(m,k,j)=%mean_areadiff;%100*mean_raddiff/((data.avgRadEllipse(bool)).^2)
-                
-                % mean_areadiff
-                                    filter_Line=sum(data.gout,2)>-2;
-size(data.gout)
-                                    size(filter_Line)
-                                    size(rep.err)
-                errMatEachSub(m,k,j)=rep.err(filter_Line);
+                errMatEachSub(m,k,j)=mean_areadiff;%100*mean_raddiff/((data.avgRadEllipse(bool)).^2)
+
+               % mean_areadiff
+                %errMatEachSub(m,k,j)=rep.err;
                 
                 
                 if strcmp(modelName,'cider')
                     
-                   % filter_Line = logical(sum(rep.pred(bool),2)) & ~rep.ann_used(bool);
-                    
-                    %                      size(filter_Line)
-                    %                      size(diffRatio)
-                    %                      size(diffRatio(filter_Line))
-                    
-                  %  err_line_MatEachSub(m,k,j)=100*mean(diffRatio(filter_Line));
-                    
-                    err_line_MatEachSub(m,k,j)=rep.err_Line(filter_Line);
+                     filter_Line = logical(sum(rep.pred,2)) & ~rep.ann_used;
+                     size(rep.ann_used)
+                     sz
+                     size(diffRatio(filter_Line))
+                     
+                     err_line_MatEachSub(m,k,j)=100*mean(diffRatio(filter_Line));
+
+                     %err_line_MatEachSub(m,k,j)=rep.err_Line;
                     annUsedMatEachSub(m,k,j)=sum(rep.ann_used);
                     
                 end
@@ -285,9 +275,6 @@ meanErrAllSub=mean(meanErrMatForAllSub,1);
 stdErrAllSub=std(meanErrMatForAllSub,1);
 
 figure;
-size(stdErrAllSub)
-size(meanErrAllSub)
-size(stdErrAllSub)
 errorbar(1:1:nLambda,meanErrAllSub,stdErrAllSub);
 ylim([0 max(meanErrAllSub+stdErrAllSub+0.5)])
 xlim([0 nLambda+1])
@@ -303,7 +290,7 @@ suptitle({strcat(modelName,': Average error of predicted ',objForTitle,' for dif
 %% Line model CIDER: Graph Subplot individual user's error
 
 if strcmp(modelName,'cider')
-    modelNameL='lineCider'
+    modelName='lineCider'
     
     figure;
     % uniFolderList={'uniquefy_0'};%,'uniquefy_1'};
@@ -330,7 +317,7 @@ if strcmp(modelName,'cider')
         
     end
     
-    suptitle({strcat(modelNameL,': Error of predicted ',objForTitle,' for 6 different users for different ANN sizes'),'Each of the ten points represents the average of errors for 5 repetitions of the experiment.','ANN size increases from left to right.'});
+    suptitle({strcat(modelName,': Error of predicted ',objForTitle,' for 6 different users for different ANN sizes'),'Each of the ten points represents the average of errors for 5 repetitions of the experiment.','ANN size increases from left to right.'});
     
     %% Line CIDER: One Graph Subplot individual user's error
     
@@ -351,7 +338,7 @@ if strcmp(modelName,'cider')
     %title(strcat('subject: ',subName));
     legend(subList);
     
-    suptitle({strcat(modelNameL,': Error of predicted ',objForTitle,' for 6 different users for different ANN sizes'),'Each of the ten points represents the average of errors for 5 repetitions of the experiment.','ANN size increases from left to right.'});
+    suptitle({strcat(modelName,': Error of predicted ',objForTitle,' for 6 different users for different ANN sizes'),'Each of the ten points represents the average of errors for 5 repetitions of the experiment.','ANN size increases from left to right.'});
     
     %% Line CIDER: AVG Graph over all user's errors
     
@@ -365,43 +352,41 @@ if strcmp(modelName,'cider')
     ylabel(strcat('Average ', ylabelunit));
     xlabel('ANN size (incrementing)');
     
-    suptitle({strcat(modelNameL,': Average error of predicted ',objForTitle,' for different ANN sizes'),'Each of the ten points is obtained by averaging the mean errors for',' 5 repetitions of the experiment for different users.','ANN size increases from left to right.'});
+    suptitle({strcat(modelName,': Average error of predicted ',objForTitle,' for different ANN sizes'),'Each of the ten points is obtained by averaging the mean errors for',' 5 repetitions of the experiment for different users.','ANN size increases from left to right.'});
     
 else
     meanErr_line_ForAllSub=0;
     stdErr_line_ForAllSub=0;
 end
 
-%% CIDER: AVG Graph over all user's errors
-%meanAnnUsedForEachLambdaEachSub
+    %% CIDER: AVG Graph over all user's errors
+    %meanAnnUsedForEachLambdaEachSub
 
-if strcmp(modelName,'cider')
-    
-    fprintf('ANNused');
-    
-    %         size(totalFrameEachSub)
-    %         size(meanAnnUsedForEachLambdaEachSub)
-    
-   % size(meanAnnUsedForEachLambdaEachSub,2)
-   % size(std(meanAnnUsedForEachLambdaEachSub,2))
-   % size(meanAnnUsedForEachLambdaEachSub)
-    meanAnnUsedForAllLambdaEachSub=100*(round(mean(meanAnnUsedForEachLambdaEachSub,2))./totalFrameEachSub);
-    %stdAnnUsedForAllLambdaEachSub=100*(round(std(meanAnnUsedForEachLambdaEachSub,2))./totalFrameEachSub);
-    meanAnnUsedForAllLambdaEachSub
-    %annUsedStdForAllLambdaEachSub=std(meanAnnUsedForEachLambdaEachSub,2)
-    
-    totalFrameEachSub
-    %        meanAnnUsedForAllLambdaEachSub
-    %size(meanAnnUsedForAllLambdaEachSub)
-    
-    figure;
-    bar(meanAnnUsedForAllLambdaEachSub)
-    %errorb(meanAnnUsedForAllLambdaEachSub,stdAnnUsedForAllLambdaEachSub);
-    set(gca, 'XTick',1:nUsers, 'XTickLabel',subList)
-    ylabel('% of annUsedFreq');
-    suptitle({strcat(modelName,': Average number of times ANN is being used in CIDER model for different users')});
-    
-end
+    if strcmp(modelName,'cider')
+
+                fprintf('ANNused');
+
+%         size(totalFrameEachSub)
+%         size(meanAnnUsedForEachLambdaEachSub)
+
+        mean(meanAnnUsedForEachLambdaEachSub,2)
+
+        meanAnnUsedForAllLambdaEachSub=100*(round(mean(meanAnnUsedForEachLambdaEachSub,2))./totalFrameEachSub);
+        stdAnnUsedForAllLambdaEachSub=100*(round(std(meanAnnUsedForEachLambdaEachSub,2))./totalFrameEachSub);
+
+        %annUsedStdForAllLambdaEachSub=std(meanAnnUsedForEachLambdaEachSub,2)
+
+        totalFrameEachSub
+%        meanAnnUsedForAllLambdaEachSub
+        %size(meanAnnUsedForAllLambdaEachSub)
+
+        figure;
+        errorb(meanAnnUsedForAllLambdaEachSub,stdAnnUsedForAllLambdaEachSub);
+        set(gca, 'XTick',1:nUsers, 'XTickLabel',subList)
+        ylabel('% of annUsedFreq');
+        suptitle({strcat(modelName,': Average number of times ANN is being used in CIDER model for different users')});
+
+    end
 
 %     %% CIDER: error and ann_used- v1
 %     if strcmp(modelName,'cider')
