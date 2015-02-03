@@ -11,8 +11,8 @@ modelName='ann';
  %scaleVect=[112 111 112];
  nDim=2;
  scaleVect=[112 111];
-irbFolderName='awesomeness_irb_gaze';
-object='gaze';
+object='radius_target';
+irbFolderName=strcat('awesomeness_irb_',object);
 
 addpath('~/iShadow/algorithms/cider');
 
@@ -21,7 +21,7 @@ dataRootDir='~/iShadow/algorithms/cider';
 cd ~
 cd (dataRootDir)
 
-subLists={'addison'}; %'akshaya','shuo','duncan','mike','shuo',
+subLists={'shuo'}; %'akshaya','shuo','duncan','mike','shuo',
 
 for i=1:length(subLists)
       
