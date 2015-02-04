@@ -7,11 +7,11 @@
 
 clear;
 modelName='ann';
- %nDim=3;
- %scaleVect=[112 111 112];
- nDim=2;
- scaleVect=[112 111];
-object='radius_target';
+%  nDim=3;
+%  scaleVect=[112 111 112];
+  nDim=2;
+  scaleVect=[112 111];
+object='pupil';
 irbFolderName=strcat('awesomeness_irb_',object);
 
 addpath('~/iShadow/algorithms/cider');
@@ -21,7 +21,7 @@ dataRootDir='~/iShadow/algorithms/cider';
 cd ~
 cd (dataRootDir)
 
-subLists={'shuo'}; %'akshaya','shuo','duncan','mike','shuo',
+subLists={'malai'}; %'akshaya','shuo','duncan','mike','shuo',
 
 for i=1:length(subLists)
       
@@ -58,8 +58,11 @@ for i=1:length(subLists)
         %??
     else
         
-        subFolderName=strcat(subName,'_calib_pupil');
+        subFolderName=strcat(subName,'_outdoors_pupil');
+        
+        
         data=load(fullfile('data',strcat(subFolderName,'.mat')));
+        subFolderName='malai_calib_pupil';
         result_dir=fullfile(dataRootDir,'data',irbFolderName,subFolderName,'uniquefy_0','results');
         
         
