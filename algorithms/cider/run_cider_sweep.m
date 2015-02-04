@@ -21,17 +21,21 @@ for i=1:length(lambda_folders)-1
         
         %Cider model
         filter = logical(sum(pred,2));
-        dist = sqrt(sum((gout(filter,:) - pred(filter,:)).^2,2));
-        err = mean(dist);
+        dist = sqrt(sum((gout - pred).^2,2));
+        %dist = sqrt(sum((gout(filter,:) - pred(filter,:)).^2,2));
+        err = mean(dist(filter,:));
+        
         
         %line model
         filter_Line = logical(sum(pred,2)) & ~ann_used;
-        dist_Line = sqrt(sum((gout(filter_Line,:) - pred(filter_Line,:)).^2,2));
+         %size(filter_Line)
+        
+        dist_Line = dist(filter_Line);
         err_Line = mean(dist_Line);
         
         
         
-        if nDim==3
+        if nDim==2
             save('-V7',sprintf('cider_rep%d.mat',j),'chord_length','pred','radii','ann_used','dist','err','gout','err_Line');
         else
             
