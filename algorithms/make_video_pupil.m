@@ -2,20 +2,20 @@ close all;
 clear;
 
 %% Edit here:
-namesub='addison';
-lighting='benchmark';
+namesub='malai';
+lighting='outdoors';
 result='predAndTrue';
 
 modelName='cider';
-object='radius_target';
-datastr='eye_data_addison_microbench1_pupil_auto';%strcat(namesub,'_',lighting,'_raw');
+object='pupil';
+datastr='malai_outdoors_raw';%'eye_data_addison_microbench1_pupil_auto';%strcat(namesub,'_',lighting,'_raw');
 ellipseFileName = strcat(datastr,'_ellipse.mat');
 
 dataFileName=strcat(datastr,'.mat');
 
-indexEnd=800;%nImages;
+indexEnd=100;%nImages;
 
-fileName='addison_benchmark_pupil';
+fileName='malai_calib_pupil';
 %%
 labeldir='/Users/ytun/Google Drive/IMPORTANT_VISION/MobiSys2015_labeling/label';
 addpath(labeldir);
@@ -23,7 +23,7 @@ addpath(labeldir);
 datadir='/Users/ytun/Google Drive/IMPORTANT_VISION/MobiSys2015_labeling/data/';
 % addpath(datadir);
 
-videoDir='~/iShadow/algorithms/video';
+videoDir='~/iShadow/results/video';
 addpath(videoDir);
 
 resultDir=fullfile('~/iShadow/algorithms/cider/data',strcat('awesomeness_irb_',object),fileName,'uniquefy_0/results/subset_l1_init_strips_k7_lambda0.000100');
@@ -97,7 +97,9 @@ for i=1:indexEnd%[1:100 200:300 400:500 1000:1200 1300:1400 1500:1600 ]
     viscircles(cider.pred(i,:), cider.radii(i,:),'EdgeColor','r','LineWidth',0.3);
     scatter(cider.pred(i,1),cider.pred(i,2),'xr');
    
-    viscircles(ann.pred(i,:), ann.radii(i,:),'EdgeColor','b','LineWidth',0.3);
+%     viscircles(ann.pred(i,:), ann.radii(i,:),'EdgeColor','b','LineWidth',0.3);
+%     scatter(ann.pred(i,1),ann.pred(i,2),'xb');
+    viscircles(ann.pred(i,:),5,'EdgeColor','b','LineWidth',0.3);
     scatter(ann.pred(i,1),ann.pred(i,2),'xb');
     hold off;
     

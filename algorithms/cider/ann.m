@@ -1,5 +1,5 @@
-%function [pred,radii]=ann(X,ann_file,nDim,scaleVect)
-function [pred]=ann(X,ann_file,nDim,scaleVect)
+function [pred,radii]=ann(X,ann_file,nDim,scaleVect)
+%function [pred]=ann(X,ann_file,nDim,scaleVect)
 
 %pred= predicted pupil center
     
