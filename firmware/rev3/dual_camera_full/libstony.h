@@ -3,6 +3,33 @@
 
 #include "stm32l1xx.h"
 
+// Camera to use for single-camera functions
+#define SINGLE_CAM      CAM2
+
+#define LED_LOW         0
+
+//#define LED_HIGH        0        
+#define LED_HIGH          0x59E       // 1.15V
+//#define LED_HIGH        0x5D1         // 1.25V
+//#define LED_HIGH        0x64D
+//#define LED_HIGH        0x746
+
+#define TX_ROWS         48
+
+#define CAM2_OFFSET     TX_ROWS * 112
+//#define CAM2_OFFSET     5376
+#define TX_BLOCKS       (TX_ROWS * 112 * 4) / 512
+
+#if (112 % TX_ROWS != 0)
+#define CAM2_MOD_OFFSET (112 % TX_ROWS) * 112
+#define TX_MOD_BLOCKS   ((112 % TX_ROWS) * 112 * 4 ) / 512
+
+#if ((112 % TX_ROWS) * 112 * 4 ) % 512 != 0
+#error TX_ROWS invalid, does not align to 512B boundary
+#endif
+
+#endif
+
 #define CAM1                 0
 #define CAM2                 1
 
@@ -36,6 +63,12 @@
 #define CAM2_AN_PIN          GPIO_Pin_3
 #define CAM2_ADC_CHAN        ADC_Channel_3
 
+#if SINGLE_CAM == CAM1
+#define SINGLE_PARAM(PNAME)    CAM1 ## _ ## PNAME
+#elif SINGLE_CAM == CAM2
+#define SINGLE_PARAM(PNAME)    CAM2 ## _ ## PNAME
+#endif
+
 #define REG_COLSEL      0  //select column
 #define REG_ROWSEL      1  //select row
 #define REG_VSW         2  //vertical switching
@@ -59,6 +92,9 @@ void stony_pin_config();
 void stony_init(short vref, short nbias, short aobias, char gain, char selamp);
 int stony_read_pixel();
 int stony_image_dual();
+int stony_image_single();
+int stony_cider_line(uint8_t rowcol_num, uint8_t *sd_buf, uint8_t rowcol_sel);
+void dac_init();
 
 void pulse_resv(uint8_t cam);
 void pulse_incv(uint8_t cam);

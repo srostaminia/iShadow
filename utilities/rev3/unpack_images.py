@@ -11,10 +11,14 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("file_prefix", help="output file prefix")
+    parser.add_argument("num_images", type = int, help="number of image pairs (or single images if --no-interleave) stored in the input file, set to 0 to run continuously")
     parser.add_argument("out_mask", help="outward-facing camera mask")
-    parser.add_argument("eye_mask", help="eye-facing camera mask")
-    parser.add_argument("num_pairs", type = int, help="number of interleaved image pairs stored in the input file")
-    parser.add_argument("--reuse-raw", action="store_true", help="Reuse previously stored raw image data files")
+    parser.add_argument("eye_mask", nargs='?', help="eye-facing camera mask (only used for interleaved images)", default=None)
+    parser.add_argument("--no-interleave", action="store_true", help="Images are stored singly, not interleaved")
+    
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("-o", "--offset", help="Number of images / pairs to skip on SD card", type=int)
+    group.add_argument("--reuse-raw", action="store_true", help="Reuse previously stored raw image data files")
 
     args = parser.parse_args()
 
@@ -22,20 +26,41 @@ def main():
     file_prefix = args.file_prefix
     out_mask_filename = args.out_mask
     eye_mask_filename = args.eye_mask
-    num_pairs = args.num_pairs
+    num_images = args.num_images
+    interleaved = not args.no_interleave
+    num_skip = args.offset if args.offset != None else 0
 
-    eye_mask = load_mask(args.eye_mask)
+    if interleaved == True and eye_mask_filename == None:
+        print "Invalid Input: Parameter eye_mask must be provided if using interleaved images"
+        sys.exit()
+
+    if interleaved:
+        eye_mask = load_mask(args.eye_mask)
+
     out_mask = load_mask(args.out_mask)
 
     if args.reuse_raw:
         os.chdir(file_prefix)
-        num_images = num_pairs
+        num_images = num_images
     else:
         try:
             input_file = open(input_filename, "rb")
         except IOError:
             print "Input file", input_filename, "could not be opened."
             sys.exit()
+
+        try:
+            input_file.read(512)
+        except IOError:
+            print "Input file", input_filename, "not available for reading."
+            sys.exit()
+
+        if interleaved:
+            input_file.seek(num_skip * 50176)
+        else:
+            input_file.seek(num_skip * 25088)
+
+        print "tell:", input_file.tell()
 
         if not os.path.exists(file_prefix):
             os.makedirs(file_prefix)
@@ -51,21 +76,23 @@ def main():
             print "Input file", file_prefix + "\\" + file_prefix + "_a.raw", "could not be opened."
             sys.exit()
 
-        try:
-            output_b = open(file_prefix + "_b.raw", "wb")
-        except IOError:
-            print "Input file", file_prefix + "\\" + file_prefix + "_b.raw", "could not be opened."
-            sys.exit()
+        if (interleaved):
+            try:
+                output_b = open(file_prefix + "_b.raw", "wb")
+            except IOError:
+                print "Input file", file_prefix + "\\" + file_prefix + "_b.raw", "could not be opened."
+                sys.exit()
 
         print "Reading image data..."
-        if (num_pairs > 0):
-            for i in range(num_pairs):
+        if (num_images > 0):
+            for i in range(num_images):
                 for j in range(2):
                     data = input_file.read(10752)
                     output_a.write(data)
 
-                    data = input_file.read(10752)
-                    output_b.write(data)
+                    if (interleaved):
+                        data = input_file.read(10752)
+                        output_b.write(data)
 
                 if (i % 500 == 0):
                     print i, "images so far"
@@ -73,8 +100,11 @@ def main():
                 data = input_file.read(3584)
                 output_a.write(data)
 
-                data = input_file.read(3584)
-                output_b.write(data)
+                print "tell:", input_file.tell()
+
+                if (interleaved):
+                    data = input_file.read(3584)
+                    output_b.write(data)
         else:
             end = False
             i = 0
@@ -87,12 +117,13 @@ def main():
 
                     output_a.write(data)
 
-                    data = input_file.read(10752)
-                    output_b.write(data)
+                    if (interleaved):
+                        data = input_file.read(10752)
+                        output_b.write(data)
 
                 if (end):
                     print "Found", i, "images total"
-                    num_pairs = i
+                    num_images = i
                     break
                 elif (i % 500 == 0):
                     print i, "images so far"
@@ -100,16 +131,19 @@ def main():
                 data = input_file.read(3584)
                 output_a.write(data)
 
-                data = input_file.read(3584)
-                output_b.write(data)
+                if (interleaved):
+                    data = input_file.read(3584)
+                    output_b.write(data)
 
                 i += 1
 
-        num_images = i
+        num_images = i + 1
         print "Total:", num_images, "images\n"
 
         output_a.close()
-        output_b.close()
+
+        if (interleaved):
+            output_b.close()
 
     try:
         output_a = open(file_prefix + "_a.raw", "rb")
@@ -117,17 +151,23 @@ def main():
         print "Input file", file_prefix + "\\" + file_prefix + "_a.raw", "could not be opened."
         sys.exit()
 
-    try:
-        output_b = open(file_prefix + "_b.raw", "rb")
-    except IOError:
-        print "Input file", file_prefix + "\\" + file_prefix + "_b.raw", "could not be opened."
-        sys.exit()
+    if (interleaved):
+        try:
+            output_b = open(file_prefix + "_b.raw", "rb")
+        except IOError:
+            print "Input file", file_prefix + "\\" + file_prefix + "_b.raw", "could not be opened."
+            sys.exit()
 
-    disp_save_images(output_b, eye_mask, file_prefix + "_eye", num_images)
-    disp_save_images(output_a, out_mask, file_prefix + "_out", num_images)
+    if (interleaved):
+        disp_save_images(output_b, eye_mask, file_prefix + "_eye", num_images)
+        disp_save_images(output_a, out_mask, file_prefix + "_out", num_images)
+    else:
+        disp_save_images(output_a, out_mask, file_prefix, num_images)
 
     output_a.close()
-    output_b.close()
+
+    if (interleaved):
+        output_b.close()
 
     os.chdir("..")
 
@@ -144,7 +184,7 @@ def load_mask(mask_filename):
         print "Mask file", mask_filename, "is corrupted."
         sys.exit()
 
-    mask_data = mask_data[1:]
+    # mask_data = mask_data[1:]
 
     mask_file.close()
 
@@ -187,10 +227,11 @@ def read_packed_image(image_file, mask_data, out_filename, index):
             image[i].append(value)
 
     # print image[0]
-    image = image[1:]
+    # image = image[1:]
 
     figure = pylab.figure()
 
+    # image -= mask_data[69]
     image -= mask_data
 
     pylab.figimage(image, cmap = pylab.cm.Greys_r)
