@@ -7,10 +7,10 @@
 
 clear;
 modelName='ann';
-%  nDim=3;
-%  scaleVect=[112 111 112];
-  nDim=2;
-  scaleVect=[112 111];
+  %nDim=3;
+  %scaleVect=[112 111 112];
+ nDim=2;
+   scaleVect=[112 111];
 object='pupil';
 irbFolderName=strcat('awesomeness_irb_',object);
 
@@ -58,8 +58,7 @@ for i=1:length(subLists)
         %??
     else
         
-        subFolderName=strcat(subName,'_outdoors_pupil');
-        
+        subFolderName=strcat(subName,'_calib_pupil');
         
         data=load(fullfile('data',strcat(subFolderName,'.mat')));
         subFolderName='malai_calib_pupil';
@@ -70,6 +69,10 @@ for i=1:length(subLists)
     
     fprintf('\n\nStarted %s\n\n',subName)
    % run_cider_sweep(result_dir, data.X, data.gout,data.avgRadEllipse,nDim,scaleVect);
+   
+   
+%    strcat(subFolderName,'.mat')
+%    result_dir
    
    if strcmp(modelName,'ann')
        run_ann_sweep(result_dir, data.X, data.gout,nDim,scaleVect);
