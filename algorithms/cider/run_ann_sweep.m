@@ -1,8 +1,8 @@
 function run_ann_sweep(result_dir, X, gout,nDim,scaleVect)
 %function run_ann_sweep(result_dir, X, gout,avgRadEllipse,nDim,scaleVect)
-%     addpath('~/iShadow/algorithms/cider');
-%     addpath('../ann/lib');
-%     addpath('../ann/run_ann');
+    addpath('~/iShadow/algorithms/cider');
+    addpath('../ann/lib');
+    addpath('../ann/run_ann');
 
 origin=pwd;
 
@@ -16,6 +16,8 @@ for i=1:length(lambda_folders)-1
     
     for j=1:length(rep_files)-1
         fprintf('%s - %d\n',lambda_folders{i},j);
+        
+        
         
         if nDim==3
             [pred,radii]= ann(X, rep_files{j},nDim,scaleVect);

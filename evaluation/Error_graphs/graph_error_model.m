@@ -81,7 +81,7 @@ for i=1:length(subList)
                 if strcmp(subName,'addison')
                     lighting='benchmark';
                 else
-                    lighting='calib';
+                    lighting='outdoors';
                 end
                 
                 subFolderName=strcat(subName,'_',lighting,'_pupil');

@@ -1,7 +1,7 @@
 clear;
 close all;
 
-addpath('~/iShadow/evaluation')
+addpath('~/iShadow/evaluation/Error_graphs')
 subList={'malai'};%,'mike'%{'malai'};%'addison','duncan',
 rootDir='~/iShadow/algorithms/cider/data/';
 
@@ -12,12 +12,13 @@ cd (rootDir)
 nLambda=10;
 
 objForTitle='pupil area';
-ylabelunit='error %';
+ylabelunit='error (pixel)';
 
 dataObj='target';
  object='pupil';
  modelName='ann'; % 'ANN' %'both'
- [annErrStEachSub,annMeanErrorMat,annStdErrorMat]=graph_error_model_rad(modelName,subList,rootDir,object,objForTitle,ylabelunit,dataObj);
+ %[annErrStEachSub,annMeanErrorMat,annStdErrorMat]=graph_error_model_rad(modelName,subList,rootDir,object,objForTitle,ylabelunit,dataObj);
+[errStEachSub,meanErrAllSub,stdErrAllSub,meanErr_line_ForAllSub,stdErr_line_ForAllSub]=graph_error_model_rad(modelName,subList,rootDir,object,objForTitle,ylabelunit,dataObj);
 
 % % CHANGE HERE:
 %  modelName='cider'; % 'ANN' %'both'
