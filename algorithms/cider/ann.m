@@ -2,7 +2,7 @@ function [pred,radii]=ann(X,ann_file,nDim,scaleVect)
 %function [pred]=ann(X,ann_file,nDim,scaleVect)
 
 %pred= predicted pupil center
-    
+    addpath('~/iShadow/algorithms/ann/lib');
     %%%these 4 lines copied from cider.m 
     pred=zeros(size(X,1),2);
     radii = zeros(size(X,1),1);
