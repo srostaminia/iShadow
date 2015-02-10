@@ -24,6 +24,9 @@ for i=1:length(lambda_folders)-1
         else
             [pred]= ann(X, rep_files{j},nDim,scaleVect);
         end
+        
+        
+        
         filter = logical(sum(pred,2));
         dist = sqrt(sum((gout(filter,:) - pred(filter,:)).^2,2));
         err = mean(dist);

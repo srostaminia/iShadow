@@ -12,7 +12,7 @@ datadir='/Users/ytun/Google Drive/IMPORTANT_VISION/MobiSys2015_labeling/data';
 % names={'kaituo','malai','sean'};%akshaya,'mike','shuo','duncan'};
 % lightings={'calib','dark'};
 names={'malai'};%{'akshaya','mike','shuo','duncan'};%{'kaituo','malai','sean'};
-lightings={'outdoors'};
+lightings={'dark'};
 
 % filter_Line = logical(sum(pred,2)) & ~ann_used;
 % dist_Line = sqrt(sum((gout(filter_Line) - pred(filter_Line)).^2,2));
