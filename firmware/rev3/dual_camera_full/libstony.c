@@ -6,6 +6,8 @@
 extern __IO  uint32_t Receive_length ;
 extern uint32_t sd_ptr;
 
+extern volatile uint16_t time_start, time_total;
+
 int adc_idx = 0;
 __IO uint16_t adc_values[2];
 
@@ -193,6 +195,7 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
   flagUseAmplifier=selamp ? 1:0;
 
   config = gain + (flagUseAmplifier * 8) + 16;
+//  config = 16;  // FIXME!!!
 
   //turn chip on with config value
   set_pointer_value(REG_CONFIG,config,CAM1);
@@ -489,10 +492,12 @@ int stony_image_single()
   ADC_RegularChannelConfig(ADC1, SINGLE_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
   ADC_RegularChannelConfig(ADC1, SINGLE_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
   
-  set_pointer_value(REG_ROWSEL, 0, SINGLE_CAM);
+//  set_pointer_value(REG_ROWSEL, 0, SINGLE_CAM);
+  set_pointer_value(REG_COLSEL, 0, SINGLE_CAM);
 
   for (int row = 0, data_cycle = 0; row < 112; row++, data_cycle++) {
-    set_pointer_value(REG_COLSEL, 0, SINGLE_CAM);
+//    set_pointer_value(REG_COLSEL, 0, SINGLE_CAM);
+    set_pointer_value(REG_ROWSEL, 0, SINGLE_CAM);
     
     delay_us(1);
     
@@ -526,7 +531,8 @@ int stony_image_single()
       SINGLE_PARAM(INCV_BANK)->ODR &= ~SINGLE_PARAM(INCV_PIN);
     } // for (col)
     
-    inc_pointer_value(REG_ROWSEL, 1, SINGLE_CAM);
+//    inc_pointer_value(REG_ROWSEL, 1, SINGLE_CAM);
+    inc_pointer_value(REG_COLSEL, 1, SINGLE_CAM);
 
     if (data_cycle == TX_ROWS - 1) {
       if (row > TX_ROWS - 1) {
@@ -565,6 +571,7 @@ int stony_cider_line(uint8_t rowcol_num, uint8_t *sd_buf, uint8_t rowcol_sel)
   // Double-buffered (2-dim array)
 //  uint8_t buf8[2][112 * TX_ROWS * 2];
   uint16_t *buf16 = (uint16_t *)sd_buf;
+  uint8_t adc_idx = 0;
   
   volatile uint16_t start, total;
   
@@ -597,10 +604,61 @@ int stony_cider_line(uint8_t rowcol_num, uint8_t *sd_buf, uint8_t rowcol_sel)
     asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
     asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
     
-    buf16[i] = adc_values[0];
+    buf16[i] = adc_values[adc_idx];
+    adc_idx = !adc_idx;
     
     SINGLE_PARAM(INCV_BANK)->ODR |= SINGLE_PARAM(INCV_PIN);
     SINGLE_PARAM(INCV_BANK)->ODR &= ~SINGLE_PARAM(INCV_PIN);
+  } // for (col)
+  
+  return 0;
+}
+
+int stony_single_pixel(uint8_t loc[2], uint16_t reps, uint16_t delay, uint8_t *sd_buf)
+{
+  // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, only 1 camera
+  // Double-buffered (2-dim array)
+//  uint8_t buf8[2][112 * TX_ROWS * 2];
+  uint16_t *buf16 = (uint16_t *)sd_buf;
+  uint8_t adc_idx = 0;
+  
+  volatile uint16_t start, total;
+  
+  set_pointer_value(REG_ROWSEL, loc[0], SINGLE_CAM);
+  set_pointer_value(REG_COLSEL, loc[1], SINGLE_CAM);
+  
+  delay_us(1);
+  Delay(100);
+  
+  for (int i = 0; i < reps; i++) { 
+    time_start = TIM5->CNT;
+    SINGLE_PARAM(INPH_BANK)->ODR |= SINGLE_PARAM(INPH_PIN);
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    SINGLE_PARAM(INPH_BANK)->ODR &= ~SINGLE_PARAM(INPH_PIN);
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    
+    // Do conversion for SINGLE_CAM
+    ADC_SoftwareStartConv(ADC1);
+    
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    
+    buf16[i] = adc_values[adc_idx];
+    adc_idx = !adc_idx;
+    
+    time_total = TIM5->CNT - time_start;
+    if (delay != 0)
+      delay_us(delay);
+    
+//    if (i == 0) {
+//      Delay(20);
   } // for (col)
   
   return 0;
