@@ -2,28 +2,26 @@ close all;
 clear;
 
 %% Edit here:
+namesub='';
 lighting='outdoors';
-result='first10frames_histeqwithCalib';%;'predAndTrue';
+result='predAndTrue';
 
 modelName='cider';
 object='pupil';
-
-
-indexEnd=10;%nImages;
-subName='duncan';
-datastr=strcat(subName,'_outdoors_raw');%'eye_data_addison_microbench1_pupil_auto';%strcat(subName,'_',lighting,'_raw');
+datastr='malai_outdoors_raw';%'eye_data_addison_microbench1_pupil_auto';%strcat(namesub,'_',lighting,'_raw');
 ellipseFileName = strcat(datastr,'_ellipse.mat');
+
 dataFileName=strcat(datastr,'.mat');
 
-fileName=strcat(subName,'_outdoors_pupil');
+indexEnd=100;%nImages;
+
+fileName='_outdoors_pupil';
 %%
 labeldir='/Users/ytun/Google Drive/IMPORTANT_VISION/MobiSys2015_labeling/label';
 addpath(labeldir);
 
 datadir='/Users/ytun/Google Drive/IMPORTANT_VISION/MobiSys2015_labeling/data/';
 % addpath(datadir);
-
-addpath('/Users/ytun/Google Drive/IMPORTANT_VISION/MobiSys2015_labeling/');
 
 videoDir='~/iShadow/results/video';
 addpath(videoDir);
@@ -61,7 +59,7 @@ bestFitsMat=labelellipse.bestFitsMat;
 %%
 shuttleVideo = VideoReader('shuttle.avi');
 
-outputVideo = VideoWriter(fullfile(videoDir,strcat(subName,'_',lighting,'_',result,'.avi')));
+outputVideo = VideoWriter(fullfile(videoDir,strcat(namesub,'_',lighting,'_',result,'.avi')));
 outputVideo.FrameRate = shuttleVideo.FrameRate;
 open(outputVideo)
 

@@ -2,7 +2,7 @@ clear;
 close all;
 
 addpath('~/iShadow/evaluation/Error_graphs')
-subList={'malai'};%,'mike'%{'malai'};%'addison','duncan',
+subList={'duncan','malai'};%,'mike'%{'malai'};%'addison','duncan',
 rootDir='~/iShadow/algorithms/cider/data/';
 
 cd ~
@@ -17,8 +17,9 @@ ylabelunit='error (pixel)';
 dataObj='target';
  object='pupil';
  modelName='ann'; % 'ANN' %'both'
+ lighting='outdoors';
  %[annErrStEachSub,annMeanErrorMat,annStdErrorMat]=graph_error_model_rad(modelName,subList,rootDir,object,objForTitle,ylabelunit,dataObj);
-[errStEachSub,meanErrAllSub,stdErrAllSub,meanErr_line_ForAllSub,stdErr_line_ForAllSub]=graph_error_model_rad(modelName,subList,rootDir,object,objForTitle,ylabelunit,dataObj);
+[errStEachSub,meanErrAllSub,stdErrAllSub,meanErr_line_ForAllSub,stdErr_line_ForAllSub]=graph_error_model_rad(lighting,modelName,subList,rootDir,object,objForTitle,ylabelunit,dataObj);
 
 % % CHANGE HERE:
 %  modelName='cider'; % 'ANN' %'both'

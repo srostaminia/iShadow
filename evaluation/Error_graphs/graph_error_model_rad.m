@@ -14,8 +14,10 @@
 
 
 
-function [errStEachSub,meanErrAllSub,stdErrAllSub,meanErr_line_ForAllSub,stdErr_line_ForAllSub]=graph_error_model_rad(modelName,subList,rootDir,object,objForTitle,ylabelunit,dataObj)
-cd ~
+function [errStEachSub,meanErrAllSub,stdErrAllSub,meanErr_line_ForAllSub,stdErr_line_ForAllSub]=graph_error_model_rad(lighting,modelName,subList,rootDir,object,objForTitle,ylabelunit,dataObj)
+
+
+%cd ~
 
 %lighting='outdoors';
 
@@ -77,11 +79,11 @@ for i=1:nUsers
                 %  dir=fullfile(rootDir, 'awesomeness_pupil_1sm4_uniquefy/yamin_1sm4_pupil/full/results',lambdaFolder,strcat(modelName,'_rep',num2str(m),'.mat'));
                 
                 %else
-                if strcmp(subName,'addison')
-                    lighting='benchmark';
-                else
-                    lighting='calib';
-                end
+%                 if strcmp(subName,'addison')
+%                     lighting='benchmark';
+%                 else
+%                     lighting='calib';
+%                 end
                 
                 subFolderName=strcat(subName,'_',lighting,'_pupil');
                 
@@ -105,7 +107,8 @@ for i=1:nUsers
                 %                     rep.predArea(end-10:end)
                 %                     rep.trueArea(end-10:end)./rep.predArea(end-10:end)
                 %                 end
-                errMatEachSub(m,k,j)=rep.err;
+                    errMatEachSub(m,k,j)=rep.err;
+                    fprintf('yes');
                 end
                 
                 if strcmp(modelName,'cider')
@@ -265,6 +268,8 @@ end
 
 %% CIDER: One Graph Subplot individual user's error
 
+rangeY=zeros(1, nUsers);
+
 figure;
 for i=1:nUsers
     
@@ -272,16 +277,19 @@ for i=1:nUsers
     errorbar(1:1:nLambda,errStEachSub.mean.(uni).(subName),errStEachSub.std.(uni).(subName));
     %meanErrMatForAllSub(i,:)=errStEachSub.mean.uniquefy_0.(subName);
     hold on;
+    
+    rangeY(i)=max(errStEachSub.mean.(uni).(subName)(:))+max(errStEachSub.std.(uni).(subName)(:))+2;
 end
 
 hold off;
-ylim([0, max(errStEachSub.mean.(uni).(subName)(:))+max(errStEachSub.std.(uni).(subName)(:))+2]) %10.1
+ylim([0, max(rangeY)]) %10.1
 xlim([0 nLambda+1])
 ylabel(ylabelunit);
 xlabel('ANN size (incrementing)');
 %title(strcat('subject: ',subName));
 legend(subList);
 
+%title('Malai Outdoor (hist eq with calib) 1:10');
 suptitle({strcat(modelName,': Error of predicted ',objForTitle,' for 6 different users for different ANN sizes'),'Each of the ten points represents the average of errors for 5 repetitions of the experiment.','ANN size increases from left to right.'});
 
 %% CIDER: AVG Graph over all user's errors
@@ -301,7 +309,9 @@ xlabel('ANN size (incrementing)');
 
 suptitle({strcat(modelName,': Average error of predicted ',objForTitle,' for different ANN sizes'),'Each of the ten points is obtained by averaging the mean errors for',' 5 repetitions of the experiment for different users.','ANN size increases from left to right.'});
 
-
+else
+   meanErrAllSub=zeros(nLambda,1); 
+   stdErrAllSub=zeros(nLambda,1); 
 end
 
 
