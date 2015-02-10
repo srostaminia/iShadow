@@ -4,7 +4,7 @@
 #include "stm32l1xx.h"
 
 // Camera to use for single-camera functions
-#define SINGLE_CAM      CAM2
+#define SINGLE_CAM      CAM1
 
 #define LED_LOW         0
 
@@ -94,6 +94,7 @@ int stony_read_pixel();
 int stony_image_dual();
 int stony_image_single();
 int stony_cider_line(uint8_t rowcol_num, uint8_t *sd_buf, uint8_t rowcol_sel);
+int stony_single_pixel(uint8_t loc[2], uint16_t reps, uint16_t delay, uint8_t *sd_buf);
 void dac_init();
 
 void pulse_resv(uint8_t cam);
