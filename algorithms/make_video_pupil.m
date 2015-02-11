@@ -10,7 +10,7 @@ object='pupil';
 
 
 indexEnd=10;%nImages;
-subName='duncan';
+subName='malai';
 datastr=strcat(subName,'_outdoors_raw');%'eye_data_addison_microbench1_pupil_auto';%strcat(subName,'_',lighting,'_raw');
 ellipseFileName = strcat(datastr,'_ellipse.mat');
 dataFileName=strcat(datastr,'.mat');
@@ -49,7 +49,7 @@ elseif strcmp(object,'pupil')
 end
 
 
-data=load(fullfile(datadir,dataFileName));
+data=load(fullfile(datadir,'malai_calib_raw.mat'));
 image=data.X;
 imArr=reshape(image',111, 112,[]);
 nImages=size(imArr,3);
@@ -61,14 +61,14 @@ bestFitsMat=labelellipse.bestFitsMat;
 %%
 shuttleVideo = VideoReader('shuttle.avi');
 
-outputVideo = VideoWriter(fullfile(videoDir,strcat(subName,'_',lighting,'_',result,'.avi')));
+outputVideo = VideoWriter(fullfile(videoDir,strcat(subName,'_','calioncali','_','1-10','.avi')));
 outputVideo.FrameRate = shuttleVideo.FrameRate;
 open(outputVideo)
 
 
 
 
-for i=1:indexEnd%[1:100 200:300 400:500 1000:1200 1300:1400 1500:1600 ]
+for i=1:10%1:indexEnd%[1:100 200:300 400:500 1000:1200 1300:1400 1500:1600 ]
     %for i=[1:100 300:400 800:900 2200:2400 5000:5100 6000:6100 ]
 
     %Detect pupil
