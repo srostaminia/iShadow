@@ -5,7 +5,7 @@
 %ground truth file: akshaya_calib_pupil
 %result file: cider_rep1.mat(for each lambda and rep)
 
-
+close all;
 clear;
 modelName='ann';
 %nDim=3;
@@ -63,7 +63,7 @@ for i=1:length(subLists)
         
         subFolderName=strcat(subName,'_',lighting,'_pupil');
         
-        data=load(fullfile(labelPupilDir,strcat(subFolderName,'.mat')));
+        data=load(fullfile(labelPupilDir,subFolderName));
         result_dir=fullfile(dataRootDir,'data',irbFolderName,subFolderName,'uniquefy_0','results');
         
     end
@@ -73,84 +73,87 @@ for i=1:length(subLists)
     
     
     %
-    X=data.X;
-    gout=data.gout;
+    X=data.X(1:10,:);%(1:100,:);
+    gout=data.gout(1:10,:);%(1:100,:);
      
-    X=X(1:10,:);
-    gout=gout(1:10,:);
+    %X=X(121:130,:);
+    %gout=gout(121:130,:);
     
-%     if strcmp(lighting,'outdoors')
+    if strcmp(lighting,'outdoors')
+        
+        addpath('/Users/ytun/Google Drive/IMPORTANT_VISION/MobiSys2015_labeling/data');
+        
+        dataCalib=load(fullfile(labelPupilDir,strcat(subName,'_calib_pupil.mat')));
+        
+        b=dataCalib.X(10,:);
+        maxx=max(b);
+
+        imSample=mat2gray(reshape(b',111, 112,[]));
+        %imSample=mat2gray(rgb2gray(imread(strcat(subName,'_','calib','.png'))));
+        newhis=(imhist(imSample));
+        
+      %  figure;
+       % imhist(imSample);
+        %imshow(imSample);
+        %title('Sample Image');
+
+        X(:,[111*1+48 111*2+48 111*3+48 111*4+48] )=repmat(mean(X,2),[1 4]);
+         addpath('~/iShadow/algorithms/ann/lib');
+
+         hsize=3;
+        
+        for p=1:size(X,1)
+%             figure;
+%             imhist(X(p,:))
+%             before=imhist(X(p,:));
+             
+            a=mat2gray(X(p,:));
+            X(p,:)=histeq(a,newhis);
+            
+%             figure;
+%             imhist(X(p,:))
+%             after=imhist(X(p,:));
+%             
+            X(p,:)=maxx*X(p,:);
+            
+            im=(reshape(X(p,:)',111, 112,[]));
+            imadjusted=medfilt2(im,[hsize hsize]);
+             figure;
+%             imhist(X(p,:));
+            subplot(1,2,1);
+            imagesc(im);
+            colormap gray
+            title('before med filter');
+            subplot(1,2,2);
+            imagesc(imadjusted);
+            colormap gray
+            title('after med filter');
+
+            %im=(reshape(X(p,:)',111, 112,[]));
+        end
+        
+        
+        %im=(reshape(X',111, 112,[]));
+        
+
+        
+        fprintf('data cropped');
+      
 %         
-%         addpath('/Users/ytun/Google Drive/IMPORTANT_VISION/MobiSys2015_labeling/data');
 %         
-%         dataCalib=load(fullfile(labelPupilDir,strcat(subName,'_calib_pupil.mat')));
+%         figure;
+%         imshow(imSample);
+%         title('calib')
+%         %colormap gray;
+%         fprintf('yes');
 %         
-%         b=dataCalib.X(1,:);
-%         imSample=mat2gray(reshape(b',111, 112,[]));
-%         %imhist(imSample)
-%         
-%         %imread('eye_center.png');
-%         %imSample=mat2gray(rgb2gray(imread(strcat(subName,'_','calib','.png'))));
-%         newhis=(imhist(imSample));
-%         
-%         %     figure;
-%         %     imshow(imSample);
-%         %     title('Sample Image');
-% 
-%         X(:,[111*1+48 111*2+48 111*3+48 111*4+48] )=repmat(mean(X,2),[1 4]);
-%         
-%         
-%       %  im=(reshape(X(1,:)',111, 112,[]));
-%         
-% %         figure;
-% %         imshow(mat2gray(im));
-%          
-%         
-%         %remove blinks
-%         %if strcmp(subName,'duncan')
-%         X=X(1:10,:);
-%         gout=gout(1:10,:);
-%         
-%         for p=1:10
-%             a=mat2gray(X(p,:));
-%             X(p,:)=histeq(a,newhis);
-%         end
-%         
-%         
-%         %im=(reshape(X',111, 112,[]));
-%         
-% %         for z=1:1
-% %             figure;
-% %             imshow(im(:,:,z));
-% %             title(sprintf('%i, after hist eq',z));
-% %             
-% %         end
-%         
-%         fprintf('data cropped');
-%         
-%         %              X=X([1:20],:);
-%         %              gout=gout([1:20],:);
-%         %             X([21:23 54:55 64 85 204 345 493 552],:)=[];
-%         %             gout([21:23 54:55 64 85 204 345 493 552],:)=[];
-%         
-%         %end
-%         
-% %         imArr=reshape(X',111, 112,[]);
-% %         
-% %         
-% %         figure;
-% %         imshow(imSample);
-% %         title('calib')
-% %         %colormap gray;
-% %         fprintf('yes');
-% %         
-% %         figure;
-% %         imshow(imArr(:,:,1));
-% %         title('adjusted')
-% %         %colormap gray;
-% %         fprintf('yes');
-%     end
-%  
+%         figure;
+%         imshow(imArr(:,:,1));
+%         title('adjusted')
+%         %colormap gray;
+%         fprintf('yes');
+    end
+ 
     if strcmp(modelName,'ann')
         run_ann_sweep(result_dir, X, gout,nDim,scaleVect);
         

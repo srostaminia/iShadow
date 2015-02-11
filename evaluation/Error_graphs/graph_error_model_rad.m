@@ -289,7 +289,7 @@ xlabel('ANN size (incrementing)');
 %title(strcat('subject: ',subName));
 legend(subList);
 
-%title('Malai Outdoor (hist eq with calib) 1:10');
+%title('Outdoor (NO hist eq) 1:100');
 suptitle({strcat(modelName,': Error of predicted ',objForTitle,' for 6 different users for different ANN sizes'),'Each of the ten points represents the average of errors for 5 repetitions of the experiment.','ANN size increases from left to right.'});
 
 %% CIDER: AVG Graph over all user's errors
