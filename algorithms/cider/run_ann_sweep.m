@@ -1,5 +1,5 @@
-function run_ann_sweep(result_dir, X, gout,nDim,scaleVect)
-%function run_ann_sweep(result_dir, X, gout,avgRadEllipse,nDim,scaleVect)
+%function run_ann_sweep(result_dir, X, gout,nDim,scaleVect)
+function run_ann_sweep(result_dir, X, gout,avgRadEllipse,nDim,scaleVect)
     addpath('~/iShadow/algorithms/cider');
     addpath('../ann/lib');
     addpath('../ann/run_ann');

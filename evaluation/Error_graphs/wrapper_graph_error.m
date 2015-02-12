@@ -2,7 +2,7 @@ clear;
 close all;
 
 addpath('~/iShadow/evaluation/Error_graphs')
-subList={'duncan','malai'};%,'mike'%{'malai'};%'addison','duncan',
+subList={'duncan'};%,'mike'%{'malai'};%'addison','duncan',
 rootDir='~/iShadow/algorithms/cider/data/';
 
 cd ~
@@ -11,15 +11,17 @@ cd (rootDir)
 % CHANGE HERE:
 nLambda=10;
 
-objForTitle='pupil area';
+objForTitle='pupil radius';%'pupil area';
 ylabelunit='error (pixel)';
 
-dataObj='target';
+dataObj='radius diff'; %radius diff
  object='pupil';
  modelName='ann'; % 'ANN' %'both'
  lighting='outdoors';
+ 
+ title='outdoor data: (ANN predicted radius- ground truth average of ellipse axis lengths)';
  %[annErrStEachSub,annMeanErrorMat,annStdErrorMat]=graph_error_model_rad(modelName,subList,rootDir,object,objForTitle,ylabelunit,dataObj);
-[errStEachSub,meanErrAllSub,stdErrAllSub,meanErr_line_ForAllSub,stdErr_line_ForAllSub]=graph_error_model_rad(lighting,modelName,subList,rootDir,object,objForTitle,ylabelunit,dataObj);
+[errStEachSub,meanErrAllSub,stdErrAllSub,meanErr_line_ForAllSub,stdErr_line_ForAllSub]=graph_error_model_rad(lighting,modelName,subList,rootDir,object,objForTitle,ylabelunit,dataObj,title);
 
 % % CHANGE HERE:
 %  modelName='cider'; % 'ANN' %'both'

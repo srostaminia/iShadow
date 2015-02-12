@@ -8,10 +8,10 @@
 close all;
 clear;
 modelName='ann';
-%nDim=3;
-%scaleVect=[112 111 112];
-nDim=2;
-scaleVect=[112 111];
+nDim=3;
+scaleVect=[112 111 112];
+%nDim=2;
+%scaleVect=[112 111];
 object='pupil';
 irbFolderName=strcat('awesomeness_irb_',object);
 
@@ -24,7 +24,7 @@ lighting='outdoors';
 cd ~
 cd (dataRootDir)
 
-subLists={'duncan','malai'}; %'akshaya','shuo','duncan','mike','shuo',
+subLists={'duncan'}; %'akshaya','shuo','duncan','mike','shuo',
 
 for i=1:length(subLists)
     
@@ -61,9 +61,11 @@ for i=1:length(subLists)
         %??
     else
         
-        subFolderName=strcat(subName,'_',lighting,'_pupil');
-        
+                subFolderName=strcat(subName,'_','outdoors','_pupil');
+
         data=load(fullfile(labelPupilDir,subFolderName));
+                subFolderName=strcat(subName,'_',lighting,'_pupil');
+
         result_dir=fullfile(dataRootDir,'data',irbFolderName,subFolderName,'uniquefy_0','results');
         
     end
@@ -73,13 +75,21 @@ for i=1:length(subLists)
     
     
     %
-    X=data.X(1:10,:);%(1:100,:);
-    gout=data.gout(1:10,:);%(1:100,:);
-     
+    X=data.X;%(1:10,:);%(1:600,:);%(1:100,:);%(1:100,:);
+    gout=data.gout;%(1:10,:);%(1:600,:);%(1:10,:);%(1:100,:);
+     avgRadEllipse=data.avgRadEllipse;%(1:10,:);
+%     figure;
+%    histogram(X(1,:));
+%    title('INDOOR: histogram of pixel values before mean_contrast_adjust_nosave');
+%    a=mean_contrast_adjust_nosave(X(1,:));
+%    figure;
+%    histogram(a);
+%       title('INDOOR: histogram of pixel values after mean_contrast_adjust_nosave');
+
     %X=X(121:130,:);
     %gout=gout(121:130,:);
     
-    if strcmp(lighting,'outdoors')
+    if strcmp(lighting,'ss')
         
         addpath('/Users/ytun/Google Drive/IMPORTANT_VISION/MobiSys2015_labeling/data');
         
@@ -92,11 +102,6 @@ for i=1:length(subLists)
         %imSample=mat2gray(rgb2gray(imread(strcat(subName,'_','calib','.png'))));
         newhis=(imhist(imSample));
         
-      %  figure;
-       % imhist(imSample);
-        %imshow(imSample);
-        %title('Sample Image');
-
         X(:,[111*1+48 111*2+48 111*3+48 111*4+48] )=repmat(mean(X,2),[1 4]);
          addpath('~/iShadow/algorithms/ann/lib');
 
@@ -107,59 +112,51 @@ for i=1:length(subLists)
 %             imhist(X(p,:))
 %             before=imhist(X(p,:));
              
-            a=mat2gray(X(p,:));
-            X(p,:)=histeq(a,newhis);
+%             a=mat2gray(X(p,:));
+%             X(p,:)=histeq(a,newhis);
+%             X(p,:)=maxx*X(p,:);
+
             
+            im=(reshape(X(p,:)',111, 112,[]));
+            imadjusted=medfilt2(im,[hsize hsize]);
+            %correct artifacts from 4 corners of median filters
+            imadjusted([1 111 end-110 end])=repmat(mean(imadjusted(:)),[1 4]);
+            
+            a=mat2gray(imadjusted);
+%            a=maxx*a;
+%             a=histeq(a,newhis);
+%             
+            X(p,:)=(reshape(a,[], 111*112));
+            
+            %im=(reshape(X(p,:)',111, 112,[]));
 %             figure;
 %             imhist(X(p,:))
 %             after=imhist(X(p,:));
 %             
-            X(p,:)=maxx*X(p,:);
             
-            im=(reshape(X(p,:)',111, 112,[]));
-            imadjusted=medfilt2(im,[hsize hsize]);
-             figure;
-%             imhist(X(p,:));
-            subplot(1,2,1);
-            imagesc(im);
-            colormap gray
-            title('before med filter');
-            subplot(1,2,2);
-            imagesc(imadjusted);
-            colormap gray
-            title('after med filter');
+%              figure;
+%             subplot(1,2,1);
+%             imagesc(im);
+%             colormap gray
+%             title('before med filter');
+%             subplot(1,2,2);
+%             imagesc(a);
+%             colormap gray
+%             title('after med filter');
 
-            %im=(reshape(X(p,:)',111, 112,[]));
         end
-        
-        
-        %im=(reshape(X',111, 112,[]));
-        
-
-        
+   
         fprintf('data cropped');
       
-%         
-%         
-%         figure;
-%         imshow(imSample);
-%         title('calib')
-%         %colormap gray;
-%         fprintf('yes');
-%         
-%         figure;
-%         imshow(imArr(:,:,1));
-%         title('adjusted')
-%         %colormap gray;
-%         fprintf('yes');
+
     end
  
-    if strcmp(modelName,'ann')
-        run_ann_sweep(result_dir, X, gout,nDim,scaleVect);
-        
-    elseif strcmp(modelName,'cider')
-        run_cider_sweep(result_dir, X, gout,nDim,scaleVect);
-    end
+%     if strcmp(modelName,'ann')
+%         run_ann_sweep(result_dir, X, gout,avgRadEllipse,nDim,scaleVect);
+%         
+%     elseif strcmp(modelName,'cider')
+%         run_cider_sweep(result_dir, X, gout,nDim,scaleVect);
+%     end
     
 end
 
