@@ -14,7 +14,7 @@
 
 
 
-function [errStEachSub,meanErrAllSub,stdErrAllSub,meanErr_line_ForAllSub,stdErr_line_ForAllSub]=graph_error_model_rad(lighting,modelName,subList,rootDir,object,objForTitle,ylabelunit,dataObj)
+function [errStEachSub,meanErrAllSub,stdErrAllSub,meanErr_line_ForAllSub,stdErr_line_ForAllSub]=graph_error_model_rad(lighting,modelName,subList,rootDir,object,objForTitle,ylabelunit,dataObj,title)
 
 
 %cd ~
@@ -109,6 +109,10 @@ for i=1:nUsers
                 %                 end
                     errMatEachSub(m,k,j)=rep.err;
                     fprintf('yes');
+                
+                elseif strcmp(dataObj,'radius diff')
+                    
+                     errMatEachSub(m,k,j)=mean(rep.radii-rep.avgRadEllipse); %err;
                 end
                 
                 if strcmp(modelName,'cider')
@@ -282,16 +286,21 @@ for i=1:nUsers
 end
 
 hold off;
+if ~strcmp(dataObj,'radius diff')
+   
 ylim([0, max(rangeY)]) %10.1
 xlim([0 nLambda+1])
+end
 ylabel(ylabelunit);
 xlabel('ANN size (incrementing)');
 %title(strcat('subject: ',subName));
 legend(subList);
 
-%title('Outdoor (NO hist eq) 1:100');
+if length(title)>0
+suptitle(title);
+else
 suptitle({strcat(modelName,': Error of predicted ',objForTitle,' for 6 different users for different ANN sizes'),'Each of the ten points represents the average of errors for 5 repetitions of the experiment.','ANN size increases from left to right.'});
-
+end
 %% CIDER: AVG Graph over all user's errors
 
 

@@ -16,10 +16,11 @@ function [pred,radii]=ann(X,ann_file,nDim,scaleVect)
     for i = 1:size(X,1)
         predVect = scaleVect .* logisticmlp_prediction(these_results.W, [X_adjust(i,:) 1], 7, nDim);
         pred(i,:) = predVect(1:2);
+        
+        if  size(predVect,2)==3
+            radii(i) = predVect(3);
             
-            if  size(predVect)==3
-                radii(i) = predVect(3);
-            end
+        end
     end
 
     if isequal(size(pred),[size(X,1) 2])
