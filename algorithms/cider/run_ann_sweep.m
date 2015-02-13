@@ -1,5 +1,5 @@
-%function run_ann_sweep(result_dir, X, gout,nDim,scaleVect)
-function run_ann_sweep(result_dir, X, gout,avgRadEllipse,nDim,scaleVect)
+function run_ann_sweep(result_dir, X, gout,nDim,scaleVect)
+%function run_ann_sweep(result_dir, X, gout,avgRadEllipse,nDim,scaleVect)
     addpath('~/iShadow/algorithms/cider');
     addpath('../ann/lib');
     addpath('../ann/run_ann');
@@ -8,6 +8,8 @@ origin=pwd;
 
 cd(result_dir);
 lambda_folders = cellstr(strsplit(ls));
+
+
 
 for i=1:length(lambda_folders)-1
     cd(lambda_folders{i});
