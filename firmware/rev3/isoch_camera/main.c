@@ -18,20 +18,14 @@ extern uint8_t IT_Clock_Sent;
 volatile uint8_t packet_sending = 0;
 
 extern int fpn_offset;
+extern float last_r;
 
 static __IO uint32_t TimingDelay;
-//extern uint16_t pred_img[112][112];
 extern int8_t pred[2];
 extern uint16_t min, max;
 
 int main()
-{ 
-//  uint8_t tx_test[PACKET_SIZE];
-//  
-//  for (int i = 0; i < PACKET_SIZE; i++) {
-//    tx_test[i] = i + 1;
-//  }
-  
+{   
   if (SysTick_Config(SystemCoreClock / 1000)) {
     while (1);
   }
@@ -39,12 +33,13 @@ int main()
   config_ms_timer();
   config_us_delay();
   
+#ifdef OUTMODE
   stony_init(41, 50, 41,
             4, SMH_SELAMP_3V3);
-
+#else
   stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3,
             SMH_GAIN_3V3, SMH_SELAMP_3V3);
-
+#endif
   
   Set_System();
   Set_USBClock();
@@ -52,34 +47,38 @@ int main()
   USB_Init();
   Speaker_Config();
   
+  uint8_t use_ann = 1;
+  int8_t last_pred[2];
+  
   pred[0] = 255;
   pred[1] = 255;
   while (1) {
     clear_ENDP1_packet_buffers();
     while (packet_sending == 1);
-    
-//    stony_image_single();
+
+#ifdef CIDER_MODE
+    if (use_ann) {
+      stony_image_dual_subsample();
+      use_ann = 0;
+      last_r = 0;
+    }
+    else {
+      last_pred[0] = pred[0];
+      last_pred[1] = pred[1];
+      
+      if (run_cider() < 0)
+        use_ann = 1;
+      
+      stony_send_cider_image(last_pred, use_ann);
+    } 
+#else
     stony_image_dual_subsample();
+#endif // ifdef CIDER_MODE
+    
     while (packet_sending == 1);
-    
-//    for (int i = 0; i < 11; i++) {
-//      packet_sending = 1;
-//      while (packet_sending == 1);
-//    }
-    
-//    delay_ms(100);
+
   }
-  
-//  uint16_t val = 0;
-//  while (1) {
-//      send_packet(tx_test, PACKET_SIZE);
-//      
-//      tx_test[0] = val;
-//      val++;
-//      
-//      while (packet_sending == 1);
-//  }
-//  
+
   return 0;
 }
 

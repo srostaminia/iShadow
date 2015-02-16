@@ -6,6 +6,7 @@
 
 extern unsigned short val[112*112];
 int8_t pred[2];
+float pred_radius;
 
 unsigned short num_subsample;
 unsigned short num_hidden;
@@ -15,6 +16,7 @@ unsigned int mask_offset;
 unsigned int who_offset;
 unsigned int wih_offset;
 unsigned int fpn_offset;
+unsigned int col_fpn_offset;
 
 extern unsigned short model_data[];
 extern uint32_t sd_ptr;
