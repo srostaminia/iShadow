@@ -14,7 +14,7 @@ extern "C" {
 
 #include "stm32l1xx.h"
   
-#define NUM_SUBSAMPLE 420
+#define NUM_SUBSAMPLE 1000
 #define NUM_HIDDEN 6
 
 #define BH(X)           *((float*)(model_data + bh_offset + ((X) * 2)))  
@@ -23,6 +23,7 @@ extern "C" {
 #define WHO(X, Y)       *((float*)(model_data + who_offset + ((X) * 4) + ((Y) * 2)))
 #define WIH(X, Y)       *((float*)(model_data + wih_offset + ((X) * num_hidden * 2) + ((Y) * 2)))
 #define FPN(X)          model_data[fpn_offset + (X)]
+#define COL_FPN(X)      model_data[col_fpn_offset + (X)]
   
 void predict_gaze(unsigned short subsamples[], uint16_t min, uint16_t max);
 void predict_gaze_fullimg(unsigned short img[], uint16_t min, uint16_t max);
