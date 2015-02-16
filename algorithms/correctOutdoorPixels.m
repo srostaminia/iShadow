@@ -1,8 +1,4 @@
-Having error
-%%Error using save
-Unable to write file
-akshaya_outdoors_raw.mat: permission
-denied.
+
 
 close all;
 clear;

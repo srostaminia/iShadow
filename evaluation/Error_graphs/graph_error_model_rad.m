@@ -108,6 +108,7 @@ for i=1:nUsers
                 %                     rep.trueArea(end-10:end)./rep.predArea(end-10:end)
                 %                 end
                     errMatEachSub(m,k,j)=rep.err;
+                    size(rep.gout)
                     fprintf('yes');
                 
                 elseif strcmp(dataObj,'radius diff')
