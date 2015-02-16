@@ -2,7 +2,7 @@ clear;
 close all;
 
 addpath('~/iShadow/evaluation/Error_graphs')
-subList={'duncan'};%,'mike'%{'malai'};%'addison','duncan',
+subList={'addison'};%,'mike'%{'malai'};%'addison','duncan',
 rootDir='~/iShadow/algorithms/cider/data/';
 
 cd ~
@@ -24,7 +24,7 @@ dataObj='target';%'radius diff'; %radius diff
  %title='frame 1:pushed left by 4 pixels: 2nd-normalized dist with dark: duncan-outdoor ran on ANN-calib-based';%'frame 1 2nd-normalized dist with dark: duncan-outdoor ran on ANN-calib-based';
  %title='frame 1087: indoor-dark -Feb 13 normalized with duncan-dark on ANN-calib-based';
  %title='all frames: no blink- raw- outdoors prediction Feb 13- retesting';
- title='Error of pupil location estimation- outdoor addison data tested on ANN (addison-calib-based)';
+ title='Error of pupil location estimation- outdoor addison data tested on ANN (addison-outdoor-based)';
  %[annErrStEachSub,annMeanErrorMat,annStdErrorMat]=graph_error_model_rad(modelName,subList,rootDir,object,objForTitle,ylabelunit,dataObj);
 [errStEachSub,meanErrAllSub,stdErrAllSub,meanErr_line_ForAllSub,stdErr_line_ForAllSub]=graph_error_model_rad(lighting,modelName,subList,rootDir,object,objForTitle,ylabelunit,dataObj,title);
 

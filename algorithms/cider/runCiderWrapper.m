@@ -24,7 +24,7 @@ lighting='outdoors';
 cd ~
 cd (dataRootDir)
 
-subLists={'duncan','malai'}; %'akshaya','shuo','duncan','mike','shuo',
+subLists={'addison'}; %'akshaya','shuo','duncan','mike','shuo',
 
 for i=1:length(subLists)
     
@@ -67,7 +67,7 @@ for i=1:length(subLists)
         %         subFolderName=strcat(subName,'_','dark','_pupil');
         %         in_data=load(fullfile(labelPupilDir,subFolderName));
         
-        subFolderName=strcat(subName,'_','outdoors','_pupil');
+        subFolderName=strcat(subName,'_','outdoors','_pupil_fixed');
         result_dir=fullfile(dataRootDir,'data',irbFolderName,subFolderName,'uniquefy_0','results');
         
         
