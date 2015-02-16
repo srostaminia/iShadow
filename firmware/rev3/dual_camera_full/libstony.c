@@ -382,10 +382,14 @@ int stony_image_dual()
   
   set_pointer_value(REG_ROWSEL, 0, CAM1);
   set_pointer_value(REG_ROWSEL, 0, CAM2);
+//  set_pointer_value(REG_COLSEL, 0, CAM1);
+//  set_pointer_value(REG_COLSEL, 0, CAM2);
 
   for (int row = 0, data_cycle = 0; row < 112; row++, data_cycle++) {
     set_pointer_value(REG_COLSEL, 0, CAM1);
     set_pointer_value(REG_COLSEL, 0, CAM2);
+//    set_pointer_value(REG_ROWSEL, 0, CAM1);
+//    set_pointer_value(REG_ROWSEL, 0, CAM2);
     
     delay_us(1);
     
@@ -437,6 +441,8 @@ int stony_image_dual()
     
     inc_pointer_value(REG_ROWSEL, 1, CAM1);
     inc_pointer_value(REG_ROWSEL, 1, CAM2);
+//    inc_pointer_value(REG_COLSEL, 1, CAM1);
+//    inc_pointer_value(REG_COLSEL, 1, CAM2);
 
     if (data_cycle == TX_ROWS - 1) {
       if (row > TX_ROWS - 1) {
@@ -492,13 +498,18 @@ int stony_image_single()
   ADC_RegularChannelConfig(ADC1, SINGLE_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
   ADC_RegularChannelConfig(ADC1, SINGLE_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
   
-//  set_pointer_value(REG_ROWSEL, 0, SINGLE_CAM);
+#ifdef COLUMN_COLLECT
   set_pointer_value(REG_COLSEL, 0, SINGLE_CAM);
+#else
+  set_pointer_value(REG_ROWSEL, 0, SINGLE_CAM);
+#endif
 
   for (int row = 0, data_cycle = 0; row < 112; row++, data_cycle++) {
-//    set_pointer_value(REG_COLSEL, 0, SINGLE_CAM);
+#ifdef COLUMN_COLLECT
     set_pointer_value(REG_ROWSEL, 0, SINGLE_CAM);
-    
+#else
+    set_pointer_value(REG_COLSEL, 0, SINGLE_CAM);
+#endif
     delay_us(1);
     
     for (int col = 0; col < 112; col++) {      
@@ -531,8 +542,11 @@ int stony_image_single()
       SINGLE_PARAM(INCV_BANK)->ODR &= ~SINGLE_PARAM(INCV_PIN);
     } // for (col)
     
-//    inc_pointer_value(REG_ROWSEL, 1, SINGLE_CAM);
+#ifdef COLUMN_COLLECT
     inc_pointer_value(REG_COLSEL, 1, SINGLE_CAM);
+#else
+    inc_pointer_value(REG_ROWSEL, 1, SINGLE_CAM);
+#endif
 
     if (data_cycle == TX_ROWS - 1) {
       if (row > TX_ROWS - 1) {
@@ -571,7 +585,6 @@ int stony_cider_line(uint8_t rowcol_num, uint8_t *sd_buf, uint8_t rowcol_sel)
   // Double-buffered (2-dim array)
 //  uint8_t buf8[2][112 * TX_ROWS * 2];
   uint16_t *buf16 = (uint16_t *)sd_buf;
-  uint8_t adc_idx = 0;
   
   volatile uint16_t start, total;
   
@@ -620,7 +633,6 @@ int stony_single_pixel(uint8_t loc[2], uint16_t reps, uint16_t delay, uint8_t *s
   // Double-buffered (2-dim array)
 //  uint8_t buf8[2][112 * TX_ROWS * 2];
   uint16_t *buf16 = (uint16_t *)sd_buf;
-  uint8_t adc_idx = 0;
   
   volatile uint16_t start, total;
   
@@ -628,9 +640,13 @@ int stony_single_pixel(uint8_t loc[2], uint16_t reps, uint16_t delay, uint8_t *s
   set_pointer_value(REG_COLSEL, loc[1], SINGLE_CAM);
   
   delay_us(1);
-  Delay(100);
   
   for (int i = 0; i < reps; i++) { 
+//    set_pointer_value(REG_ROWSEL, loc[0], SINGLE_CAM);
+//    set_pointer_value(REG_COLSEL, loc[1], SINGLE_CAM);
+//    
+//    delay_us(1);
+    
     time_start = TIM5->CNT;
     SINGLE_PARAM(INPH_BANK)->ODR |= SINGLE_PARAM(INPH_PIN);
     asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
@@ -662,4 +678,105 @@ int stony_single_pixel(uint8_t loc[2], uint16_t reps, uint16_t delay, uint8_t *s
   } // for (col)
   
   return 0;
+}
+
+int stony_mask_subsample(uint8_t *row, uint8_t *col, uint32_t num_pixels, uint8_t *sd_buf)
+{
+  uint16_t *buf16 = (uint16_t *)sd_buf;
+  
+  int16_t last_row = -1, last_col = -1;
+  for (uint32_t i = 0; i < num_pixels; i++) {
+//    if (last_col == -1 || last_col != col[i]) {
+//      set_pointer_value(REG_COLSEL, col[i], SINGLE_CAM);
+//      set_pointer_value(REG_ROWSEL, row[i], SINGLE_CAM);
+//      
+//      last_col = col[i];
+//      last_row = row[i];
+//    } else {
+//      for (uint8_t j = 0; j < (row[i] - last_row); j++)
+//        pulse_incv(SINGLE_CAM);
+//      
+//      last_row = row[i];
+//    }
+    
+    set_pointer_value(REG_COLSEL, col[i], SINGLE_CAM);
+    set_pointer_value(REG_ROWSEL, row[i], SINGLE_CAM);
+  
+    SINGLE_PARAM(INPH_BANK)->ODR |= SINGLE_PARAM(INPH_PIN);
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    SINGLE_PARAM(INPH_BANK)->ODR &= ~SINGLE_PARAM(INPH_PIN);
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    
+    // Do conversion for SINGLE_CAM
+    ADC_SoftwareStartConv(ADC1);
+    
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    
+    buf16[i] = adc_values[adc_idx];
+    adc_idx = !adc_idx;
+  }
+  
+  set_pointer_value(REG_COLSEL, 0, SINGLE_CAM);
+  set_pointer_value(REG_ROWSEL, 0, SINGLE_CAM);
+}
+
+int stony_mask_fullsample(uint8_t *row, uint8_t *col, uint32_t num_pixels, uint8_t *sd_buf)
+{
+  uint16_t *buf16 = (uint16_t *)sd_buf;
+  uint32_t pix_idx = 0;
+  
+  set_pointer_value(REG_COLSEL, 0, SINGLE_CAM);
+  
+  int16_t last_row = -1, last_col = -1;
+  for (uint8_t col_idx = 0; col_idx < 112; col_idx++) {
+    set_pointer_value(REG_ROWSEL, 1, SINGLE_CAM);
+    
+//    delay_us(1);
+    
+    for (uint8_t row_idx = 1; row_idx < 112; row_idx++) {
+      SINGLE_PARAM(INPH_BANK)->ODR |= SINGLE_PARAM(INPH_PIN);
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      SINGLE_PARAM(INPH_BANK)->ODR &= ~SINGLE_PARAM(INPH_PIN);
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      
+      // Do conversion for SINGLE_CAM
+      ADC_SoftwareStartConv(ADC1);
+      
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      
+      if (row[pix_idx] == row_idx && col[pix_idx] == col_idx) {
+        buf16[pix_idx] = adc_values[adc_idx];
+        pix_idx++;
+      }
+      
+      adc_idx = !adc_idx;
+      
+      if (pix_idx == num_pixels)
+        return 0;
+      
+      SINGLE_PARAM(INCV_BANK)->ODR |= SINGLE_PARAM(INCV_PIN);
+      SINGLE_PARAM(INCV_BANK)->ODR &= ~SINGLE_PARAM(INCV_PIN);
+    }
+    
+    inc_pointer_value(REG_COLSEL, 1, SINGLE_CAM);
+  }
+  
+  set_pointer_value(REG_COLSEL, 0, SINGLE_CAM);
+  set_pointer_value(REG_ROWSEL, 0, SINGLE_CAM);
 }

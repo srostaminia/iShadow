@@ -65,6 +65,7 @@ void delay_us(int delayTime);
 int cider_line_test(int8_t rowcol_num, int8_t rowcol_sel);
 int single_pixel_test(uint8_t loc[2], uint16_t lines, uint16_t delay);
 int pixel_mass_test(uint8_t loc[2]);
+int single_line_test(uint8_t rowcol_num, uint8_t rowcol_sel);
 
 unsigned short inv_row_2_scale(const signed char *row);
 unsigned short inv_orientation_matrix_to_scalar(const signed char *mtx);

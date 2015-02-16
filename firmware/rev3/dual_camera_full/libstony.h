@@ -6,6 +6,8 @@
 // Camera to use for single-camera functions
 #define SINGLE_CAM      CAM1
 
+//#define COLUMN_COLLECT
+
 #define LED_LOW         0
 
 //#define LED_HIGH        0        
