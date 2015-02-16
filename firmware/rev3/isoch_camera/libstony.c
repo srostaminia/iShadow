@@ -943,18 +943,21 @@ int stony_image_dual_subsample()
 //  min = 1000;
 
 //  int data_cycle = 0;
-  int data_cycle = 2; // Start at 2 b/c first two "pixels" transmitted are prediction values from previous cycle
+  int data_cycle = 6; // Start at 2 b/c first two "pixels" transmitted are prediction values from previous cycle
 
 #ifdef SEND_16BIT  
 //  buf16[0] = pred[0];
 //  buf16[1] = pred[1];
-  buf8[0][0] = pred[0];
-  buf8[0][1] = 0;
-  buf8[0][2] = pred[1];
-  buf8[0][3] = 0;
+  buf8[0][0] = 2;
+  buf8[0][2] = pred[0];
+  buf8[0][4] = pred[1];
+  for (int i = 6; i < 11; i += 2) buf8[0][i] = 1;
+  for (int i = 1; i < 12; i += 2) buf8[0][i] = 0;
 #else
-  buf8_active[0] = pred[0];
-  buf8_active[1] = pred[1];
+  buf8_active[0] = 2;
+  buf8_active[1] = pred[0];
+  buf8_active[2] = pred[1];
+  for (int i = 3; i < 6; i++)   buf8_active[i] = 1;
 #endif  
   
   uint16_t packets_sent = 0;  // For debug purposes only
@@ -1523,9 +1526,18 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
   return;       // Edge data is stored in argument array
 }
 
-
-int stony_send_cider_image(int *cider_rowcol, uint8_t cider_failed)
-{  
+int stony_send_cider_image(uint8_t *cider_rowcol, uint8_t cider_failed)
+{
+  __IO uint32_t led1 = 0, led2 = 0;
+  uint32_t DAC_Align = DAC_Align_12b_R;
+  
+  led1 = led2 = (uint32_t)DAC_BASE;
+  led1 += DHR12R1_OFFSET + DAC_Align;
+  led2 += DHR12R2_OFFSET + DAC_Align;
+  
+//  *(__IO uint32_t *) led1 = LED_LOW;
+//  *(__IO uint32_t *) led2 = LED_LOW;
+  
   // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, 2 cameras
   // Double-buffered (2-dim array)
   uint8_t buf8[2][USB_PIXELS * 2];
@@ -1570,13 +1582,17 @@ int stony_send_cider_image(int *cider_rowcol, uint8_t cider_failed)
 //  int data_cycle = 0;
   int data_cycle = 6; // Start at 2 b/c first two "pixels" transmitted are prediction values from previous cycle
 
+  // Can't send any zero values, would cause problems with the USB communication
+  uint8_t pred_radius_approx = (uint8_t)pred_radius;
+  pred_radius_approx = (pred_radius_approx == 0) ? (255) : (pred_radius_approx);
+  
 #ifdef SEND_16BIT  
   buf8[0][0] = cider_failed;
   buf8[0][2] = pred[0];
   buf8[0][4] = pred[1];
   buf8[0][6] = cider_rowcol[0];
   buf8[0][8] = cider_rowcol[1];
-  buf8[0][10] = (uint8_t)pred_radius;
+  buf8[0][10] = pred_radius_approx;
   
   for (int i = 1; i < 12; i += 2)
     buf8[0][i] = 0;
@@ -1586,7 +1602,7 @@ int stony_send_cider_image(int *cider_rowcol, uint8_t cider_failed)
   buf8_active[2] = pred[1];
   buf8_active[3] = cider_rowcol[0];
   buf8_active[4] = cider_rowcol[1];
-  buf8_active[5] = (uint8_t)pred_radius;
+  buf8_active[5] = pred_radius_approx;
 #endif
   
   uint16_t packets_sent = 0;  // For debug purposes only
@@ -1850,6 +1866,10 @@ int stony_send_cider_image(int *cider_rowcol, uint8_t cider_failed)
 #ifdef OUTMODE
   last_avg = (uint16_t)mean;
 #endif
+  
+  // Predict gaze, store results in global variable pred[]
+//  predict_gaze_fullimg((uint16_t*)pred_img, min, max);
+  predict_gaze_fullmean((uint16_t*)pred_img, mean, std);
   
   return 0;
 }
