@@ -19,7 +19,7 @@ labelPupilDir='/Users/ytun/Google Drive/IMPORTANT_VISION/MobiSys2015_labeling/la
 addpath('~/iShadow/algorithms/cider');
 
 dataRootDir='~/iShadow/algorithms/cider';
-lighting='outdoors';
+lighting='outdoors_filt';
 
 cd ~
 cd (dataRootDir)
@@ -61,18 +61,18 @@ for i=1:length(subLists)
 %         %??
 %     else
         
-        subFolderName=strcat(subName,'_','outdoors','_pupil');
+        subFolderName=strcat(subName,'_',lighting,'_pupil');
         out_data=load(fullfile(labelPupilDir,subFolderName));
         
         %         subFolderName=strcat(subName,'_','dark','_pupil');
         %         in_data=load(fullfile(labelPupilDir,subFolderName));
         
-        subFolderName=strcat(subName,'_','outdoors','_pupil_fixed');
+        subFolderName=strcat(subName,'_',lighting,'_pupil');
+        %result_dir=fullfile(dataRootDir,'data',irbFolderName,subFolderName,'results');
         result_dir=fullfile(dataRootDir,'data',irbFolderName,subFolderName,'uniquefy_0','results');
-        
+       
         
    % end
-   
    
     %index_out=;
     XX=out_data.X;

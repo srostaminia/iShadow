@@ -22,8 +22,11 @@ function [errStEachSub,meanErrAllSub,stdErrAllSub,meanErr_line_ForAllSub,stdErr_
 %lighting='outdoors';
 
 uniFolderList={'uniquefy_0'};%,'uniquefy_1'};
-lambdaFolderList={'subset_l1_init_strips_k7_lambda0.000100','subset_l1_init_strips_k7_lambda0.000215','subset_l1_init_strips_k7_lambda0.000464','subset_l1_init_strips_k7_lambda0.001000','subset_l1_init_strips_k7_lambda0.002154','subset_l1_init_strips_k7_lambda0.004642','subset_l1_init_strips_k7_lambda0.010000','subset_l1_init_strips_k7_lambda0.021544','subset_l1_init_strips_k7_lambda0.046416','subset_l1_init_strips_k7_lambda0.100000'};
-lambdaStrList={'lambda0.000100','lambda0.000215','lambda0.000464','lambda0.001000','lambda0.002154','lambda0.004642','lambda0.010000','lambda0.021544','lambda0.046416','lambda0.100000'};
+
+lambdaFolderList={'subset_l1_init_strips_k7_lambda0.001000','subset_l1_init_strips_k7_lambda0.010000','subset_l1_init_strips_k7_lambda0.100000'};
+%lambdaFolderList={'subset_l1_init_strips_k7_lambda0.000100','subset_l1_init_strips_k7_lambda0.000215','subset_l1_init_strips_k7_lambda0.000464','subset_l1_init_strips_k7_lambda0.001000','subset_l1_init_strips_k7_lambda0.002154','subset_l1_init_strips_k7_lambda0.004642','subset_l1_init_strips_k7_lambda0.010000','subset_l1_init_strips_k7_lambda0.021544','subset_l1_init_strips_k7_lambda0.046416','subset_l1_init_strips_k7_lambda0.100000'};
+%lambdaStrList={'lambda0.000100','lambda0.000215','lambda0.000464','lambda0.001000','lambda0.002154','lambda0.004642','lambda0.010000','lambda0.021544','lambda0.046416','lambda0.100000'};
+lambdaStrList={'lambda0.001000','lambda0.010000','lambda0.100000'};
 lambdaStrList=fliplr(lambdaStrList);
 lambdaFolderList=fliplr(lambdaFolderList);
 
@@ -142,7 +145,7 @@ for i=1:nUsers
     
     errStEachSub.raw.(uni).(subName)=errMatEachSub;
     errStEachSub.mean.(uni).(subName)=mean(errMatEachSub,1);
-    errStEachSub.std.(uni).(subName)=std(errMatEachSub,1);
+    errStEachSub.std.(uni).(subName)=std(errMatEachSub,0,1);
     
     
     
@@ -153,14 +156,14 @@ for i=1:nUsers
     if strcmp(modelName,'cider')
         annUsedStEachLambdaEachSub.raw.(uni).(subName)=annUsedMatEachSub; %5x10
         annUsedStEachLambdaEachSub.mean.(uni).(subName)=round(mean(annUsedMatEachSub,1));
-        annUsedStEachLambdaEachSub.std.(uni).(subName)=std(annUsedMatEachSub,1);
+        annUsedStEachLambdaEachSub.std.(uni).(subName)=std(annUsedMatEachSub,0,1);
         
        % fprintf('Got here%s',subName);
         
         
         err_line_StEachSub.raw.(uni).(subName)=err_line_MatEachSub;
         err_line_StEachSub.mean.(uni).(subName)=mean(err_line_MatEachSub,1);
-        err_line_StEachSub.std.(uni).(subName)=std(err_line_MatEachSub,1);
+        err_line_StEachSub.std.(uni).(subName)=std(err_line_MatEachSub,0,1);
         
         fprintf('ANNused1');
         
@@ -307,7 +310,7 @@ end
 
 if nUsers>1
 meanErrAllSub=mean(meanErrMatForAllSub,1);
-stdErrAllSub=std(meanErrMatForAllSub,1);
+stdErrAllSub=std(meanErrMatForAllSub,0,1);
 
 figure;
 
@@ -360,7 +363,7 @@ if strcmp(modelName,'cider')
     %% Line CIDER: One Graph Subplot individual user's error
     
     meanErr_line_ForAllSub=mean(meanErrMat_line_ForAllSub,1);
-    stdErr_line_ForAllSub=std(meanErrMat_line_ForAllSub,1);
+    stdErr_line_ForAllSub=std(meanErrMat_line_ForAllSub,0,1);
     
     figure;
     for i=1:nUsers
@@ -413,15 +416,15 @@ if strcmp(modelName,'cider')
     %         size(meanAnnUsedForEachLambdaEachSub)
     
     % size(meanAnnUsedForEachLambdaEachSub,2)
-    % size(std(meanAnnUsedForEachLambdaEachSub,2))
+    % size(std(meanAnnUsedForEachLambdaEachSub,0,2))
     % size(meanAnnUsedForEachLambdaEachSub)
     
     
     
     meanAnnUsedForAllLambdaEachSub=100*(round(mean(meanAnnUsedForEachLambdaEachSub,2))./totalFrameEachSub);
-    %stdAnnUsedForAllLambdaEachSub=100*(round(std(meanAnnUsedForEachLambdaEachSub,2))./totalFrameEachSub);
+    %stdAnnUsedForAllLambdaEachSub=100*(round(std(meanAnnUsedForEachLambdaEachSub,0,2))./totalFrameEachSub);
    % meanAnnUsedForAllLambdaEachSub
-    %annUsedStdForAllLambdaEachSub=std(meanAnnUsedForEachLambdaEachSub,2)
+    %annUsedStdForAllLambdaEachSub=std(meanAnnUsedForEachLambdaEachSub,0,2)
     
    % totalFrameEachSub
     %        meanAnnUsedForAllLambdaEachSub

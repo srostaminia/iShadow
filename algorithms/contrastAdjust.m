@@ -1,6 +1,6 @@
 nSubplot=5;
 
-subName='malai';
+subName='addison';
 
 addpath('/Users/ytun/Google Drive/IMPORTANT_VISION/MobiSys2015_labeling/data');
 addpath('/Users/ytun/iShadow/algorithms/ann/lib');
@@ -8,13 +8,12 @@ addpath('/Users/ytun/iShadow/algorithms/ann/lib');
 labelPupilDir='/Users/ytun/Google Drive/IMPORTANT_VISION/MobiSys2015_labeling/labelPupil';
 addpath(labelPupilDir);
 
-dataCalib=load(fullfile(labelPupilDir,strcat(subName,'_calib_pupil.mat')));
+dataCalib=load(fullfile(labelPupilDir,strcat(subName,'_outdoors_pupil.mat')));
 
-b=dataCalib.X(1,:);
-im=(reshape(b',111, 112,[]));
 
-figure;
-imshow((im));
+%im=imresize(im,[50 50],'bilinear')
+
+% med
 
 % figure;
 % imhist(im);
@@ -22,13 +21,13 @@ imshow((im));
 % figure;
 % imhist(mat2gray(im));
 
-im=mean_contrast_adjust_nosave(im);
+%im=mean_contrast_adjust_nosave(im);
 
 % figure;
 % imhist(mat2gray(im));
 
-figure;
-imshow(im);
+% figure;
+% imshow(im);
 
 
 %%

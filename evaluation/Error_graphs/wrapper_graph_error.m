@@ -17,7 +17,7 @@ ylabelunit='error (pixel)';
 dataObj='target';%'radius diff'; %radius diff
  object='pupil';
  modelName='ann'; % 'ANN' %'both'
- lighting='outdoors';
+ lighting='outdoors_filt';
  
  %title='outdoor data: (ANN predicted radius- ground truth average of ellipse axis lengths)';
  %title='first 600 frames: duncan-dark ran on ANN-calib-based'%;'frame 1: ANN RawOutput: duncan_outdoor on ANN (duncan_cali-based)';
