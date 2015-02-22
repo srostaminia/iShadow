@@ -24,12 +24,18 @@ def main():
 
     parser.add_argument("--debug_folder", help="debug mode output file prefix")
     parser.add_argument("--mask", help="camera mask")
-    parser.add_argument("--gen_mask", help="generate new camera mask with name")
+    parser.add_argument("--columnwise", help="images being sent in column-major order", action="store_true")
+
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--gen_mask", help="generate new camera mask with name")
+    group.add_argument("--noflip", help="don't flip image (debug option)", action='store_true')
 
     args = parser.parse_args()
     debug_folder = args.debug_folder
     mask_filename = args.mask
     gen_mask_file = args.gen_mask
+    columnwise = args.columnwise
+    noflip = args.noflip
 
     if (debug_folder != None): 
         if os.path.isdir(debug_folder):
@@ -66,6 +72,7 @@ def main():
     iters = 0
     save_filename = None
     pred = [None, None]
+    next_start = []
 
     frame = np.zeros((112*112,))
     fig = plt.figure(999) 
@@ -78,30 +85,36 @@ def main():
     if (debug == False):
         vline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
         hline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
+        vline_cider,=ax.plot([0, 1], [0, 1], 'b-', linewidth=2)
+        hline_cider,=ax.plot([0, 1], [0, 1], 'b-', linewidth=2)
 
     while True:
-
-        # try:
-        #     output = open(debug_folder + ".raw", "wb")
-        # except IOError:
-        #     print "Output file", debug_folder + ".raw", "could not be opened."
-        #     sys.exit()
-
         frame = np.reshape(frame, (112*112))
 
-        pixels = 0
-        data_started = 0
-        packets = 0
+        if (debug and iters == 1):
+            sys.exit()
+
+        if len(next_start) != 0:
+            start_pixels = get_valid_bytes(next_start)
+            pixels = len(start_pixels)
+            frame[:pixels] = start_pixels
+
+            data_started = 1
+            packets = 1
+            next_start = []
+        else:
+            pixels = 0
+            data_started = 0
+            packets = 0
+
         # while packets < 14 or pixels < (112 * 112):
-        while pixels < (112 * 112):
+        while pixels < (112 * 112 + 6):
             data = endp.read(1840)
             # print data
 
             if (get_first(data) != -1) and (data_started == 0):
                 data_started = 1
-            elif (get_first(data) == -1) and (data_started == 1):
-                break
-
+                
             if (data_started == 1):
                 packets += 1
             else:
@@ -120,19 +133,31 @@ def main():
                 elif TX_BITS == 16:
                     print_packets(unpacked, 92)
 
+            param_packet, unpacked = get_param_packet(unpacked)
+
+            # Parameter packet is the end of an image transmission
+            if param_packet != None:
+                param_valid = get_valid_bytes(param_packet)
+
+                model_type = struct.unpack('h', struct.pack('H', param_valid.pop(0)))[0]
+                pred[0] = 112 - struct.unpack('h', struct.pack('H', param_valid.pop(0)))[0]
+                pred[1] = struct.unpack('h', struct.pack('H', param_valid.pop(0)))[0]
+
+                if model_type == 0 or model_type == 1:
+                    cider_col = 112 - struct.unpack('h', struct.pack('H', param_valid.pop(0)))[0]
+                    cider_row = struct.unpack('h', struct.pack('H', param_valid.pop(0)))[0]
+                    cider_radius = struct.unpack('h', struct.pack('H', param_valid.pop(0)))[0]
+
+                next_start = get_valid_bytes(unpacked)
+                break
+
             valid_bytes = get_valid_bytes(unpacked)
-
-            if (packets == 1):
-                pred[0] = 112 - struct.unpack('h', struct.pack('H', valid_bytes.pop(0)))[0]
-                pred[1] = struct.unpack('h', struct.pack('H', valid_bytes.pop(0)))[0]
-
-                if (debug and iters == 1):
-                    print "Prediction (X, Y):", pred[0], pred[1], "\n"
-                    sys.exit()
 
             if (iters != 0) and (debug == 0):
                 vline.set_data([pred[0], pred[0]], [max(0, pred[1] - 10), min(111, pred[1] + 10)])
                 hline.set_data([max(0, pred[0] - 10), min(111, pred[0] + 10)], [pred[1], pred[1]])
+                # vline_cider.set_data([cider_col, cider_col], [0, 112])
+                # hline_cider.set_data([0, 112], [cider_row, cider_row])
 
             valid_bytes = np.array(valid_bytes)
             new_pixels = len(valid_bytes)
@@ -169,12 +194,17 @@ def main():
         if (not gen_mask and mask != None):
             frame -= mask #************************UNCOMMENT ME ***************
 
-        if (not gen_mask):
-            frame = np.fliplr(frame)
-
         if (CONTRAST_ADJUST == 1):
             frame -= np.mean(frame)
             frame /= float(np.std(frame))
+
+        if columnwise:
+            frame = frame.T
+            # tmp = [pred[1], pred[0]]
+            # pred = tmp
+
+        if not gen_mask and not noflip and not debug:
+            frame = np.fliplr(frame)
 
         #plt.imshow(frame2, cmap = pylab.cm.Greys_r)
         image.set_data(frame)
@@ -219,7 +249,7 @@ def main():
             frame1 = plt.gca()
             frame1.axes.get_xaxis().set_visible(False)
             frame1.axes.get_yaxis().set_visible(False)
-            plt.savefig(gen_mask_file + ".png")
+            plt.savefig("img_" + gen_mask_file + ".png")
 
             sys.exit()
 
@@ -230,7 +260,8 @@ def print_packets(unpacked, packet_size):
         sys.exit()
 
     for i in range(len(unpacked) / packet_size):
-        print unpacked[(i * packet_size):((i + 1) * packet_size)]
+        data = unpacked[(i * packet_size):((i + 1) * packet_size)]
+        print data, ", valid:", count_valid_bytes(data)
 
     print "\n"
 
@@ -257,6 +288,20 @@ def get_first(data):
             return item
 
     return -1
+
+def get_param_packet(data):
+    param_packet = []
+
+    for i, item in enumerate(data):
+        if item == 0 and len(param_packet) != 0:
+            if len(param_packet) == 6:
+                return (param_packet, data[i:])
+            else:
+                return (None, data)
+        elif item != 0:
+            param_packet.append(item)
+
+    return None, data
 
 def count_valid_bytes(data):
     count = 0
