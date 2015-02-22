@@ -30,6 +30,8 @@ extern float pred_radius;
 float last_r = 0;
 //uint16_t pred_img[112][112];
 
+extern uint8_t param_packet[];
+
 extern __IO  uint32_t Receive_length ;
 extern uint32_t sd_ptr;
 extern volatile uint8_t packet_sending;
@@ -942,23 +944,23 @@ int stony_image_dual_subsample()
 //  max = 0;
 //  min = 1000;
 
-//  int data_cycle = 0;
-  int data_cycle = 6; // Start at 2 b/c first two "pixels" transmitted are prediction values from previous cycle
-
-#ifdef SEND_16BIT  
-//  buf16[0] = pred[0];
-//  buf16[1] = pred[1];
-  buf8[0][0] = 2;
-  buf8[0][2] = pred[0];
-  buf8[0][4] = pred[1];
-  for (int i = 6; i < 11; i += 2) buf8[0][i] = 1;
-  for (int i = 1; i < 12; i += 2) buf8[0][i] = 0;
-#else
-  buf8_active[0] = 2;
-  buf8_active[1] = pred[0];
-  buf8_active[2] = pred[1];
-  for (int i = 3; i < 6; i++)   buf8_active[i] = 1;
-#endif  
+  int data_cycle = 0;
+  
+//  int data_cycle = 6; // Start at 2 b/c first two "pixels" transmitted are prediction values from previous cycle
+//#ifdef SEND_16BIT  
+////  buf16[0] = pred[0];
+////  buf16[1] = pred[1];
+//  buf8[0][0] = 2;
+//  buf8[0][2] = pred[0];
+//  buf8[0][4] = pred[1];
+//  for (int i = 6; i < 11; i += 2) buf8[0][i] = 1;
+//  for (int i = 1; i < 12; i += 2) buf8[0][i] = 0;
+//#else
+//  buf8_active[0] = 2;
+//  buf8_active[1] = pred[0];
+//  buf8_active[2] = pred[1];
+//  for (int i = 3; i < 6; i++)   buf8_active[i] = 1;
+//#endif
   
   uint16_t packets_sent = 0;  // For debug purposes only
 //  uint16_t start = 0, total = 0;
@@ -1206,14 +1208,6 @@ int stony_image_dual_subsample()
     packets_sent += 1;
   }
   
-//  clear_ENDP1_packet_buffers();
-  send_empty_packet();
-  while(packet_sending == 1);
-  
-//  packet_sending = 1;
-  send_empty_packet();
-  while(packet_sending == 1);
-  
 //  float mean = (float)pixel_sum / (112 * 112);
   float mean = (float)pixel_sum / (NUM_SUBSAMPLE);
   float std = sqrt(S / (k-1));
@@ -1225,6 +1219,34 @@ int stony_image_dual_subsample()
   // Predict gaze, store results in global variable pred[]
 //  predict_gaze_fullimg((uint16_t*)pred_img, min, max);
   predict_gaze_fullmean((uint16_t*)pred_img, mean, std);
+  
+  data_cycle = 6;
+#ifdef SEND_16BIT  
+//  buf16[0] = pred[0];
+//  buf16[1] = pred[1];
+  param_packet[0] = 2;
+  param_packet[2] = pred[0];
+  param_packet[4] = pred[1];
+  for (int i = 6; i < 11; i += 2) param_packet[i] = 1;
+  for (int i = 1; i < 12; i += 2) param_packet[i] = 0;
+#else
+  param_packet[0] = 2;
+  param_packet[1] = pred[0];
+  param_packet[2] = pred[1];
+  for (int i = 3; i < 6; i++)   param_packet[i] = 1;
+#endif
+
+  send_packet(param_packet, PACKET_SIZE);
+
+  while(packet_sending == 1);
+  
+//  clear_ENDP1_packet_buffers();
+  send_empty_packet();
+  while(packet_sending == 1);
+  
+//  packet_sending = 1;
+  send_empty_packet();
+  while(packet_sending == 1);
   
   return 0;
 }
@@ -1858,18 +1880,13 @@ int stony_send_cider_image(uint8_t *cider_rowcol, uint8_t cider_failed)
 //  packet_sending = 1;
   send_empty_packet();
   while(packet_sending == 1);
-  
+    
+#ifdef OUTMODE
 //  float mean = (float)pixel_sum / (112 * 112);
   float mean = (float)pixel_sum / (NUM_SUBSAMPLE);
   float std = sqrt(S / (k-1));
-  
-#ifdef OUTMODE
   last_avg = (uint16_t)mean;
 #endif
-  
-  // Predict gaze, store results in global variable pred[]
-//  predict_gaze_fullimg((uint16_t*)pred_img, min, max);
-  predict_gaze_fullmean((uint16_t*)pred_img, mean, std);
   
   return 0;
 }

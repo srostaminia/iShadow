@@ -72,8 +72,8 @@ int main()
       stony_send_cider_image(last_pred, use_ann);
     } 
 #else
-//    stony_image_dual_subsample();
-    stony_send_cider_image(pred, use_ann);
+    stony_image_dual_subsample();
+//    stony_send_cider_image(pred, use_ann);
 #endif // ifdef CIDER_MODE
     
     while (packet_sending == 1);
