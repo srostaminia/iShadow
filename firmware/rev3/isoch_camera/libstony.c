@@ -53,7 +53,7 @@ int adc_idx = 0;
 uint16_t min = 1000, max = 0;
 
 #ifdef OUTMODE
-uint16_t last_avg = 0;
+uint16_t last_avg = 150;
 #endif
 
 //extern unsigned short mask[num_subsample][2];
@@ -1026,6 +1026,9 @@ int stony_image_dual_subsample()
 
 #ifdef SEND_EYE
 
+        if (this_pixel == 0) {
+          this_pixel = 150;
+        }
 #ifdef SEND_16BIT
 //        buf16[data_cycle] = adc_values[1];
         buf16[data_cycle] = this_pixel;
@@ -1153,6 +1156,9 @@ int stony_image_dual_subsample()
         }
     
 #ifdef SEND_EYE
+        if (pred_img[row][111] == 0) {
+          pred_img[row][111] = 150;
+        }
         
 #ifdef SEND_16BIT
 //    buf16[data_cycle] = adc_values[1];
