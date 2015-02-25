@@ -2,6 +2,7 @@
 #define __LIBSTONY_H
 
 #include "stm32l1xx.h"
+#include "predict_gaze.h"
 
 // Uncomment to use CIDER (overrides some other config options)
 //#define CIDER_MODE
@@ -12,7 +13,7 @@
 
 // Comment out to use unmasked eye pixels
 // (overriden by CIDER_MODE)
-//#define USE_FPN_EYE
+#define USE_FPN_EYE
 
 // Comment out to collect data row-wise instead of column-wise
 #define COLUMN_COLLECT
@@ -29,13 +30,26 @@
 
 // CIDER overrides (don't touch)
 #ifdef CIDER_MODE
+
 #if !defined(SEND_EYE) 
 #define SEND_EYE
 #endif // !defined(SEND_EYE)
+
 #if !defined(USE_FPN_EYE)
 #define USE_FPN_EYE
 #endif // !defined(USE_FPN_EYE)
+
 #endif  // ifdef CIDER_MODE
+
+#ifdef USE_FPN_EYE
+
+#ifdef COLUMN_COLLECT
+#define FPN_INORDER        COL_FPN
+#else
+#define FPN_INORDER        ROW_FPN
+#endif // ifdef COLUMN_COLLECT
+
+#endif // ifdef USE_FPN_EYE
 
 #if defined(SEND_16BIT) && defined(SEND_8BIT)
 #error CANNOT DEFINE BOTH SEND_16BIT AND SEND_8BIT (LIBSTONY.H)
