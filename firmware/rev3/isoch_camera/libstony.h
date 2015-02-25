@@ -12,10 +12,10 @@
 
 // Comment out to use unmasked eye pixels
 // (overriden by CIDER_MODE)
-#define USE_FPN_EYE
+//#define USE_FPN_EYE
 
 // Comment out to collect data row-wise instead of column-wise
-//#define COLUMN_COLLECT
+#define COLUMN_COLLECT
 
 // Uncomment to use outdoor settings
 //#define OUTMODE
@@ -53,8 +53,8 @@
 
 #define LED_LOW         0
 
-//#define LED_HIGH        0        
-#define LED_HIGH          0x59E       // 1.15V
+#define LED_HIGH        0        
+//#define LED_HIGH          0x59E       // 1.15V
 //#define LED_HIGH        0x5D1         // 1.25V
 //#define LED_HIGH        0x64D
 //#define LED_HIGH        0x746
