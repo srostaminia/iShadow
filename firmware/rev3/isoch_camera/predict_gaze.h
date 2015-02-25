@@ -22,7 +22,7 @@ extern "C" {
 #define MASK(X, Y)      model_data[mask_offset + ((X) * 2) + (Y)]
 #define WHO(X, Y)       *((float*)(model_data + who_offset + ((X) * 4) + ((Y) * 2)))
 #define WIH(X, Y)       *((float*)(model_data + wih_offset + ((X) * num_hidden * 2) + ((Y) * 2)))
-#define FPN(X)          model_data[fpn_offset + (X)]
+#define ROW_FPN(X)          model_data[fpn_offset + (X)]
 #define COL_FPN(X)      model_data[col_fpn_offset + (X)]
   
 void predict_gaze(unsigned short subsamples[], uint16_t min, uint16_t max);

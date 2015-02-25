@@ -25,7 +25,7 @@
 
 //#define USB_PIXELS      92
 
-extern int8_t pred[2];
+extern uint8_t pred[2];
 extern float pred_radius;
 float last_r = 0;
 //uint16_t pred_img[112][112];
@@ -340,7 +340,7 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
   who_offset = mask_offset + num_subsample * 2;
   wih_offset = who_offset + num_hidden * 2 * 2;
   fpn_offset = wih_offset + (num_hidden * num_subsample * 2);
-  col_fpn_offset = fpn_offset + 112 * 112 * 2;
+  col_fpn_offset = fpn_offset + 112 * 112;
   
   short config;
   char flagUseAmplifier;
@@ -434,383 +434,6 @@ int stony_read_pixel()
   
   return ADCdata;
 }
-
-//int stony_image_test()
-//{
-//  
-////  sd_ptr = 0; // FIX ME OH MY GOODNESS PLEASE FIX ME
-//  
-//  // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row
-//  // Double-buffered (2-dim array)
-//  uint8_t buf8[2][112 * TX_ROWS * 2];
-//  uint16_t *buf16 = (uint16_t *)buf8[0];
-//  uint16_t subsamples[NUM_SUBSAMPLE];
-//  uint16_t sub_idx = 0;
-//  uint16_t pix_value;
-//  
-//  volatile uint16_t start, total;
-//  uint8_t buf_idx = 0;
-//  
-//  uint16_t min = 65535, max = 0;
-//  
-//  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
-//  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
-//  
-//  set_pointer_value(REG_ROWSEL, 0, CAM2);
-//
-//  for (int row = 0, data_cycle = 0; row < 112; row++, data_cycle++) {
-//    set_pointer_value(REG_COLSEL, 0, CAM2);
-//    
-//    delay_us(1);
-//    
-//    for (int col = 0; col < 112; col++) {      
-//      CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      
-//      // Do conversion for CAM2
-//      ADC_SoftwareStartConv(ADC1);
-//      
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      
-//      
-////      buf16[(data_cycle * 112) + col] = adc_values[adc_idx];
-//      pix_value = adc_values[adc_idx];
-//      buf16[(data_cycle * 112) + col] = pix_value;
-//
-//      if (sub_idx < NUM_SUBSAMPLE && row == MASK(sub_idx, 0) && col == MASK(sub_idx, 1)) {
-////        uint16_t temp = buf16[(data_cycle * 112) + col];
-//        subsamples[sub_idx] = pix_value - FPN(sub_idx);
-//        
-//        min = (subsamples[sub_idx] < min) ? (subsamples[sub_idx]) : (min);
-//        max = (subsamples[sub_idx] > max) ? (subsamples[sub_idx]) : (max);
-//        
-//        sub_idx++;
-//      }
-//      adc_idx = !adc_idx;
-//
-//      CAM2_INCV_BANK->ODR |= CAM2_INCV_PIN;
-//      CAM2_INCV_BANK->ODR &= ~CAM2_INCV_PIN;
-//    } // for (col)
-//    
-//    inc_pointer_value(REG_ROWSEL, 1, CAM2);
-//
-//    if (data_cycle == TX_ROWS - 1) {
-//      if (row > TX_ROWS - 1) {
-//        f_finish_write();
-//      }
-//      
-//      if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, TX_BLOCKS / 2) != RES_OK)      return -1;
-//      
-//      buf_idx = !buf_idx;
-//      buf16 = (uint16_t *)buf8[buf_idx];
-//      
-//      sd_ptr += TX_BLOCKS / 2;
-//      data_cycle = -1;      
-////      if (row == 31)    return 0;
-//    }
-//    
-//  } // for (row)
-//
-//#if (112 % TX_ROWS != 0)
-//  f_finish_write();
-//  
-//  if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, TX_MOD_BLOCKS / 2) != RES_OK)      return -1;
-//  sd_ptr += TX_MOD_BLOCKS / 2;
-//#endif
-//  
-//  f_finish_write();
-//  
-//  if (sub_idx < NUM_SUBSAMPLE)
-//    while(1);
-//    
-//  predict_gaze(subsamples, last_min, last_max);
-//  
-//  last_min = min;
-//  last_max = max;
-//  
-//  return 0;
-//}
-//
-//int stony_image_minmax()
-//{
-//  uint16_t lastRow, lastCol;
-//  uint16_t pix_value;
-//  
-//  uint16_t min = 65535, max = 0;
-//  
-//  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
-//  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
-//  
-//  set_pointer_value(REG_ROWSEL, MASK(0, 0), CAM2);
-//  set_pointer_value(REG_COLSEL, 0, CAM2);
-//  
-//  lastRow = MASK(0, 0);
-//  lastCol = 0;
-//
-//  for (int pixel = 0; pixel < num_subsample; pixel++) {
-//      if (MASK(pixel, 0) != lastRow)
-//      {
-//        char diff = MASK(pixel, 0) - lastRow;
-//        
-//        inc_pointer_value(REG_ROWSEL, diff, CAM2);
-//        
-//        lastRow = MASK(pixel, 0);
-//
-//        set_pointer_value(REG_COLSEL, MASK(pixel, 1), CAM2);
-//        
-//        lastCol = MASK(pixel, 1);
-//        
-//        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      } else {
-//        inc_value(MASK(pixel, 1) - lastCol, CAM2);
-//        
-//        lastCol = MASK(pixel, 1);
-//      }
-//      
-//      CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      
-//      /* Start ADC1 Software Conversion */
-//      ADC_SoftwareStartConv(ADC1);
-//      
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//        
-////      subsamples[pixel] = adc_values[adc_idx] - FPN(pixel);
-//      pix_value = adc_values[adc_idx] - FPN(pixel);
-//      adc_idx = !adc_idx;
-//      
-//      min = (pix_value < min) ? (pix_value) : (min);
-//      max = (pix_value > max) ? (pix_value) : (max);
-//  }
-//  
-//  last_min = min;
-//  last_max = max;
-//  
-//  return 0;
-//}
-
-//int stony_image_dual()
-//{
-//  // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, 2 cameras
-//  // Double-buffered (2-dim array)
-//  uint8_t buf8[2][112 * TX_ROWS * 2 * 2];
-//  uint16_t *buf16 = (uint16_t *)buf8[0];
-//  
-//  uint16_t cam2_offset = CAM2_OFFSET;
-//  volatile uint16_t start, total;
-//  uint8_t buf_idx = 0;
-//  
-//  set_pointer_value(REG_ROWSEL, 0, CAM1);
-//  set_pointer_value(REG_ROWSEL, 0, CAM2);
-//
-//  for (int row = 0, data_cycle = 0; row < 112; row++, data_cycle++) {
-//    set_pointer_value(REG_COLSEL, 0, CAM1);
-//    set_pointer_value(REG_COLSEL, 0, CAM2);
-//    
-//    delay_us(1);
-//    
-//    for (int col = 0; col < 112; col++) {      
-//      CAM1_INPH_BANK->ODR |= CAM1_INPH_PIN;
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      CAM1_INPH_BANK->ODR &= ~CAM1_INPH_PIN;
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      
-//      if (col != 0) {
-//        buf16[(data_cycle * 112) + cam2_offset + (col - 1)] = adc_values[1];
-//      }
-//      
-//      // Do conversion for CAM1
-//      ADC_SoftwareStartConv(ADC1);
-//      
-//      if (col != 0) {
-//        CAM2_INCV_BANK->ODR |= CAM2_INCV_PIN;
-//        CAM2_INCV_BANK->ODR &= ~CAM2_INCV_PIN;
-//      }
-//      
-//      CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      
-//      buf16[(data_cycle * 112) + col] = adc_values[0];
-//      
-//      // Do conversion for CAM2
-//      ADC_SoftwareStartConv(ADC1);
-//
-//      CAM1_INCV_BANK->ODR |= CAM1_INCV_PIN;
-//      CAM1_INCV_BANK->ODR &= ~CAM1_INCV_PIN;
-//    } // for (col)
-//    
-//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//    
-//    buf16[(data_cycle * 112) + cam2_offset + 111] = adc_values[1];
-//    
-//    inc_pointer_value(REG_ROWSEL, 1, CAM1);
-//    inc_pointer_value(REG_ROWSEL, 1, CAM2);
-//
-//    if (data_cycle == TX_ROWS - 1) {
-//      if (row > TX_ROWS - 1) {
-//        f_finish_write();
-//      }
-//      
-//      if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, TX_BLOCKS) != RES_OK)      return -1;
-//      
-//      buf_idx = !buf_idx;
-//      buf16 = (uint16_t *)buf8[buf_idx];
-//      
-//      sd_ptr += TX_BLOCKS;
-//      data_cycle = -1;
-//      
-//#if (112 % TX_ROWS != 0)
-//      if (row + TX_ROWS > 112) {
-//        cam2_offset = CAM2_MOD_OFFSET;
-////        data_val = 0xCCCC;
-//      }
-////      else
-////        data_val = 0xBBBB;
-//#endif
-//      
-////      if (row == 31)    return 0;
-//    }
-//
-//  } // for (row)
-//
-//#if (112 % TX_ROWS != 0)
-//  f_finish_write();
-//  
-//  if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, TX_MOD_BLOCKS) != RES_OK)      return -1;
-//  sd_ptr += TX_MOD_BLOCKS;
-//#endif
-//  
-//  f_finish_write();
-//  
-//  return 0;
-//}
-
-//int stony_image_subsample()
-//{
-//  uint16_t lastRow, lastCol;
-//  uint16_t pix_value;
-////  uint16_t subsamples[NUM_SUBSAMPLE];
-////  uint16_t subsamples_raw[NUM_SUBSAMPLE];
-//  float x;
-//  float ah[NUM_HIDDEN];
-//  
-//  uint16_t min = 65535, max = 0;
-//  
-//  for (int i = 0; i < num_hidden; i++)  {
-//    ah[i] = BH(i);
-//  }
-//  
-//  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
-//  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
-//  
-//  set_pointer_value(REG_ROWSEL, MASK(0, 0), CAM2);
-//  set_pointer_value(REG_COLSEL, 0, CAM2);
-//  
-//  lastRow = MASK(0, 0);
-//  lastCol = 0;
-//
-//  for (int pixel = 0; pixel < NUM_SUBSAMPLE; pixel++) {
-//      if (MASK(pixel, 0) != lastRow)
-//      {
-//        char diff = MASK(pixel, 0) - lastRow;
-//        
-//        inc_pointer_value(REG_ROWSEL, diff, CAM2);
-//        
-//        lastRow = MASK(pixel, 0);
-//
-//        set_pointer_value(REG_COLSEL, MASK(pixel, 1), CAM2);
-//        
-//        lastCol = MASK(pixel, 1);
-//        
-//        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      } else {
-//        inc_value(MASK(pixel, 1) - lastCol, CAM2);
-//        
-//        lastCol = MASK(pixel, 1);
-//      }
-//      
-//      CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      
-//      /* Start ADC1 Software Conversion */
-//      ADC_SoftwareStartConv(ADC1);
-//      
-//      if (pixel > 0) {
-////        x = (float)(subsamples[pixel - 1] - last_min) / last_max;
-//        x = (float)(pix_value - last_min) / last_max;
-//
-//        for (int i = 0; i < num_hidden; i++) {
-//            ah[i] += x * WIH(pixel - 1, i);
-//        }
-//      }
-//      else {
-//        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//      }
-//      
-////      subsamples[pixel] = adc_values[adc_idx] - FPN(pixel);
-//      pix_value = adc_values[adc_idx] - FPN(pixel);
-//      adc_idx = !adc_idx;
-//      
-////      subsamples[pixel] = pix_value;    // AMM
-//      
-//      min = (pix_value < min) ? (pix_value) : (min);
-//      max = (pix_value > max) ? (pix_value) : (max);
-//  }
-//  
-////  x = (float)(subsamples[num_subsample - 1] - last_min) / last_max;
-//  x = (float)(pix_value - last_min) / last_max;
-//
-//  for (int i = 0; i < num_hidden; i++) {
-//      ah[i] += x * WIH(NUM_SUBSAMPLE - 1, i);
-//  }
-//  
-//  if (finish_predict(ah) != 0)  return -1;
-//  
-////  predict_gaze(subsamples, last_min, last_max);       // AMM - Diagnostic        
-//  
-//  last_min = min;
-//  last_max = max;
-//  
-//  return 0;
-//}
 
 int stony_image_single()
 {
@@ -989,7 +612,7 @@ int stony_image_dual_subsample()
       if (col != 0) {
         
 #ifdef USE_FPN_EYE
-        this_pixel = adc_values[1] - FPN((row * 112) + (col - 1));
+        this_pixel = adc_values[1] - FPN_INORDER((row * 112) + (col - 1));
 #else
         this_pixel = adc_values[1];
 #endif
@@ -1134,7 +757,7 @@ int stony_image_dual_subsample()
     
 #ifdef USE_FPN_EYE
     // TODO: Get subsampled pixels...
-    this_pixel = adc_values[1] - FPN((row * 112) + 111);
+    this_pixel = adc_values[1] - FPN_INORDER((row * 112) + 111);
 #else
     this_pixel = adc_values[1];
 #endif
@@ -1261,33 +884,6 @@ int stony_image_dual_subsample()
   return 0;
 }
 
-//void test_predict()
-//{
-//  uint16_t pred_img[112][112];
-//  
-//  int test_offset = fpn_offset + (112 * 112);
-//  
-//  uint16_t temp;
-//  min = 1000;
-//  max = 0;
-//  for (int row = 0; row < 112; row++) {
-//    for (int col = 0; col < 112; col++) {
-//      temp = model_data[test_offset + (row * 112) + col];
-//      temp -= FPN((row * 112) + col);
-//      
-//      pred_img[row][col] = temp;
-//      
-//      min = (pred_img[row][col] < min) ? (pred_img[row][col]) : (min);
-//      max = (pred_img[row][col] > max) ? (pred_img[row][col]) : (max);
-//      
-//      if (row == 111 && col == 111)
-//        temp = 0;
-//    }
-//  }
-//  
-//  predict_gaze_fullimg((uint16_t*)pred_img, min, max);
-//}
-
 int stony_cider_line(uint8_t rowcol_num, uint8_t *sd_buf, uint8_t rowcol_sel)
 {
   // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, only 1 camera
@@ -1329,7 +925,7 @@ int stony_cider_line(uint8_t rowcol_num, uint8_t *sd_buf, uint8_t rowcol_sel)
     if (rowcol_sel == SEL_COL)
       buf16[i] = adc_values[adc_idx] - COL_FPN((i * 112) + rowcol_num);
     else
-      buf16[i] = adc_values[adc_idx] - FPN((rowcol_num * 112) + i);
+      buf16[i] = adc_values[adc_idx] - ROW_FPN((rowcol_num * 112) + i);
     
     adc_idx = !adc_idx;
     
@@ -1640,7 +1236,7 @@ int stony_send_cider_image(uint8_t *cider_rowcol, uint8_t cider_failed)
       if (col != 0) {
         
 #ifdef USE_FPN_EYE
-        this_pixel = adc_values[1] - FPN((row * 112) + (col - 1));
+        this_pixel = adc_values[1] - FPN_INORDER((row * 112) + (col - 1));
 #else
         this_pixel = adc_values[1];
 #endif
@@ -1785,7 +1381,7 @@ int stony_send_cider_image(uint8_t *cider_rowcol, uint8_t cider_failed)
     
 #ifdef USE_FPN_EYE
     // TODO: Get subsampled pixels...
-    this_pixel = adc_values[1] - FPN((row * 112) + 111);
+    this_pixel = adc_values[1] - FPN_INORDER((row * 112) + 111);
 #else
     this_pixel = adc_values[1];
 #endif
@@ -1870,7 +1466,10 @@ int stony_send_cider_image(uint8_t *cider_rowcol, uint8_t cider_failed)
   }
   
 //  float mean = (float)pixel_sum / (112 * 112);
+#ifdef OUTMODE
   float mean = (float)pixel_sum / (NUM_SUBSAMPLE);
+#endif
+  
   float std = sqrt(S / (k-1));
   
 #if defined(OUTMODE) && !defined(COLUMN_COLLECT)

@@ -21,7 +21,7 @@ extern int fpn_offset;
 extern float last_r;
 
 static __IO uint32_t TimingDelay;
-extern int8_t pred[2];
+extern uint8_t pred[2];
 extern uint16_t min, max;
 
 int main()
@@ -46,14 +46,14 @@ int main()
   USB_Interrupts_Config();
   USB_Init();
   Speaker_Config();
-  
+
+#ifdef CIDER_MODE
   uint8_t use_ann = 1;
   int8_t last_pred[2];
+#endif
   
-  pred[0] = 15;
-  pred[1] = 15;
-  last_pred[0] = 100;
-  last_pred[1] = 100;
+  pred[0] = 255;
+  pred[1] = 255;
   while (1) {
     clear_ENDP1_packet_buffers();
     while (packet_sending == 1);
@@ -74,8 +74,8 @@ int main()
       stony_send_cider_image(last_pred, use_ann);
     } 
 #else
-//    stony_image_dual_subsample();
-    stony_send_cider_image(last_pred, 1);
+    stony_image_dual_subsample();
+//    stony_send_cider_image(last_pred, 1);
 #endif // ifdef CIDER_MODE
     
     while (packet_sending == 1);
