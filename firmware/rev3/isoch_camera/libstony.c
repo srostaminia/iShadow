@@ -52,7 +52,7 @@ int adc_idx = 0;
 //uint16_t last_min = 0, last_max = 1000;
 uint16_t min = 1000, max = 0;
 
-#ifdef OUTMODE
+#if defined(OUTMODE) && !defined(COLUMN_COLLECT)
 uint16_t last_avg = 150;
 #endif
 
@@ -994,11 +994,16 @@ int stony_image_dual_subsample()
         this_pixel = adc_values[1];
 #endif
 
-#ifdef OUTMODE
+#if defined(OUTMODE) && !defined(COLUMN_COLLECT)
       // These pixels don't work in outmode for some reason
       // Replace them with the last image's average value
+#ifdef COLUMN_COLLECT
+      if (col == 48 && row < 6)
+        this_pixel = last_avg;
+#else
       if (row == 48 && col < 6)
         this_pixel = last_avg;
+#endif
 #endif
         
         //      DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);      
@@ -1026,9 +1031,6 @@ int stony_image_dual_subsample()
 
 #ifdef SEND_EYE
 
-        if (this_pixel == 0) {
-          this_pixel = 150;
-        }
 #ifdef SEND_16BIT
 //        buf16[data_cycle] = adc_values[1];
         buf16[data_cycle] = this_pixel;
@@ -1077,11 +1079,16 @@ int stony_image_dual_subsample()
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
-#ifdef OUTMODE
+#if defined(OUTMODE) && !defined(COLUMN_COLLECT)
       // These pixels don't work in outmode for some reason
       // Replace them with the last image's average value
+#ifdef COLUMN_COLLECT
+      if (col == 48 && row < 6)
+        this_pixel = last_avg;
+#else
       if (row == 48 && col < 6)
-        adc_values[0] = last_avg;
+        this_pixel = last_avg;
+#endif
 #endif
       
 #if !defined(SEND_EYE)
@@ -1156,10 +1163,7 @@ int stony_image_dual_subsample()
         }
     
 #ifdef SEND_EYE
-        if (pred_img[row][111] == 0) {
-          pred_img[row][111] = 150;
-        }
-        
+
 #ifdef SEND_16BIT
 //    buf16[data_cycle] = adc_values[1];
     buf16[data_cycle] = pred_img[row][111];
@@ -1218,7 +1222,7 @@ int stony_image_dual_subsample()
   float mean = (float)pixel_sum / (NUM_SUBSAMPLE);
   float std = sqrt(S / (k-1));
   
-#ifdef OUTMODE
+#if defined(OUTMODE) && !defined(COLUMN_COLLECT)
   last_avg = (uint16_t)mean;
 #endif
   
@@ -1230,13 +1234,13 @@ int stony_image_dual_subsample()
 #ifdef SEND_16BIT  
 //  buf16[0] = pred[0];
 //  buf16[1] = pred[1];
-  param_packet[0] = 2;
+  param_packet[0] = 3;
   param_packet[2] = pred[0];
   param_packet[4] = pred[1];
   for (int i = 6; i < 11; i += 2) param_packet[i] = 1;
   for (int i = 1; i < 12; i += 2) param_packet[i] = 0;
 #else
-  param_packet[0] = 2;
+  param_packet[0] = 3;
   param_packet[1] = pred[0];
   param_packet[2] = pred[1];
   for (int i = 3; i < 6; i++)   param_packet[i] = 1;
@@ -1607,31 +1611,7 @@ int stony_send_cider_image(uint8_t *cider_rowcol, uint8_t cider_failed)
 //  max = 0;
 //  min = 1000;
 
-//  int data_cycle = 0;
-  int data_cycle = 6; // Start at 2 b/c first two "pixels" transmitted are prediction values from previous cycle
-
-  // Can't send any zero values, would cause problems with the USB communication
-  uint8_t pred_radius_approx = (uint8_t)pred_radius;
-  pred_radius_approx = (pred_radius_approx == 0) ? (255) : (pred_radius_approx);
-  
-#ifdef SEND_16BIT  
-  buf8[0][0] = cider_failed;
-  buf8[0][2] = pred[0];
-  buf8[0][4] = pred[1];
-  buf8[0][6] = cider_rowcol[0];
-  buf8[0][8] = cider_rowcol[1];
-  buf8[0][10] = pred_radius_approx;
-  
-  for (int i = 1; i < 12; i += 2)
-    buf8[0][i] = 0;
-#else
-  buf8_active[0] = cider_failed;
-  buf8_active[1] = pred[0];
-  buf8_active[2] = pred[1];
-  buf8_active[3] = cider_rowcol[0];
-  buf8_active[4] = cider_rowcol[1];
-  buf8_active[5] = pred_radius_approx;
-#endif
+  int data_cycle = 0;
   
   uint16_t packets_sent = 0;  // For debug purposes only
 //  uint16_t start = 0, total = 0;
@@ -1665,11 +1645,16 @@ int stony_send_cider_image(uint8_t *cider_rowcol, uint8_t cider_failed)
         this_pixel = adc_values[1];
 #endif
 
-#ifdef OUTMODE
+#if defined(OUTMODE) && !defined(COLUMN_COLLECT)
       // These pixels don't work in outmode for some reason
       // Replace them with the last image's average value
+#ifdef COLUMN_COLLECT
+      if (col == 48 && row < 6)
+        this_pixel = last_avg;
+#else
       if (row == 48 && col < 6)
         this_pixel = last_avg;
+#endif
 #endif
         
         //      DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);      
@@ -1745,11 +1730,16 @@ int stony_send_cider_image(uint8_t *cider_rowcol, uint8_t cider_failed)
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
-#ifdef OUTMODE
+#if defined(OUTMODE) && !defined(COLUMN_COLLECT)
       // These pixels don't work in outmode for some reason
       // Replace them with the last image's average value
+#ifdef COLUMN_COLLECT
+      if (col == 48 && row < 6)
+        this_pixel = last_avg;
+#else
       if (row == 48 && col < 6)
-        adc_values[0] = last_avg;
+        this_pixel = last_avg;
+#endif
 #endif
       
 #if !defined(SEND_EYE)
@@ -1879,6 +1869,38 @@ int stony_send_cider_image(uint8_t *cider_rowcol, uint8_t cider_failed)
     packets_sent += 1;
   }
   
+//  float mean = (float)pixel_sum / (112 * 112);
+  float mean = (float)pixel_sum / (NUM_SUBSAMPLE);
+  float std = sqrt(S / (k-1));
+  
+#if defined(OUTMODE) && !defined(COLUMN_COLLECT)
+  last_avg = (uint16_t)mean;
+#endif
+  
+  data_cycle = 6;
+#ifdef SEND_16BIT  
+//  buf16[0] = pred[0];
+//  buf16[1] = pred[1];
+  param_packet[0] = cider_failed + 1;
+  param_packet[2] = pred[0];
+  param_packet[4] = pred[1];
+  param_packet[6] = cider_rowcol[1];
+  param_packet[8] = cider_rowcol[0];
+  param_packet[10] = (uint8_t)pred_radius;
+  for (int i = 1; i < 12; i += 2) param_packet[i] = 0;
+#else
+  param_packet[0] = cider_failed + 1;
+  param_packet[1] = pred[0];
+  param_packet[2] = pred[1];
+  param_packet[3] = cider_rowcol[1];
+  param_packet[4] = cider_rowcol[0];
+  param_packet[5] = (uint8_t)pred_radius;
+#endif
+
+  send_packet(param_packet, PACKET_SIZE);
+
+  while(packet_sending == 1);
+  
 //  clear_ENDP1_packet_buffers();
   send_empty_packet();
   while(packet_sending == 1);
@@ -1886,13 +1908,6 @@ int stony_send_cider_image(uint8_t *cider_rowcol, uint8_t cider_failed)
 //  packet_sending = 1;
   send_empty_packet();
   while(packet_sending == 1);
-    
-#ifdef OUTMODE
-//  float mean = (float)pixel_sum / (112 * 112);
-  float mean = (float)pixel_sum / (NUM_SUBSAMPLE);
-  float std = sqrt(S / (k-1));
-  last_avg = (uint16_t)mean;
-#endif
   
   return 0;
 }

@@ -35,7 +35,7 @@ int main()
   
 #ifdef OUTMODE
   stony_init(41, 50, 41,
-            4, SMH_SELAMP_3V3);
+            2, SMH_SELAMP_3V3);
 #else
   stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3,
             SMH_GAIN_3V3, SMH_SELAMP_3V3);
@@ -50,8 +50,10 @@ int main()
   uint8_t use_ann = 1;
   int8_t last_pred[2];
   
-  pred[0] = 255;
-  pred[1] = 255;
+  pred[0] = 15;
+  pred[1] = 15;
+  last_pred[0] = 100;
+  last_pred[1] = 100;
   while (1) {
     clear_ENDP1_packet_buffers();
     while (packet_sending == 1);
@@ -72,8 +74,8 @@ int main()
       stony_send_cider_image(last_pred, use_ann);
     } 
 #else
-    stony_image_dual_subsample();
-//    stony_send_cider_image(pred, use_ann);
+//    stony_image_dual_subsample();
+    stony_send_cider_image(last_pred, 1);
 #endif // ifdef CIDER_MODE
     
     while (packet_sending == 1);
