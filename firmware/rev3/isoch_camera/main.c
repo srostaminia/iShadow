@@ -49,7 +49,7 @@ int main()
 
 #ifdef CIDER_MODE
   uint8_t use_ann = 1;
-  int8_t last_pred[2];
+  uint8_t cider_xy[2];
 #endif
   
   pred[0] = 255;
@@ -64,14 +64,11 @@ int main()
       use_ann = 0;
       last_r = 0;
     }
-    else {
-      last_pred[0] = pred[0];
-      last_pred[1] = pred[1];
-      
-      if (run_cider() < 0)
+    else {      
+      if (run_cider(cider_xy) < 0)
         use_ann = 1;
       
-      stony_send_cider_image(last_pred, use_ann);
+      stony_send_cider_image(cider_xy, use_ann);
     } 
 #else
     stony_image_dual_subsample();

@@ -25,7 +25,7 @@
 
 //#define USB_PIXELS      92
 
-extern uint8_t pred[2];
+extern int8_t pred[2];
 extern float pred_radius;
 float last_r = 0;
 //uint16_t pred_img[112][112];
@@ -884,13 +884,11 @@ int stony_image_dual_subsample()
   return 0;
 }
 
-int stony_cider_line(uint8_t rowcol_num, uint8_t *sd_buf, uint8_t rowcol_sel)
+int stony_cider_line(uint8_t rowcol_num, uint16_t *line_buf, uint8_t rowcol_sel)
 {
   // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, only 1 camera
   // Double-buffered (2-dim array)
-//  uint8_t buf8[2][112 * TX_ROWS * 2];
-  uint16_t *buf16 = (uint16_t *)sd_buf;
-  
+//  uint8_t buf8[2][112 * TX_ROWS * 2];  
   volatile uint16_t start, total;
   
   if (rowcol_sel == SEL_COL) {
@@ -923,9 +921,9 @@ int stony_cider_line(uint8_t rowcol_num, uint8_t *sd_buf, uint8_t rowcol_sel)
     asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
     
     if (rowcol_sel == SEL_COL)
-      buf16[i] = adc_values[adc_idx] - COL_FPN((i * 112) + rowcol_num);
+      line_buf[i] = adc_values[adc_idx] - COL_FPN((i * 112) + rowcol_num);
     else
-      buf16[i] = adc_values[adc_idx] - ROW_FPN((rowcol_num * 112) + i);
+      line_buf[i] = adc_values[adc_idx] - ROW_FPN((rowcol_num * 112) + i);
     
     adc_idx = !adc_idx;
     
@@ -936,29 +934,32 @@ int stony_cider_line(uint8_t rowcol_num, uint8_t *sd_buf, uint8_t rowcol_sel)
   return 0;
 }
 
-int run_cider()
+int run_cider(uint8_t *cider_xy)
 {
   uint8_t row_edges[6] = {0, 0, 0, 0, 0, 0}, col_edges[6] = {0, 0, 0, 0, 0, 0};
   int pupil_found = -1;
   
-  uint8_t row_start = pred[0], col_start = pred[1];
+  cider_xy[1] = (uint8_t)((pred[1] < 0 ? 0 : pred[1]) > 111 ? 111 : pred[1]);
+  cider_xy[0] = (uint8_t)((pred[0] < 0 ? 0 : pred[0]) > 111 ? 111 : pred[0]);
+  
+  uint8_t col_start = cider_xy[1], row_start = cider_xy[0];
   
   float best_ratio = 0, best_r = 0;
   uint8_t best_center[2] = {0, 0};
   
-  uint8_t row[112], col[112];
+  uint16_t row[112], col[112];
   stony_cider_line(col_start, row, SEL_ROW);
   stony_cider_line(row_start, col, SEL_COL);
   
-  find_pupil_edge(row_start, row_edges, (uint16_t*)row);
-  find_pupil_edge(col_start, col_edges, (uint16_t*)col);
-  
-  for (uint8_t i = 0; row_edges[i] != 0 || i==0; i += 2) {
+  find_pupil_edge(row_start, row_edges, row);
+  find_pupil_edge(col_start, col_edges, col);
+
+  for (uint8_t i = 0; (row_edges[i] != 0 || i==0) && i < 6; i += 2) {
     // Pupil can't be smaller than 4 pixels across
     if ((row_edges[i] - row_edges[i + 1]) < 4 && (row_edges[i] - row_edges[i + 1]) > -4)
       continue;
     
-    for (uint8_t j = 0; col_edges[j] != 0 || j==0; j += 2) {
+    for (uint8_t j = 0; (col_edges[j] != 0 || j==0) && j < 6; j += 2) {
       // Pupil can't be smaller than 4 pixels across
       if ((col_edges[j] - col_edges[j + 1]) < 4 && (col_edges[j] - col_edges[j + 1]) > -4)
         continue;
@@ -1138,18 +1139,18 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
   edges[1] += (edges[1] == 111 ? 0 : CONV_OFFSET);
   edge_idx = 2;
   
-  // Check if the region has a specular point on either end
-  for (uint8_t i = 0; i < spec_idx; i++) {
-    if (spec_regions[i] == local_regions[lr_min] - 1) {
-      edges[edge_idx] = peaks[local_regions[lr_min] - 1] + CONV_OFFSET;
-      edges[edge_idx+1] = peaks[local_regions[lr_min] + 1] + CONV_OFFSET;
-      edge_idx += 2;
-    } else if (spec_regions[i] == local_regions[lr_min] + 1) {
-      edges[edge_idx] = peaks[local_regions[lr_min]] + CONV_OFFSET;
-      edges[edge_idx+1] = peaks[local_regions[lr_min] + 2] + CONV_OFFSET;
-      edge_idx += 2;
-    }
-  }
+//  // Check if the region has a specular point on either end
+//  for (uint8_t i = 0; i < spec_idx; i++) {
+//    if (spec_regions[i] == local_regions[lr_min] - 1) {
+//      edges[edge_idx] = peaks[local_regions[lr_min] - 1] + CONV_OFFSET;
+//      edges[edge_idx+1] = peaks[local_regions[lr_min] + 1] + CONV_OFFSET;
+//      edge_idx += 2;
+//    } else if (spec_regions[i] == local_regions[lr_min] + 1) {
+//      edges[edge_idx] = peaks[local_regions[lr_min]] + CONV_OFFSET;
+//      edges[edge_idx+1] = peaks[local_regions[lr_min] + 2] + CONV_OFFSET;
+//      edge_idx += 2;
+//    }
+//  }
   
   return;       // Edge data is stored in argument array
 }
@@ -1491,8 +1492,8 @@ int stony_send_cider_image(uint8_t *cider_rowcol, uint8_t cider_failed)
   param_packet[0] = cider_failed + 1;
   param_packet[1] = pred[0];
   param_packet[2] = pred[1];
-  param_packet[3] = cider_rowcol[1];
-  param_packet[4] = cider_rowcol[0];
+  param_packet[3] = cider_rowcol[0];
+  param_packet[4] = cider_rowcol[1];
   param_packet[5] = (uint8_t)pred_radius;
 #endif
 
