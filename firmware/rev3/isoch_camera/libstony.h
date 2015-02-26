@@ -5,7 +5,7 @@
 #include "predict_gaze.h"
 
 // Uncomment to use CIDER (overrides some other config options)
-//#define CIDER_MODE
+#define CIDER_MODE
 
 // Uncomment to transmit eye-facing camera instead of out-facing
 // (overriden by CIDER_MODE)
@@ -67,8 +67,8 @@
 
 #define LED_LOW         0
 
-#define LED_HIGH        0        
-//#define LED_HIGH          0x59E       // 1.15V
+//#define LED_HIGH        0        
+#define LED_HIGH          0x59E       // 1.15V
 //#define LED_HIGH        0x5D1         // 1.25V
 //#define LED_HIGH        0x64D
 //#define LED_HIGH        0x746
@@ -145,9 +145,10 @@ int stony_image_single();
 int stony_image_subsample();
 int stony_image_minmax();
 int stony_image_dual_subsample();
-int stony_cider_line(uint8_t rowcol_num, uint8_t *sd_buf, uint8_t rowcol_sel);
+int stony_cider_line(uint8_t rowcol_num, uint16_t *line_buf, uint8_t rowcol_sel);
 void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels);
 int stony_send_cider_image(uint8_t *cider_rowcol, uint8_t cider_failed);
+int run_cider(uint8_t *cider_rowcol);
 
 void pulse_resv(uint8_t cam);
 void pulse_incv(uint8_t cam);
