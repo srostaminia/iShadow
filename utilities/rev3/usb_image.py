@@ -10,6 +10,7 @@ import pickle
 import os
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+import matplotlib
 import Tkinter
 import shutil
 import utils
@@ -89,6 +90,8 @@ def main():
         hline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
         vline_cider,=ax.plot([-10, -9], [-10, -9], 'b-', linewidth=2)
         hline_cider,=ax.plot([-10, -9], [-10, -9], 'b-', linewidth=2)
+        circle = plt.Circle((-10, -10), 0, fill=False, linewidth=2, color='g')
+        ax.add_artist(circle)
 
     while True:
         frame = np.reshape(frame, (112*112))
@@ -180,7 +183,7 @@ def main():
         pred[1] = struct.unpack('h', struct.pack('H', param_data[2]))[0]
 
         if model_type == 1 or model_type == 2:
-            cider_col = struct.unpack('h', struct.pack('H', param_data[3]))[0]
+            cider_col = 112 - struct.unpack('h', struct.pack('H', param_data[3]))[0]
             cider_row = struct.unpack('h', struct.pack('H', param_data[4]))[0]
             cider_radius = struct.unpack('h', struct.pack('H', param_data[5]))[0]
         else:
@@ -193,6 +196,8 @@ def main():
             hline.set_data([max(0, pred[0] - 10), min(111, pred[0] + 10)], [pred[1], pred[1]])
             vline_cider.set_data([cider_col, cider_col], [0, 112])
             hline_cider.set_data([0, 112], [cider_row, cider_row])
+            circle.center = cider_col, cider_row
+            circle.set_radius(cider_radius)
 
         print "Pixels:", pixels
         print "Packets:", packets
@@ -201,7 +206,7 @@ def main():
         if model_type != 3:
             print "CIDER Point (X, Y):", cider_col, cider_row
             print "CIDER Radius:", cider_radius
-
+            
         print
 
         # if (debug == 0):
