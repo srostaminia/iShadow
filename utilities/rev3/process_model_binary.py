@@ -54,7 +54,10 @@ def main():
 
     if columnwise:
         ind = np.lexsort((mask[:,0], mask[:,1]))
-        mask = np.array([[mask[i,0], mask[i,1]] for i in ind])
+
+        # IMPORTANT NOTE that we are swapping row / column here b/c indexing on the glasses is screwed up
+        mask = np.array([[mask[i,1], mask[i,0]] for i in ind])
+        
         wih = np.array([wih[i,:] for i in ind])
 
     try:
