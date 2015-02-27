@@ -1,16 +1,29 @@
-function edges = find_pupil_edge(start, pixels, peak_thresh, do_round)
-
+function edges = find_pupil_edge(start, pixels, peak_thresh, do_round, plot_debug)
+    if nargin < 5
+        plot_debug = 0;
+    end
+    
+    if (nargin < 4)
+        do_round = 0;
+    end
+    
     % First do median filtering
     pixels = medfilt1(pixels,3);
+    
+    if plot_debug
+        figure;
+        subplot(3,1,1);
+        plot(pixels);
+        title('Median-Filtered Pixels');
+        xlabel('Pixel Number');
+        ylabel('Pixel Value');
+        xlim([0, length(pixels)]);
+    end
     
     % Next, do convolution
     conv_op = [-1 -1 -1 0 1 1 1];
 %     conv_op = conv_op / (sum(abs(conv_op(:))));
     conv_offset = [floor(length(conv_op) / 2), ceil(length(conv_op) / 2)];
-    
-    if (nargin == 3)
-        do_round = 0;
-    end
     
     if do_round == 1
         edge_detect = floor(abs(conv(pixels, conv_op, 'valid')));
@@ -65,6 +78,30 @@ function edges = find_pupil_edge(start, pixels, peak_thresh, do_round)
         return;
     end
     
+    if plot_debug
+        subplot(3,1,2);
+        plot(conv_offset(1):(length(pixels)-conv_offset(2)), edge_detect, 'b');
+        title('Edge Detection');
+        xlabel('Pixel Position');
+        ylabel('Edge Response');
+        
+        xlim([0, length(pixels)]);
+        
+        hold on;
+        line([conv_offset(1), length(pixels)-conv_offset(2)], [peak_thresh, peak_thresh], 'Color','r');
+        
+        this_ylim = get(gca,'YLim');
+        
+        if this_ylim(2) >= 150      
+            line([conv_offset(1), length(pixels)-conv_offset(2)], [spec_thresh, spec_thresh], 'Color','r');
+        end
+        
+        for i=1:length(peaks)
+           line([peaks(i), peaks(i)], get(gca,'YLim'), 'Color','k');
+        end
+        hold off;
+    end
+    
     % Calculate mean between successive peaks
     region_means = zeros(length(peaks) - 1, 1);
     for i=1:length(peaks) - 1
@@ -105,12 +142,38 @@ function edges = find_pupil_edge(start, pixels, peak_thresh, do_round)
     min_idx = sort_idx(1);
     edges = [peaks(local_regions(min_idx)), peaks(local_regions(min_idx)+1)];
     
+    if plot_debug
+        plot_regions = region_means(local_regions(min_idx));
+    end
+    
     if ~isempty(find(specular_regions == local_regions(min_idx)-1,1))
         edges = [edges; peaks(local_regions(min_idx)-1), peaks(local_regions(min_idx)+1)];
     end
     
     if ~isempty(find(specular_regions == local_regions(min_idx)+1,1))
         edges = [edges; peaks(local_regions(min_idx)), peaks(local_regions(min_idx)+2)];
+    end
+    
+    if plot_debug
+        subplot(3,1,3);
+        hold on;
+        
+        for i=1:length(region_means)
+           line([peaks(i)+1, peaks(i+1)], [region_means(i), region_means(i)], 'Color','k');
+        end
+        
+        xlim([0, length(pixels)]);
+        ylim([min(region_means) - 10, max(region_means) + 10]);
+        
+        % TODO: also plot potential specular regions
+        line([edges(1,1)+1, edges(1,2)], [plot_regions(1), plot_regions(1)], 'Color','g');
+        
+        title('Region Means');
+        xlabel('Region Coverage');
+        ylabel('Region Mean Pixel Value');
+        
+        hold off;
+        keyboard;
     end
     
 %     % Identify range of lowest mean(s)
