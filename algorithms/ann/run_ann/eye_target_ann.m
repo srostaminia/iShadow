@@ -6,9 +6,9 @@ pkg load statistics;
 
 %Set to location of gaze data file
 %File should contain:
-% * X: eye image data in (n x 12545) matrix with one image per row
+% * X: eye image data in (n x 12433) matrix with one image per row
 %   last column needs to be appended column of 1's. 
-% * Out: scene image data in (n x 12544) matrix with one row per image
+% * Out: scene image data in (n x 12432) matrix with one row per image
 % * gout: gaze coordinates in (n x 2) matrix
 % gaze_data_file = sprintf('~/training_sets/eye_data_%s_auto.mat',params(1).data_name);
 
@@ -51,6 +51,12 @@ if (params(1).on_cluster == 0)
   % params(1).lambdas = [0.001000, 0.010000, 0.100000]
   params(1).lambdas = [0.000100];
 
+  %Set randomization seed
+  params(1).random_seed = 136824521;
+
+  % Only needed if running on cluster
+  params(1).cross_val_rep = 0;
+
 % Running on cluster
 else
   addpath('~/ann_model')
@@ -59,7 +65,7 @@ else
 
   params_file = fopen('params.txt');
 
-  params(1).gaze_data_file = 'eye_data.mat'
+  params(1).gaze_data_file = '../eye_data.mat'
 
   % See above for parameter definitions
   params(1).uniquefy = str2num(fgetl(params_file));
@@ -69,6 +75,8 @@ else
   params(1).subset = fgetl(params_file);
   params(1).maxiter = str2num(fgetl(params_file));
   params(1).lambdas = str2num(fgetl(params_file));
+  params(1).random_seed = str2num(fgetl(params_file));
+  params(1).cross_val_rep = str2num(fgetl(params_file));
 
   params(1).nHidden = prod(params(1).hiddenShape) + 1;
 end
@@ -79,31 +87,38 @@ params
 %Set to 0 to continue a partial run
 from_scratch = 1;
 
-%Set randomization seed
-seed = 136824521;
-
 %Do not modify code below this point
 %-----------------------------------
-results_folder = 'results'
-model_folder = 'models'
+if params(1).cross_val_rep == 0
+  results_folder = 'results'
+  model_folder = 'models'
+else
+  results_folder = '../results'
+  model_folder = '../models'
+end
 
 fprintf('Loading data...');
 load(params(1).gaze_data_file); %load data file
 fprintf('Done.\n');
-rand('seed',seed); %set rand seed
-randn('seed',seed); %set randn seed
+rand('seed',params(1).random_seed); %set rand seed
+randn('seed',params(1).random_seed); %set randn seed
 
 X2=X; %Non-scaled data
 
 g          = bsxfun(@times,gout,1./[111,112]); %Normalize gaze matrix
 X          = [mean_contrast_adjust_nosave(X), ones(size(X,1),1)];
 [N,nVars]  = size(X); %get data matrix size
-num_reps   = 5;
 
-% for c=[1]
-  % r=1
+if params(1).cross_val_rep == 0
+  rep_start = 1;
+  rep_stop = 5;
+else
+  rep_start = params(1).cross_val_rep;
+  rep_stop = params(1).cross_val_rep;
+end
+
 c = 1;
-for r = 1:num_reps
+for r = rep_start:rep_stop
   % sparsities = 1-params(c).lambdas;
   % sparsities(1:2)=[];
   global_suffix = sprintf('subset_%s_init_%s_k%d',params(c).subset,params(c).init,params(c).nHidden)
@@ -131,14 +146,19 @@ for r = 1:num_reps
 
     ytest = g(ind(1:Ntest),:);
     ytrain = g(unique_train_ind,:);
+
+    train_ind = unique_train_ind;
   else
     Xtrain= X(ind(Ntest+1:end),:);
     Xtrain2= X2(ind(Ntest+1:end),:);
 
     ytest = g(ind(1:Ntest),:);
     ytrain = g(ind(Ntest+1:end),:);
+
+    train_ind = ind(Ntest+1:end);
   end
 
+  test_ind = ind(1:Ntest);
   Ntrain = size(Xtrain,1);
 
   switch(params(c).init)
@@ -214,8 +234,11 @@ for r = 1:num_reps
       Xtest_rescale = [Xtest2(:,:), ones(size(Xtest2,1),1)];
       Xtest_rescale(:,ind) = Xtest_sub;
 
-      these_results= test_model(W_groupSparse,Xtrain_rescale,ytrain,Xtest_rescale,ytest,params(c));
+      these_results= test_model(W_groupSparse,Xtrain_rescale,ytrain,Xtest_rescale,ytest,[112 111],params(c));
       these_results.alpha0 = alpha0;
+
+      these_results.train_ind = train_ind;
+      these_results.test_ind = test_ind;
 
       these_params = params(c);
 
