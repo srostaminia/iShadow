@@ -48,6 +48,8 @@ extern unsigned int col_fpn_offset;
 
 extern unsigned short model_data[];
 
+//uint16_t row[112], col[112];
+
 int adc_idx = 0;
 //uint16_t last_min = 0, last_max = 1000;
 uint16_t min = 1000, max = 0;
@@ -921,7 +923,8 @@ int stony_cider_line(uint8_t rowcol_num, uint16_t *line_buf, uint8_t rowcol_sel)
     asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
     
     if (rowcol_sel == SEL_COL)
-      line_buf[i] = adc_values[adc_idx] - COL_FPN((i * 112) + rowcol_num);
+//      line_buf[i] = adc_values[adc_idx] - COL_FPN((i * 112) + rowcol_num);
+      line_buf[i] = adc_values[adc_idx] - COL_FPN((rowcol_num * 112) + i);
     else
       line_buf[i] = adc_values[adc_idx] - ROW_FPN((rowcol_num * 112) + i);
     
@@ -947,9 +950,17 @@ int run_cider(uint8_t *cider_xy)
   float best_ratio = 0, best_r = 0;
   uint8_t best_center[2] = {0, 0};
   
+  // Configure ADC to read only from eye camera
+  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
+  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
+  
   uint16_t row[112], col[112];
   stony_cider_line(col_start, row, SEL_ROW);
   stony_cider_line(row_start, col, SEL_COL);
+  
+  // Reconfigure ADC for dual-camera reading
+  ADC_RegularChannelConfig(ADC1, CAM1_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
+  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 2, ADC_SampleTime_4Cycles); // AMM
   
   find_pupil_edge(row_start, row_edges, row);
   find_pupil_edge(col_start, col_edges, col);
