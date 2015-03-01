@@ -1,4 +1,4 @@
-function [ind,chord_length,pred,radii,ann_used]=cider(X,rep_file,chord_length,thresh,model,make_vid,nDim,scaleVect,contrast_method)
+function [ind,chord_length,pred,radii,ann_used]=cider_save(X,rep_file,chord_length,thresh,model,make_vid,nDim,scaleVect,contrast_method)
 %function [chord_length,pred,radii,ann_used]=cider(X,ann_file,chord_length,thresh,model,make_vid,nDim,scaleVect)
     addpath('~/iShadow/algorithms/ann/lib');
     addpath('~/iShadow/algorithms/ann/run_ann');

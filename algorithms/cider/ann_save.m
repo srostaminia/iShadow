@@ -1,4 +1,4 @@
-function [ind,pred,radii]=ann(X,ann_file,nDim,scaleVect,contrast_method)
+function [ind,pred,radii]=ann_save(X,ann_file,nDim,scaleVect,contrast_method)
 %function [pred]=ann(X,ann_file,nDim,scaleVect)
 
 %pred= predicted pupil center
