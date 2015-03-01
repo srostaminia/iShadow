@@ -45,8 +45,8 @@ for i=[100 200 400];
     methodd='nearest';
     sizeHist=max(X(i,:)-min(X(i,:)));
 
-    sub1=2;
-    sub2=2;
+    sub1=3;
+    sub2=4;
 
     im=reshape(X(i,:)',111,112);
     newIm=reshape(newX',sizes(1),sizes(2));%,111,112);
@@ -76,18 +76,27 @@ for i=[100 200 400];
     % colormap gray
     % title(strcat('downscale-',methodd,' method'))
 
-    subplot(sub1,sub2,2)
+    subplot(sub1,sub2,3)
     imagesc(newIm)
     colormap gray
-    title('histogram adjustment result')
+    title('histogram clipping result')
 
-    subplot(sub1,sub2,3)
-    histogram(im,sizeHist,'BinWidth',5)
-    title('original histogram');
-   
-    subplot(sub1,sub2,4)
+
+    subplot(sub1,sub2,5)
+    histogram(im,5)
+
+    % subplot(sub1,sub2,6)
+    % histogram(GIm3)
+
+    subplot(sub1,sub2,7)
     histogram(newIm,sizeHist)
-    title('histogram result')
+
+    adjIm=imadjust(mat2gray(im));%imresize(im,[50 50],methodd)));
+
+    subplot(sub1,sub2,4)
+    imagesc(adjIm)
+    colormap gray
+    title('histogram exponent result')
 
     min(min(adjIm))
     max(max(adjIm))
@@ -96,8 +105,47 @@ for i=[100 200 400];
     histogram(adjIm)
     ylim([0 800])
 
-   
+    subplot(sub1,sub2,9)
+    imshow(im2bw(adjIm,0.2))
+    title('thresholding(threshold=0.15)');
+
 
     suptitle({strcat('10 BINS: Result: Downscaling the image by half and Histogram clipping'),'Downscaling method: nearest approach'});
 
 end
+%%
+
+% A = [1 2 3;
+%      4 5 6;
+%      7 8 9]
+% mean(A,1)
+% mean(A,2)
+% 
+% 
+% %B = [0 1 2]
+% 
+% func=@(x,y) normalize_percentile(x,y);
+% C = bsxfun(func, A,1)
+
+%http://stackoverflow.com/questions/2307249/how-to-apply-a-function-to-every-row-in-matlab
+%C = bsxfun(@(x,y) x.^y, A, B)
+
+
+%%
+
+% [X,Y] = meshgrid(1:3, 2:3)
+% xx=normalize_percentile(X(1,:));
+% 
+% %[X,Y] = meshgrid(1:3, 2:3)
+% [X_new]=arrayfun(@(x) normalize_percentile(x), X(1,:));
+% [X_new]=bsxfun(@(x,y) normalize_percentile(x,y), X(1:2,:), repmat(percent,[2 1]));
+% 
+% 
+% X_new=normalize_percentile(X,repmat(5,[size(X,1) 1]))
+%%
+%func=@normalize_percentile;%(x,y)normalize_percentile(x,y);
+% 
+% [X,Y] = meshgrid(1:3, 2:3)
+% 
+% size(X)
+% X_new=bsxfun(func, X, repmat(5,[size(X,1) 1]));

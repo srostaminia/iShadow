@@ -99,12 +99,10 @@ for i=1:100%1:indexEnd%[1:100 200:300 400:500 1000:1200 1300:1400 1500:1600 ]
    
 %     viscircles(ann.pred(i,:), ann.radii(i,:),'EdgeColor','b','LineWidth',0.3);
 %     scatter(ann.pred(i,1),ann.pred(i,2),'xb');
-%ann.radii(i,:)
+%   ann.radii(i,:)
     viscircles(ann.pred(i,:),5,'EdgeColor','b','LineWidth',0.3);
     scatter(ann.pred(i,1),ann.pred(i,2),'xb');
     hold off;
-    
-    
     
     title({sprintf('%i',i),'blue- ann','red- cider','yellow- ground truth'});
     

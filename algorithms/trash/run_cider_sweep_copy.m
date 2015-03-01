@@ -1,4 +1,4 @@
-function run_cider_sweep(result_dir, input_dir,do_uniquefy,nDim,scaleVect,sub_cider,contrast_method)
+function run_cider_sweep(result_dir, input_dir,nDim,scaleVect,sub_cider,contrast_method)
 %function run_cider_sweep(result_dir, X, gout,avgEllipseRad,nDim,scaleVect)
 addpath('~/iShadow/algorithms/cider');
 addpath('../ann/lib');
@@ -11,22 +11,6 @@ lambda_folders = cellstr(strsplit(ls));
 
 load(input_dir);
 
-[~, test_ind] = gen_crossval_ind(X, do_uniquefy, gout);
-
-
-XCell=cell(1,5);
-goutCell=cell(1,5);
-sqrtRadEllipseCell=cell(1,5);
-
-for a=1:5
-    XCell{a}=X(test_ind{a},:);
-    goutCell{a}=gout(test_ind{a},:);
-    
-    if nDim==3
-    sqrtRadEllipseCell{a}=sqrtRadEllipse(test_ind{a},:);
-    end
-end
-
 for i=1:length(lambda_folders)-1
     cd(lambda_folders{i});
     
@@ -37,23 +21,12 @@ for i=1:length(lambda_folders)-1
         
         fprintf('%s - %d\n',lambda_folders{i},j);
         
-            X=XCell{j};
-        
-        
-            [ind,chord_length,pred,radii,ann_used] = cider(X, rep_files{j}, 400, 0.22, 'circle_edge', 0,nDim,scaleVect,contrast_method);
-        
-        
-            gout=goutCell{j};
-            
-            if nDim==3
-                sqrtRadEllipse=sqrtRadEllipseCell{j};
-            end
-        
+        [ind,chord_length,pred,radii,ann_used] = cider(X, rep_files{j}, 400, 0.22, 'circle_edge', 0,nDim,scaleVect,contrast_method);
         
         % % %
         %Cider model
         filter = logical(sum(pred,2));
-        %CENTER
+        %CENTER        
         center.diff.raw = sqrt(sum((gout - pred).^2,2));
         
         mean_cider.center.diff = mean(center.diff.raw(filter,:));
@@ -83,17 +56,12 @@ for i=1:length(lambda_folders)-1
             mean_cider.area.diff_perc=mean(area.diff_perc(filter,:));
             mean_line.area.diff_perc=mean(area.diff_perc(filter_Line,:));
             
-            radius.diff=sqrtRadEllipse-radii;
-            
-            mean_cider.radius.diff=mean(radius.diff(filter,:));
-            mean_cider.radius.diff=mean(radius.diff(filter_Line,:));
-            
-            save('-V7',sprintf('cider_%srep%d.mat',sub_cider,j),'gout','avgRadEllipse','sqrtRadEllipse',...
+            save('-V7',sprintf(strcat('cider',sub_cider,'_rep%d.mat'),j),'gout','avgRadEllipse','sqrtRadEllipse',...
                 'ind','chord_length','pred','radii','ann_used','filter','center','area','radii','mean_cider',...
                 'filter_Line','mean_line','indActivePercent','perc_AnnUsed','perc_LineUsed');
             
         else
-            save('-V7',sprintf('cider_%srep%d.mat',sub_cider,j),'gout',...
+            save('-V7',sprintf(strcat('cider',sub_cider,'_rep%d.mat'),j),'gout',...
                 'ind','chord_length','pred','ann_used','filter','center','mean_cider',...
                 'filter_Line','mean_line','indActivePercent','perc_AnnUsed','perc_LineUsed');
         end
@@ -108,4 +76,5 @@ end
 
 cd(origin);
 
+fprintf('FINISHED');
 end
