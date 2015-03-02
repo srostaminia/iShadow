@@ -1002,7 +1002,7 @@ int run_cider(uint8_t *cider_xy)
   pred[1] = best_center[1];
   pred_radius = best_r;
   last_r = best_r;
-  
+
   return pupil_found;
 }
 
@@ -1038,6 +1038,12 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
     
     med_buf[med_idx] = next_pixel;
     med_idx = !med_idx;
+  }
+  
+  // Then percentile clamping
+  uint16_t perc_val = quick_percentile(pixels);
+  for (uint8_t i = 0; i < 112; i++) {
+    if (pixels[i] < perc_val)   pixels[i] = perc_val;
   }
   
   // Next, do convolution
@@ -1164,6 +1170,53 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
 //  }
   
   return;       // Edge data is stored in argument array
+}
+
+uint16_t quick_percentile(uint16_t *base_row)
+{
+  uint16_t row[112];
+  uint16_t r, w, mid;
+  
+  for (uint16_t i = 0; i < 112; i++) {
+    row[i] = base_row[i];
+  }
+  
+  uint8_t from = 0, to = 111;
+  
+  // Percentile value is hardcoded so it doesn't have to be computed at runtime
+  uint8_t k = (((112 * 100) * CIDER_PERCENTILE) / 10000);
+  
+  // if from == to we reached the kth element
+  while (from < to) {
+    r = from, w = to;
+    mid = row[(r + w) / 2];
+    
+    // stop if the reader and writer meets
+    while (r < w) {
+      
+      if (row[r] >= mid) { // put the large values at the end
+        uint16_t tmp = row[w];
+        row[w] = row[r];
+        row[r] = tmp;
+        w--;
+      } else { // the value is smaller than the pivot, skip
+        r++;
+      }
+    }
+    
+    // if we stepped up (r++) we need to step one down
+    if (row[r] > mid && r != 0)    
+      r--;
+    
+    // the r pointer is on the end of the first k elements
+    if (k <= r) {
+      to = r;
+    } else {
+      from = r + 1;
+    }
+  }
+  
+  return row[k];
 }
 
 int stony_send_cider_image(uint8_t *cider_rowcol, uint8_t cider_failed)

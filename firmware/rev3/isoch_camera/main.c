@@ -64,7 +64,7 @@ int main()
       use_ann = 0;
       last_r = 0;
     }
-    else {      
+    else {
       if (run_cider(cider_xy) < 0)
         use_ann = 1;
       
