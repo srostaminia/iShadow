@@ -28,6 +28,9 @@
 //#define SEND_16BIT
 #define SEND_8BIT
 
+// Percentile value for cross model pixel clamping
+#define CIDER_PERCENTILE        10
+
 // CIDER overrides (don't touch)
 #ifdef CIDER_MODE
 
@@ -149,6 +152,7 @@ int stony_cider_line(uint8_t rowcol_num, uint16_t *line_buf, uint8_t rowcol_sel)
 void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels);
 int stony_send_cider_image(uint8_t *cider_rowcol, uint8_t cider_failed);
 int run_cider(uint8_t *cider_rowcol);
+uint16_t quick_percentile(uint16_t *base_row);
 
 void pulse_resv(uint8_t cam);
 void pulse_incv(uint8_t cam);
