@@ -1,4 +1,5 @@
-function [W,alpha] = train_mlp(Xtrain,ytrain,nHidden,lambda,W_groupSparse,alpha, maxiter)
+function [W,alpha] = update_mlp(Xtrain,ytrain,nHidden,lambda,W_groupSparse,alphainit, maxiter)
+%   addpath('minConf');
 
   nInstances = size(Xtrain,1);
   nVars = size(Xtrain,2);
@@ -17,6 +18,12 @@ function [W,alpha] = train_mlp(Xtrain,ytrain,nHidden,lambda,W_groupSparse,alpha,
     groups = groups(:);
   end
   nGroups = max(groups);
+  
+  if(nargin>=6 && ~isempty(alphainit))
+    alpha = alphainit;
+  else
+    alpha = zeros(nGroups,1);
+  end
 
   %Initialize auxiliary variables that will bound norm
   penalizedFunObj = @(W)auxGroupLoss(W,groups,lambda,funObj);
@@ -26,6 +33,7 @@ function [W,alpha] = train_mlp(Xtrain,ytrain,nHidden,lambda,W_groupSparse,alpha,
   funProj = @(W)auxGroupL2Project(W,nParams,groupStart,groupPtr);
 
   %Solve optimization problem
+%   options.verbose=2;
   options.verbose=2;
   options.maxIter = maxiter;
 
