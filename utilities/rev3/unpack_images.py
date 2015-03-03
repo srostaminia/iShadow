@@ -14,7 +14,8 @@ def main():
     parser.add_argument("num_images", type = int, help="number of image pairs (or single images if --no-interleave) stored in the input file, set to 0 to run continuously")
     parser.add_argument("out_mask", help="outward-facing camera mask")
     parser.add_argument("eye_mask", nargs='?', help="eye-facing camera mask (only used for interleaved images)", default=None)
-    parser.add_argument("--no-interleave", action="store_true", help="Images are stored singly, not interleaved")
+    parser.add_argument("--no-interleave", action="store_true", help="images are stored singly, not interleaved")
+    parser.add_argument("--columnwise", action="store_true", help="images recorded columnwise on hardware instead of rowwise")
     
     group = parser.add_mutually_exclusive_group()
     group.add_argument("-o", "--offset", help="Number of images / pairs to skip on SD card", type=int)
@@ -28,6 +29,7 @@ def main():
     eye_mask_filename = args.eye_mask
     num_images = args.num_images
     interleaved = not args.no_interleave
+    columnwise = args.columnwise
     num_skip = args.offset if args.offset != None else 0
 
     if interleaved == True and eye_mask_filename == None:
@@ -59,8 +61,6 @@ def main():
             input_file.seek(num_skip * 50176)
         else:
             input_file.seek(num_skip * 25088)
-
-        print "tell:", input_file.tell()
 
         if not os.path.exists(file_prefix):
             os.makedirs(file_prefix)
@@ -99,8 +99,6 @@ def main():
 
                 data = input_file.read(3584)
                 output_a.write(data)
-
-                print "tell:", input_file.tell()
 
                 if (interleaved):
                     data = input_file.read(3584)
@@ -157,6 +155,13 @@ def main():
         except IOError:
             print "Input file", file_prefix + "\\" + file_prefix + "_b.raw", "could not be opened."
             sys.exit()
+
+    if columnwise:
+        # image = image.T
+        out_mask = out_mask.T
+
+        if interleaved:
+            eye_mask = eye_mask.T
 
     if (interleaved):
         disp_save_images(output_b, eye_mask, file_prefix + "_eye", num_images)
@@ -228,11 +233,17 @@ def read_packed_image(image_file, mask_data, out_filename, index):
 
     # print image[0]
     # image = image[1:]
-
+    
     figure = pylab.figure()
 
-    # image -= mask_data[69]
+    # image[::2] -= mask_data[55]
+    # image[1::2] -= mask_data[60]
+
+    # image[:20] -= mask_data[58:78]
+
+    # image -= mask_data[55]
     image -= mask_data
+    image = image[1:]
 
     pylab.figimage(image, cmap = pylab.cm.Greys_r)
 

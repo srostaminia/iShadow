@@ -179,13 +179,20 @@ def main():
 
         # utils.keyboard()
         model_type = struct.unpack('h', struct.pack('H', param_data[0]))[0]
-        pred[0] = 112 - struct.unpack('h', struct.pack('H', param_data[1]))[0]
         pred[1] = struct.unpack('h', struct.pack('H', param_data[2]))[0]
+        if noflip:
+            pred[0] = struct.unpack('h', struct.pack('H', param_data[1]))[0]
+        else:
+            pred[0] = 112 - struct.unpack('h', struct.pack('H', param_data[1]))[0]
 
         if model_type == 1 or model_type == 2:
-            cider_col = 112 - struct.unpack('h', struct.pack('H', param_data[3]))[0]
             cider_row = struct.unpack('h', struct.pack('H', param_data[4]))[0]
             cider_radius = struct.unpack('h', struct.pack('H', param_data[5]))[0]
+
+            if noflip:
+                cider_col = struct.unpack('h', struct.pack('H', param_data[3]))[0]
+            else:
+                cider_col = 112 - struct.unpack('h', struct.pack('H', param_data[3]))[0]
         else:
             cider_col = -10
             cider_row = -10
@@ -196,7 +203,7 @@ def main():
             hline.set_data([max(0, pred[0] - 10), min(111, pred[0] + 10)], [pred[1], pred[1]])
             vline_cider.set_data([cider_col, cider_col], [0, 112])
             hline_cider.set_data([0, 112], [cider_row, cider_row])
-            circle.center = cider_col, cider_row
+            circle.center = pred[0], pred[1]
             circle.set_radius(cider_radius)
 
         print "Pixels:", pixels
