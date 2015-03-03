@@ -1,4 +1,4 @@
-function [orig_err, upd_err] = update_compare_ann(param_file, data_file)
+function [orig_err, upd_err] = update_compare_ann(param_file, data_file, batch_size, iters)
 
 addpath(genpath('/Users/ammayber/iShadow/algorithms/ann/lib'));
 
@@ -34,21 +34,29 @@ Ntrain = size(Xtrain,1)
 upd_err = zeros([Ntrain 2]);
 
 W_orig = these_results.W;
+W_upd = params_compress(W_orig, ind, 12433, 7);
 alpha0 = these_results.alpha0;
 
 orig_pred = bsxfun(@times, logisticmlp_prediction(W_orig,Xtest,7,2), [112 111]);
 orig_err = mean(sqrt(sum((orig_pred - ytest).^2,2)));
 
-W_upd = params_compress(W_orig, ind, 12433, 7);
-W_upd = update_mlp(Xtrain(:,ind), ytrain_scaled, 7, 0, W_upd, [], 250);
-W_upd = params_expand(W_upd,ind,12433,7);
+% W_upd = params_compress(W_orig, ind, 12433, 7);
+% W_upd = update_mlp(Xtrain(:,ind), ytrain_scaled, 7, 0, W_upd, [], 250, 2);
+% W_upd = params_expand(W_upd,ind,12433,7);
+% 
+% pred = bsxfun(@times, logisticmlp_prediction(W_upd,Xtest,7,2), [112 111]);
+% upd_err = mean(sqrt(sum((pred - ytest).^2,2)));
 
-pred = bsxfun(@times, logisticmlp_prediction(W_upd,Xtest,7,2), [112 111]);
-upd_err = mean(sqrt(sum((pred - ytest).^2,2)));
+iter = 1;
+for i=(batch_size + 1):batch_size:Ntrain
+    W_upd = update_mlp(Xtrain(i-(batch_size):i,ind), ytrain_scaled(i-(batch_size):i,:), 7, 0, W_upd, [], iters);
+    W_upd_expand = params_expand(W_upd,ind,12433,7);
 
-% for i=1:Ntrain
-%    [W_upd, alpha_upd] = update_mlp(Xtrain(i,:), ytrain_scaled(i,:), 7, lambda, W_upd, alpha_upd, 2);
-%    pred = bsxfun(@times, logisticmlp_prediction(W_upd,Xtest,7,2), [112 111]);
-%    upd_err(i) = mean(sqrt(sum((pred - ytest).^2,2)));
-%    fprintf('%d : %f', i, upd_err(i));
-% end
+    pred = bsxfun(@times, logisticmlp_prediction(W_upd_expand,Xtest,7,2), [112 111]);
+
+    upd_err(iter) = mean(sqrt(sum((pred - ytest).^2,2)));
+    fprintf('%d : %f\n', i, upd_err(iter));
+    iter = iter + 1;
+end
+
+upd_err(upd_err == 0) = [];

@@ -1,5 +1,9 @@
-function [W,alpha] = update_mlp(Xtrain,ytrain,nHidden,lambda,W_groupSparse,alphainit, maxiter)
+function [W,alpha] = update_mlp(Xtrain,ytrain,nHidden,lambda,W_groupSparse,alphainit, maxiter, verbose)
 %   addpath('minConf');
+
+  if (nargin < 8)
+      verbose = 0;
+  end
 
   nInstances = size(Xtrain,1);
   nVars = size(Xtrain,2);
@@ -34,7 +38,7 @@ function [W,alpha] = update_mlp(Xtrain,ytrain,nHidden,lambda,W_groupSparse,alpha
 
   %Solve optimization problem
 %   options.verbose=2;
-  options.verbose=2;
+  options.verbose=verbose;
   options.maxIter = maxiter;
 
   options.optTol = 1e-5; %default 1e-5
