@@ -10,12 +10,12 @@ import os
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("filename", help="mask filename")
+    parser.add_argument("name", help="mask name")
 
     args = parser.parse_args()
 
     input_filename = "/dev/disk1"
-    mask_filename = args.filename
+    mask_filename = args.name + ".pi"
 
     try:
         input_file = open(input_filename, "rb")

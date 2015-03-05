@@ -6,8 +6,11 @@ import os
 from random import shuffle
 
 # Window dimensions
-X_DIM=1280
-Y_DIM=950
+# X_DIM=1280
+# Y_DIM=950
+
+X_DIM=1400
+Y_DIM=820
 
 X_ADDITIONAL=0
 

@@ -29,11 +29,12 @@ data = ['results', 'models']
 
 work_dir = '/mnt/nfs/work1/marlin/amayberr'
 
+random_seeds = [136824521, 160358906, 614159124, 153154915, 776882322]
+
 if len(experiment_descriptor) != 0:
 	experiment_descriptor = '_' + experiment_descriptor
 
 experiment_title = 'awesomeness' + experiment_descriptor
-template_title = 'run_template' + experiment_descriptor + '.sh'
 
 def main():
 	uniquefy_pre = 'uniquefy_'
@@ -45,13 +46,6 @@ def main():
 
 	params = [uniquefy, data_limit, hidden_shapes, init, subset, maxiter]
 	prefixes = [uniquefy_pre, data_limit_pre, hidden_shapes_pre, init_pre, subset_pre, maxiter_pre]
-
-	template_f = open(work_dir + '/' + template_title, 'w')
-
-	template_f.write('#!/bin/bash\n')
-	template_f.write('octave ' + work_dir + '/' + mat_file + '\n')
-
-	template_f.close()
 
 	print names
 
@@ -84,20 +78,6 @@ def params_recurse(path, name, params, prefixes, lambdas, settings_text):
 				this_text = settings_text + build_setting_text(setting, '', ', ') + '\n'
 				setting_folder = build_setting_text(setting, prefixes[0], '_')
 
-				# # Construct folder name
-				# if isinstance(setting, list) or isinstance(setting, tuple):
-				# 	setting_folder = prefixes[0] + str(setting[0])
-				# 	this_text += str(setting[0])
-
-				# 	for item in setting[1:]:
-				# 		setting_folder += '_' + str(item)
-				# 		this_text += ', ' + str(item)
-
-				# 	this_text += '\n'
-				# else:
-				# 	setting_folder = prefixes[0] + str(setting)
-				# 	this_text += str(setting) + '\n'
-
 				this_path = path + '/' + setting_folder
 
 				if not os.path.exists(this_path):
@@ -115,22 +95,37 @@ def params_recurse(path, name, params, prefixes, lambdas, settings_text):
 			settings_text += ', ' + str(lam)
 		settings_text += '\n'
 
-		param_file = open(path + '/' + 'params.txt','w')
-
-		param_file.write(settings_text)
-
-		param_file.close()
-
-		data_title = name + experiment_descriptor
-		shutil.copy(work_dir + '/' + template_title, path + '/' + data_title + '.sh')
-
 		os.link(work_dir + '/training_sets/' + name + '.mat', path + '/' + 'eye_data.mat')
 
-		pwd = os.getcwd()
+		for i in range(5):
+			this_text = settings_text
+			this_text += str(random_seeds[i]) + '\n'
+			this_text += str(i + 1) + '\n'
 
-		os.chdir(path)
-		call(['qsub', '-cwd', '-o', 'stdout.txt', '-e', 'stderr.txt', data_title + '.sh'])
-		os.chdir(pwd)
+			this_path = path + '/rep' + str(i + 1) + '_run'
+
+			if not os.path.exists(this_path):
+				os.mkdir(this_path)
+			elif len(params) == 1:
+				print "ERROR: Run script folder", this_path, "already exists - halting"
+				sys.exit()
+
+			param_file = open(this_path + '/' + 'params.txt','w')
+			param_file.write(this_text)
+			param_file.close()
+
+			data_title = name + experiment_descriptor + '_rep' + str(i + 1)
+
+			run_script = open(this_path + '/' + data_title + '.sh','w')
+			run_script.write('#!/bin/bash\n')
+			run_script.write('octave ' + work_dir + '/' + mat_file + '\n')
+			run_script.close()
+
+			cwd = os.getcwd()
+
+			os.chdir(this_path)
+			call(['qsub', '-cwd', '-o', 'stdout.txt', '-e', 'stderr.txt', data_title + '.sh'])
+			os.chdir(cwd)
 
 def build_setting_text(setting, prefix, delim):
 	text = prefix
@@ -146,52 +141,3 @@ def build_setting_text(setting, prefix, delim):
 	return text
 
 main()
-
-	# # TODO: Create multiple folders iff there is more than one setting for a parameter
-	# for name in names:
-	# 	for ftype in types:	# FIXME: types is now data_limit
-	# 		for datum in data:
-	# 			datum_pathname = work_dir + '/' + experiment_title + '/' + name + '/' + ftype + '/' + datum + '/'
-
-	# 			if not os.path.exists(datum_pathname):
-	# 				os.makedirs(datum_pathname)
-
-	# 		ftype_pathname = work_dir + '/' + experiment_title + '/' + name + '/' + ftype + '/'
-
-	# 		dataf = open(ftype_pathname + 'init.txt','w')
-
-	# 		if ftype.find('kmed') != -1:
-	# 			dataf.write('1\n')
-	# 		elif ftype.find('rand') != -1:
-	# 			dataf.write('2\n')
-	# 		else:
-	# 			dataf.write('0\n')
-
-	# 		dataf.close()
-
-	# 		dataf = open(ftype_pathname + 'data_limit.txt','w')
-
-	# 		if ftype == '5m':
-	# 			dataf.write(str(3000) + '\n')
-	# 		elif ftype == '3m':
-	# 			dataf.write(str(1800) + '\n')
-	# 		elif ftype == '2m':
-	# 			dataf.write(str(1200) + '\n')
-	# 		elif ftype == '1m':
-	# 			dataf.write(str(600) + '\n')
-	# 		elif ftype == '30s':
-	# 			dataf.write(str(300) + '\n')
-	# 		else:
-	# 			dataf.write(str(0) + '\n')
-
-	# 		dataf.close()
-
-	# 		shutil.copy(work_dir + '/' + template_title, ftype_pathname + name + '_' + ftype + experiment_descriptor + '.sh')
-
-	# 		os.link(work_dir + '/training_sets/eye_data_' + name + '_auto.mat', ftype_pathname + 'eye_data.mat')
-
-	# 		pwd = os.getcwd()
-
-	# 		os.chdir(ftype_pathname)
-	# 		call(['qsub', '-cwd', '-o', 'stdout.txt', '-e', 'stderr.txt', name + '_' + ftype + experiment_descriptor + '.sh'])
-	# 		os.chdir(pwd)

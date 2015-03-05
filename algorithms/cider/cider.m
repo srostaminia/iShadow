@@ -1,11 +1,24 @@
-function [chord_length,pred,radii,ann_used]=cider(X,ann_file,chord_length,thresh,model,make_vid,nDim,scaleVect)
+function [ind,chord_length,pred,radii,ann_used]=cider(X,rep_file,chord_length,thresh,model,make_vid,nDim,scaleVect,contrast_method)
+%function [chord_length,pred,radii,ann_used]=cider(X,ann_file,chord_length,thresh,model,make_vid,nDim,scaleVect)
     addpath('~/iShadow/algorithms/ann/lib');
     addpath('~/iShadow/algorithms/ann/run_ann');
-    load(ann_file,'ind','these_results');
+    load(rep_file,'ind','these_results');
     
     % Contrast adjustment
     X_adjust = X(:,:);
-    X_adjust(:,ind(1:end-1)) = mean_contrast_adjust_nosave(X(:,ind(1:end-1)));
+    
+    if strcmp(contrast_method,'percentile')
+        X_adjust(:,ind(1:end-1)) = clip_percentile(X(:,ind(1:end-1)));
+    elseif strcmp(contrast_method,'mean')
+        X_adjust(:,ind(1:end-1)) = mean_contrast_adjust_nosave(X(:,ind(1:end-1)));
+    elseif strcmp(contrast_method,'median')
+        X_adjust(:,ind(1:end-1)) = median_filter_subpixels(X,ind);
+    else
+        fprintf('ERROR: need to define contrast method');
+        return;
+    end
+    
+    %X_adjust(:,ind(1:end-1)) = mean_contrast_adjust_nosave(X(:,ind(1:end-1)));
     
     scale_params = zeros(size(X,1),2);
     
@@ -52,7 +65,8 @@ function [chord_length,pred,radii,ann_used]=cider(X,ann_file,chord_length,thresh
             predVect = scaleVect .* logisticmlp_prediction(these_results.W, [X_adjust(i,:) 1], 7, nDim);
             pred(i,:) = predVect(1:2);
             
-            if  size(predVect)==3
+            
+            if  size(predVect,2)==3
                 radii(i) = predVect(3);
             end
              %             pred(i,:) = ginput;
