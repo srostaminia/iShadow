@@ -1,3 +1,39 @@
+% 
+% clear all;
+% close all;
+% 
+% sub1=3;
+% sub2=3;
+% 
+% data=load('/Users/ytun/iShadow/algorithms/cider/data/new/awesomeness_irb_radius_target_area_calFixed/addison_calib_pupil/results/subset_l1_init_strips_k7_lambda0.000100/cider_rep1.mat');
+% 
+% gout=data.gout;
+% diff=data.radii.pred-data.radii.true;
+% 
+% figure;
+% subplot(sub1,sub2,1);
+% histogram(diff);
+% 
+% subplot(sub1,sub2,1);
+% histogram(data.radii.pred);
+% 
+% subplot(sub1,sub2,1);
+% histogram(data.radii.true);
+% 
+% [row,col]=round(gout);
+% mat(row,col)=diff;
+% 
+% subplot(sub1,sub2,1);
+% colormap('hot')
+% imagesc(A)
+% colorbar
+% 
+% subplot(sub1,sub2,1);
+% 
+
+
+%%
+
 clear;
 close all;
 
@@ -20,7 +56,7 @@ figure;
 
 subplot(2,2,1);
 dataSel={'train','yhat'};  
-[errMat_train,dist_train]=createPupilErrorMat_radius(filepath,dataSel);
+[errMat_train,dist_train]=createPupilErrorMat(filepath,dataSel);
 colormap('hot');
 imagesc(errMat_train);
 colorbar;
@@ -30,7 +66,7 @@ title('Training Error at Predicted Pupil Center');
 %--Plot heatmap for test data
 subplot(2,2,2);
 dataSel={'test','yhat'};  
-[errMat_test,dist_test]=createPupilErrorMat_radius(filepath,dataSel);
+[errMat_test,dist_test]=createPupilErrorMat(filepath,dataSel);
 colormap('hot');
 imagesc(errMat_test);
 colorbar;
@@ -39,7 +75,7 @@ title('Test Error at Predicted Pupil Center');
 
 subplot(2,2,3);
 dataSel={'train','y'};  
-[errMat_train,dist_train]=createPupilErrorMat_radius(filepath,dataSel);
+[errMat_train,dist_train]=createPupilErrorMat(filepath,dataSel);
 colormap('hot');
 imagesc(errMat_train);
 colorbar;
@@ -49,7 +85,7 @@ title('Training Error at True Pupil Center');
 %--Plot heatmap for test data
 subplot(2,2,4);
 dataSel={'test','y'};  
-[errMat_test,dist_test]=createPupilErrorMat_radius(filepath,dataSel);
+[errMat_test,dist_test]=createPupilErrorMat(filepath,dataSel);
 colormap('hot');
 imagesc(errMat_test);
 colorbar;

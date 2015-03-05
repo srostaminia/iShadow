@@ -8,7 +8,7 @@
 close all;
 clear;
 
-labelPupilDir='/Users/ytun/Google Drive/IMPORTANT_VISION/MobiSys2015_labeling/labelPupil_wrong';
+labelPupilDir='/Users/ytun/Google Drive/IMPORTANT_VISION/MobiSys2015_labeling/labelPupil';
 dataRootDir='~/iShadow/algorithms/cider/data/new';
 
 %cd ~
@@ -16,17 +16,17 @@ addpath ('~/iShadow/algorithms/cider/')
 
 % % % Change here%
 
-irbFolderCell={'awesomeness_parallel_test'};
+irbFolderCell={'awesomeness_irb_radius_target_mean'};
 %irbFolderCell={'awesomeness_irb_pupil_percent_0-2_98','awesomeness_irb_pupil_percent_0.05','awesomeness_parallel_test'};
 
 modelCell={'cider','ann'};%,'ann'}; %'ann',
 lightingList={'calib'};
-%subLists={'addison','akshaya','shuo','duncan','mike','malai','kaituo'};
+subLists={'akshaya','shuo','duncan','mike','malai','kaituo'};%'addison',
 %uniList={'uniquefy_0','uniquefy_1'};
-sub_ann='';
+sub_ann='darkTest_';
 
-nDim=2;
-scaleVect=[112 111];%[112 111 112];%
+nDim=3;
+scaleVect=[112 111 112];%[112 111 112];%
 
 contrast_method='mean';
 % % %
@@ -45,9 +45,12 @@ for n=1:length(irbFolderCell)
     
     subject_folders = cellstr(strsplit(ls));
     
-    for i=2%1:length(subject_folders)-1
-        
+    for i=2:length(subject_folders)-1
+                
         subject_folder=subject_folders{i};
+        
+        strList=strsplit(subject_folder,'_');
+        subName=strList{1};
         
         originIRB=pwd;
         cd(subject_folder);
@@ -61,7 +64,7 @@ for n=1:length(irbFolderCell)
             cd('results');
             
             %subFolderName=strcat(subName,'_',lighting,'.mat');
-            input_dir=fullfile(labelPupilDir,strcat('addison_calib_pupil','.mat'));
+            input_dir=fullfile(labelPupilDir,strcat(subName,'_',lightingList{1},'_pupil.mat'));%strcat('addison_calib_pupil','.mat'));
             
             %result_dir=fullfile(dataRootDir,'data',irbFolderName,subFolderName,'results');
             result_dir=pwd;%fullfile(dataRootDir,'data',irbFolderName,subFolderName,uni,'results');
