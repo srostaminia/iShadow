@@ -13,7 +13,7 @@
 
 
 %Error of predicted pupil center for 6 different users for different ANN sizes'),'Each of the ten points represents the average of errors for 5 repetitions of the experiment.','ANN size increases from left to right.'
-function [errStEachSub,err_line_StEachSub,meanErrAllSub,stdErrAllSub,indPerForAllSub,meanErr_line_ForAllSub,stdErr_line_ForAllSub,meanAnnUsedForAllSub,stdAnnUsedForAllSub,meanLineUsedForAllSub,stdLineUsedForAllSub]=graph_error_model_current_fixed(indFile,linestyle,modelName,subList,rootDir,lightingSubFolder,objToPlot,subModelName,compareLine)
+function [errStEachSub,err_line_StEachSub,meanErrAllSub,stdErrAllSub,indPerForAllSub,meanErr_line_ForAllSub,stdErr_line_ForAllSub,meanAnnUsedForAllSub,stdAnnUsedForAllSub,meanLineUsedForAllSub,stdLineUsedForAllSub]=graph_error_model_current(indFile,linestyle,modelName,subList,rootDir,lightingSubFolder,objToPlot,subModelName,compareLine)
 %function [errStEachSub,meanErrAllSub,stdErrAllSub,indPerForAllSub,meanErr_line_ForAllSub,stdErr_line_ForAllSub,meanAnnUsedForAllSub,stdAnnUsedForAllSub,meanLineUsedForAllSub,stdLineUsedForAllSub]=graph_error_model_current(indFile,linestyle,modelName,subList,rootDir,lightingSubFolder,objToPlot,subModelName)
 
 uniFolderList={'uniquefy_0'};%,'uniquefy_1'};
@@ -214,8 +214,6 @@ for i=1:nUsers
     indPerMatForAllSub(i,:)=indStEachSub.mean.(uni).(subName);
 end
 
-save('meanErrMatForAllSub_6subs.mat','meanErrMatForAllSub');
-
 if strcmp(modelName,'cider')
     %stdAnnUsedForAllSub=zeros(nUsers,nLambda);
     
@@ -238,7 +236,7 @@ end
 
 %save(fullfile('annSize.mat'),'indPerMatForAllSub');
 
-
+save('meanErrMatForAllSub.mat','meanErrMatForAllSub');
 
 for i=1:nUsers
     
