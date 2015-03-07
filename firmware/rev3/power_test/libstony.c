@@ -424,8 +424,8 @@ void dac_init() {
   DAC_Cmd(DAC_Channel_2, ENABLE);
   DAC_Cmd(DAC_Channel_1, ENABLE);
   
-  DAC_SetChannel2Data(DAC_Align_12b_R, LED_HIGH);
-  DAC_SetChannel1Data(DAC_Align_12b_R, LED_HIGH);
+//  DAC_SetChannel2Data(DAC_Align_12b_R, LED_HIGH);
+//  DAC_SetChannel1Data(DAC_Align_12b_R, LED_HIGH);
 }
 
 int stony_read_pixel()
