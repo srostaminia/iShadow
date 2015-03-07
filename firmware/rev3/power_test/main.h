@@ -55,6 +55,9 @@
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
+#define US_TIME         TIM5->CNT
+#define MS_TIME         TIM4->CNT
+
 /* Exported functions ------------------------------------------------------- */
 void TimingDelay_Decrement(void);
 void Delay(__IO uint32_t nTime);
@@ -62,13 +65,9 @@ void config_us_delay();
 void config_ms_timer();
 void set_mco();
 void delay_us(int delayTime);
-int imu_test();
 
-unsigned short inv_row_2_scale(const signed char *row);
-unsigned short inv_orientation_matrix_to_scalar(const signed char *mtx);
-void setup_gyro(void);
-void tap_cb(unsigned char direction, unsigned char count);
-void android_orient_cb(unsigned char orientation);
+void get_model_time(uint16_t *model_time);
+void StopRTCLSIMode_Measure(uint16_t sleep_time);
 
 
 #endif /* __MAIN_H */

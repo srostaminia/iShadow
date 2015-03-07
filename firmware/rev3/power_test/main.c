@@ -10,43 +10,82 @@
 
 static __IO uint32_t TimingDelay;
 
-void SleepMode_Measure();
-
 int main()
 {  
-  uint16_t start;
-  volatile uint16_t total;
-  
   if (SysTick_Config(SystemCoreClock / 1000)) {
     while (1);
   }
   
-  config_us_delay();
-
-  stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3,
-            SMH_GAIN_3V3, SMH_SELAMP_3V3);
-  
-//  if (disk_initialize(0) != SD_OK)
-//    while(1);
-  
   config_ms_timer();
+  config_us_delay();
   
-  while(1) {
-//    start = TIM4->CNT;
-    stony_image_subsample();
-//    total = TIM4->CNT - start;
+  uint16_t model_time[] = {0, 0};
+  get_model_time(model_time);
+  
+  uint16_t model_sum = model_time[0] + model_time[1];
+  
+  if (model_sum >= 250) {
+    while(1);
   }
   
-//  for (int i = 0; i < 50; i++) {
-////      while (1);
-//    stony_image_test();
-//    if (stony_image_single() != 0)
-//      while (1);
-////    if (stony_image_dual() != 0)
-////      while(1);
-//  }
+  const uint16_t SLEEP_TIME = 250 - model_sum;
   
-  return total;
+  __IO uint32_t led1 = 0, led2 = 0;
+  uint32_t DAC_Align = DAC_Align_12b_R;
+  
+  led1 = led2 = (uint32_t)DAC_BASE;
+  led1 += DHR12R1_OFFSET + DAC_Align;
+  led2 += DHR12R2_OFFSET + DAC_Align;
+  
+  *(__IO uint32_t *) led1 = LED_LOW;
+  *(__IO uint32_t *) led2 = LED_LOW;
+  
+  uint8_t cycle = 1;
+  
+  while (1) {
+    if (SysTick_Config(SystemCoreClock / 1000)) {
+      while (1);
+    }
+    
+    dac_init();
+    
+//    config_us_delay();
+    
+    if (cycle == 1 || cycle == 2) {      
+      DAC_SetChannel2Data(DAC_Align_12b_R, LED_HIGH);
+      DAC_SetChannel1Data(DAC_Align_12b_R, LED_HIGH);
+    }
+    
+    if (cycle == 1 || cycle == 3) {
+      stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3,
+                 SMH_GAIN_3V3, SMH_SELAMP_3V3);
+    }
+    
+//    config_ms_timer();
+    
+    stony_image_subsample();
+    
+    if (cycle == 1 || cycle == 2) {
+      DAC_SetChannel2Data(DAC_Align_12b_R, LED_LOW);
+      DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);
+    }
+    
+    if (cycle == 1 || cycle == 3)
+      stony_sleep();
+    
+    if (cycle == 4) {
+      cycle = 0;
+      StopRTCLSIMode_Measure(SLEEP_TIME * 2);
+    } else {
+      StopRTCLSIMode_Measure(SLEEP_TIME);
+    }
+    
+    SystemInit();
+    
+    cycle += 1;
+  }
+  
+  return 0;
 }
 
 /**
@@ -117,104 +156,75 @@ void delay_us(int delayTime)
   }
 }
 
+void get_model_time(uint16_t *model_time) {
+  volatile uint16_t full_time, acq_time, start;
+  
+  start = MS_TIME;
+  stony_image_subsample();
+  full_time = MS_TIME - start;
+  
+  start = MS_TIME;
+  stony_image_subsample_nopred();
+  acq_time = MS_TIME - start;
+  
+  model_time[0] = acq_time;                     // Acquisiton time
+  model_time[1] = full_time - acq_time;         // Prediction time        
+}
+
 /**
-  * @brief  This function configures the system to enter Sleep mode for
-  *         current consumption measurement purpose.
-  *         Sleep Mode
-  *         ==========  
-  *            - System Running at HSI (16MHz)
-  *            - Flash 1 wait state  
-  *            - Voltage Range 2
-  *            - Code running from Internal FLASH
-  *            - Current Consumption ~1mA 
-  *            - Wakeup using EXTI Line (Key Button PA.00)   
+  * @brief  This function configures the system to enter Stop mode with RTC 
+  *         clocked by LSI for current consumption measurement purpose.
+  *         STOP Mode with RTC clocked by LSI
+  *         =================================   
+  *           - RTC Clocked by LSI
+  *           - Regulator in LP mode
+  *           - HSI and HSE OFF
+  *           - No IWDG
+  *           - Current Consumption ~1.3uA
+  *           - Automatic Wakeup using RTC clocked by LSI (after ~4s)  
   * @param  None
   * @retval None
   */
-void SleepMode_Measure(void)
+void StopRTCLSIMode_Measure(uint16_t sleep_time)
 {
-  /* Configure System Clock to HSI (16MHz) */
-  __IO uint32_t StartUpCounter = 0, HSIStatus = 0;
-    
-  /* SYSCLK, HCLK, PCLK2 and PCLK1 configuration -----------------------------*/
-  /* RCC system reset(for debug purpose) */
-  RCC_DeInit();
-
-  /* Enable HSI */
-  RCC_HSICmd(ENABLE);
-
-  /* Wait till HSI is ready and if Time out is reached exit */
-  do
-  {
-    HSIStatus = RCC_GetFlagStatus(RCC_FLAG_HSIRDY);
-    StartUpCounter++;  
-  } while((HSIStatus == 0) && (StartUpCounter != HSI_STARTUP_TIMEOUT));
-
-
-  if (RCC_GetFlagStatus(RCC_FLAG_HSIRDY) != RESET)
-  {
-    HSIStatus = (uint32_t)0x01;
-  }
-  else
-  {
-    HSIStatus = (uint32_t)0x00;
-  } 
-
-  if (HSIStatus == 0x01)
-  {
-    /* Enable 64-bit access */
-    FLASH_ReadAccess64Cmd(ENABLE);
-   
-    /* Enable Prefetch Buffer */
-    FLASH_PrefetchBufferCmd(ENABLE);
+  NVIC_InitTypeDef  NVIC_InitStructure;
+  EXTI_InitTypeDef  EXTI_InitStructure;
+  GPIO_InitTypeDef  GPIO_InitStructure;
   
-    /* Flash 1 wait state */
-    FLASH_SetLatency(FLASH_Latency_1);    
+  /* Enable PWR APB1 Clock */
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
 
-    /* Enable the PWR APB1 Clock */
-    RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR, ENABLE);
+  /* Allow access to RTC */
+  PWR_RTCAccessCmd(ENABLE);
+
+  /* Reset RTC Domain */
+  RCC_RTCResetCmd(ENABLE);
+  RCC_RTCResetCmd(DISABLE);
   
-    /* Select the Voltage Range 2 (1.5V) */
-    PWR_VoltageScalingConfig(PWR_VoltageScaling_Range2);
-  
-    /* Wait Until the Voltage Regulator is ready */
-    while(PWR_GetFlagStatus(PWR_FLAG_VOS) != RESET)
-    {
-    } 
+  /* Allow access to RTC */
+  PWR_RTCAccessCmd(ENABLE);
 
-    /* HCLK = SYSCLK */
-    RCC_HCLKConfig(RCC_SYSCLK_Div1);
+  /*!< LSI Enable */
+  RCC_LSICmd(ENABLE);
 
-    /* PCLK2 = HCLK */
-    RCC_PCLK2Config(RCC_HCLK_Div1);
+  /*!< Wait till LSI is ready */
+  while (RCC_GetFlagStatus(RCC_FLAG_LSIRDY) == RESET)
+  {}
 
-    /* PCLK1 = HCLK */
-    RCC_PCLK1Config(RCC_HCLK_Div1);
+  /*!< RTC Clock Source Selection */
+  RCC_RTCCLKConfig(RCC_RTCCLKSource_LSI);
 
-    /* Select HSI as system clock source */
-    RCC_SYSCLKConfig(RCC_SYSCLKSource_HSI);
+  /* Enable the RTC Clock */
+  RCC_RTCCLKCmd(ENABLE);
 
-    /* Wait till HSI is used as system clock source */
-    while (RCC_GetSYSCLKSource() != 0x04)
-    {}
-  }
-  else
-  { 
-    /* If HSI fails to start-up, the application will have wrong clock configuration.
-    User can add here some code to deal with this error */
-
-    /* Go to infinite loop */
-    while (1)
-    {}
-  }
+  /* Wait for RTC APB registers synchronisation */
+  RTC_WaitForSynchro();
 
   /* Configure all GPIO as analog to reduce current consumption on non used IOs */
   /* Enable GPIOs clock */
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA | RCC_AHBPeriph_GPIOB | RCC_AHBPeriph_GPIOC |
                         RCC_AHBPeriph_GPIOD | RCC_AHBPeriph_GPIOE | RCC_AHBPeriph_GPIOH |
                         RCC_AHBPeriph_GPIOF | RCC_AHBPeriph_GPIOG, ENABLE);
-
-  GPIO_InitTypeDef GPIO_InitStructure;
 
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
   GPIO_InitStructure.GPIO_Speed = GPIO_Speed_40MHz;
@@ -224,19 +234,19 @@ void SleepMode_Measure(void)
   GPIO_Init(GPIOD, &GPIO_InitStructure);
   GPIO_Init(GPIOE, &GPIO_InitStructure);
   GPIO_Init(GPIOH, &GPIO_InitStructure);
-  GPIO_Init(GPIOF, &GPIO_InitStructure);
-  GPIO_Init(GPIOG, &GPIO_InitStructure);  
-  GPIO_Init(GPIOA, &GPIO_InitStructure); 
-  GPIO_Init(GPIOB, &GPIO_InitStructure);   
+  GPIO_Init(GPIOG, &GPIO_InitStructure); 
+  GPIO_Init(GPIOF, &GPIO_InitStructure);  
+//  GPIO_Init(GPIOA, &GPIO_InitStructure); 
+//  GPIO_Init(GPIOB, &GPIO_InitStructure);
 
   /* Disable GPIOs clock */
-  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA | RCC_AHBPeriph_GPIOB | RCC_AHBPeriph_GPIOC |
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOC |//RCC_AHBPeriph_GPIOA | RCC_AHBPeriph_GPIOB | 
                         RCC_AHBPeriph_GPIOD | RCC_AHBPeriph_GPIOE | RCC_AHBPeriph_GPIOH |
                         RCC_AHBPeriph_GPIOF | RCC_AHBPeriph_GPIOG, DISABLE);
 
-  /*  Configure Key Button*/
+//  /*  Configure Key Button*/
 //  STM_EVAL_PBInit(BUTTON_KEY,BUTTON_MODE_GPIO);
-
+//
 //  /* Wait Until Key button pressed */
 //  while(STM_EVAL_PBGetState(BUTTON_KEY) == RESET)
 //  {
@@ -245,23 +255,47 @@ void SleepMode_Measure(void)
 //  while(STM_EVAL_PBGetState(BUTTON_KEY) != RESET)
 //  {
 //  }
+    
+  /* EXTI configuration *******************************************************/
+  EXTI_ClearITPendingBit(EXTI_Line20);
+  EXTI_InitStructure.EXTI_Line = EXTI_Line20;
+  EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+  EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
+  EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+  EXTI_Init(&EXTI_InitStructure);
+  
+  /* Enable the RTC Wakeup Interrupt */
+  NVIC_InitStructure.NVIC_IRQChannel = RTC_WKUP_IRQn;
+  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+  NVIC_Init(&NVIC_InitStructure);
+  
+  /* RTC Wakeup Interrupt Generation: Clock Source: RTCCLK_Div16, Wakeup Time Base: ~4s 
+     RTC Clock Source LSI ~37KHz  
+  */
+  RTC_WakeUpClockConfig(RTC_WakeUpClock_RTCCLK_Div16);
+  RTC_SetWakeUpCounter(0x2421);
 
-  /*  Configure Key Button*/
-//  STM_EVAL_PBInit(BUTTON_KEY,BUTTON_MODE_EXTI);
+  /* Enable the Wakeup Interrupt */
+  RTC_ITConfig(RTC_IT_WUT, ENABLE);
+      
+  /* Enable Ultra low power mode */
+  PWR_UltraLowPowerCmd(ENABLE);
 
-  /* Request to enter SLEEP mode with regulator ON */
-  PWR_EnterSleepMode(PWR_Regulator_ON, PWR_SLEEPEntry_WFI);
-
-  /* Initialize LED1 on STM32L152-EVAL board */
-//  STM_EVAL_LEDInit(LED1);
+  /* Enable Wakeup Counter */
+  RTC_WakeUpCmd(ENABLE);
+    
+  /* Enter Stop Mode */
+  PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
 
   /* Infinite loop */
-  while (1)
-  {
-    /* Toggle The LED1 */
+//  while (1)
+//  {
+//    /* Toggle The LED1 */
 //    STM_EVAL_LEDToggle(LED1);
 
-    /* Inserted Delay */
-    for(int index = 0; index < 0x5FFFF; index++);
-  }
+//    /* Inserted Delay */
+//    for(index = 0; index < 0x5FF; index++);
+//  }
 }

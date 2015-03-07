@@ -4,28 +4,38 @@
 #include "diskio.h"
 #include "stm32l152d_eval_sdio_sd.h"
 #include "predict_gaze.h"
+#include "math.h"
 
-#define TX_ROWS         48
+//#define TX_ROWS         48
+//
+//#define CAM2_OFFSET     TX_ROWS * 112
+////#define CAM2_OFFSET     5376
+//#define TX_BLOCKS       (TX_ROWS * 112 * 4) / 512
+//
+//#if (112 % TX_ROWS != 0)
+//#define CAM2_MOD_OFFSET (112 % TX_ROWS) * 112
+//#define TX_MOD_BLOCKS   ((112 % TX_ROWS) * 112 * 4 ) / 512
+//
+//#if ((112 % TX_ROWS) * 112 * 4 ) % 512 != 0
+//#error TX_ROWS invalid, does not align to 512B boundary
+//#endif
 
-#define CAM2_OFFSET     TX_ROWS * 112
-//#define CAM2_OFFSET     5376
-#define TX_BLOCKS       (TX_ROWS * 112 * 4) / 512
+//#endif
 
-#if (112 % TX_ROWS != 0)
-#define CAM2_MOD_OFFSET (112 % TX_ROWS) * 112
-#define TX_MOD_BLOCKS   ((112 % TX_ROWS) * 112 * 4 ) / 512
-
-#if ((112 % TX_ROWS) * 112 * 4 ) % 512 != 0
-#error TX_ROWS invalid, does not align to 512B boundary
-#endif
-
-#endif
+//#define USB_PIXELS      92
 
 extern int8_t pred[2];
 extern float pred_radius;
+float last_r = 0;
+//uint16_t pred_img[112][112];
+
+uint16_t last_min = 1000, last_max = 0;
+
+extern uint8_t param_packet[];
 
 extern __IO  uint32_t Receive_length ;
 extern uint32_t sd_ptr;
+extern volatile uint8_t packet_sending;
 
 extern unsigned short num_subsample;
 extern unsigned short num_hidden;
@@ -35,11 +45,19 @@ extern unsigned int mask_offset;
 extern unsigned int who_offset;
 extern unsigned int wih_offset;
 extern unsigned int fpn_offset;
+extern unsigned int col_fpn_offset;
 
 extern unsigned short model_data[];
 
+//uint16_t row[112], col[112];
+
 int adc_idx = 0;
-uint16_t last_min = 0, last_max = 1000;
+//uint16_t last_min = 0, last_max = 1000;
+uint16_t min = 1000, max = 0;
+
+#if defined(OUTMODE) && !defined(COLUMN_COLLECT)
+uint16_t last_avg = 150;
+#endif
 
 //extern unsigned short mask[num_subsample][2];
 //extern float bh[num_hidden];
@@ -319,15 +337,13 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
   num_subsample = model_data[0];
   num_hidden = model_data[1];
   
-//  for (int i = 0; i < 512; i++)
-//    pred[i] = 0;
-  
   bh_offset = 2;
   bo_offset = bh_offset + num_hidden * 2;
   mask_offset = bo_offset + 4;
   who_offset = mask_offset + num_subsample * 2;
   wih_offset = who_offset + num_hidden * 2 * 2;
   fpn_offset = wih_offset + (num_hidden * num_subsample * 2);
+  col_fpn_offset = fpn_offset + 112 * 112;
   
   short config;
   char flagUseAmplifier;
@@ -365,8 +381,51 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
   set_pointer_value(REG_CONFIG,config,CAM1);
   set_pointer_value(REG_CONFIG,config,CAM2);
   
+//  dac_init();
+  
   // Get initial min / max pixel values from eye-facing camera
-  stony_image_minmax();
+//  stony_image_minmax();
+}
+
+void stony_sleep() {
+  set_pointer_value(REG_CONFIG,0,CAM1);
+  set_pointer_value(REG_CONFIG,0,CAM2);
+}
+
+void dac_init() {
+  GPIO_InitTypeDef GPIO_InitStructure;
+  DAC_InitTypeDef DAC_InitStructure;
+
+  /* DAC Periph clock enable */
+  RCC_APB1PeriphClockCmd(RCC_APB1Periph_DAC, ENABLE);
+
+  /* GPIOA clock enable */
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
+  /* Configure PA.04 (DAC_OUT1), PA.05 (DAC_OUT2) as analog */
+  GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_5;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+  
+  GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_4;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+  
+  DAC_DeInit();
+  
+  DAC_InitStructure.DAC_Trigger = DAC_Trigger_None;
+  DAC_InitStructure.DAC_WaveGeneration = DAC_WaveGeneration_None;
+  DAC_InitStructure.DAC_OutputBuffer = DAC_OutputBuffer_Enable;
+  
+  /* DAC Channel2 Init */
+  DAC_Init(DAC_Channel_2, &DAC_InitStructure);
+  DAC_Init(DAC_Channel_1, &DAC_InitStructure);
+
+  /* Enable DAC Channel2 */
+  DAC_Cmd(DAC_Channel_2, ENABLE);
+  DAC_Cmd(DAC_Channel_1, ENABLE);
+  
+  DAC_SetChannel2Data(DAC_Align_12b_R, LED_HIGH);
+  DAC_SetChannel1Data(DAC_Align_12b_R, LED_HIGH);
 }
 
 int stony_read_pixel()
@@ -383,395 +442,541 @@ int stony_read_pixel()
   
   return ADCdata;
 }
+//
+//int stony_image_single()
+//{
+//  // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row
+//  // Double-buffered (2-dim array)
+////  uint8_t buf8[2][112 * TX_ROWS * 2];
+//  uint8_t buf8[2][USB_PIXELS * 2];
+//  uint16_t *buf16 = (uint16_t *)buf8[0];
+//  
+//  volatile uint16_t start, total;
+//  uint8_t buf_idx = 0;
+////  uint16_t min = 65535, max = 0;
+//  
+//  ADC_RegularChannelConfig(ADC1, CAM1_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
+//  ADC_RegularChannelConfig(ADC1, CAM1_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
+//  
+//  set_pointer_value(REG_ROWSEL, 0, CAM1);
+//  
+//  int data_cycle = 0;
+//  for (int row = 0; row < 112; row++) {
+//    set_pointer_value(REG_COLSEL, 0, CAM1);
+//    
+//    delay_us(1);
+//    
+//    for (int col = 0; col < 112; col++) {      
+//      CAM1_INPH_BANK->ODR |= CAM1_INPH_PIN;
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      CAM1_INPH_BANK->ODR &= ~CAM1_INPH_PIN;
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      
+//      // Do conversion
+//      ADC_SoftwareStartConv(ADC1);
+//      
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      
+//      buf16[data_cycle] = adc_values[adc_idx];
+//      
+//      if (data_cycle == (USB_PIXELS - 1)) {
+//        while (packet_sending == 1);
+//        
+//        data_cycle = -1;
+//        send_packet(buf8[buf_idx], PACKET_SIZE);
+//        packet_sending = 1;
+//        
+//        buf_idx = !buf_idx;
+//        buf16 = (uint16_t *)buf8[buf_idx];
+//      }
+//      
+//      data_cycle++;
+//      adc_idx = !adc_idx;
+//
+//      CAM1_INCV_BANK->ODR |= CAM1_INCV_PIN;
+//      CAM1_INCV_BANK->ODR &= ~CAM1_INCV_PIN;
+//    } // for (col)
+//    
+//    inc_pointer_value(REG_ROWSEL, 1, CAM1);
+//  } // for (row)
+//  
+//  if (data_cycle != -1) {
+//    for (int i = data_cycle; i < USB_PIXELS; i++)
+//      buf16[i] = 0;
+//    
+//    while (packet_sending == 1);
+//    send_packet(buf8[buf_idx], PACKET_SIZE);
+//  }
+//  
+////  last_max = max;
+////  last_min = min;
+//  
+//  return 0;
+//}
+//
+//int stony_image_dual_subsample()
+//{
+//  __IO uint32_t led1 = 0, led2 = 0;
+//  uint32_t DAC_Align = DAC_Align_12b_R;
+//  
+//  led1 = led2 = (uint32_t)DAC_BASE;
+//  led1 += DHR12R1_OFFSET + DAC_Align;
+//  led2 += DHR12R2_OFFSET + DAC_Align;
+//  
+////  *(__IO uint32_t *) led1 = LED_LOW;
+////  *(__IO uint32_t *) led2 = LED_LOW;
+//  
+//  // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, 2 cameras
+//  // Double-buffered (2-dim array)
+//  uint8_t buf8[2][USB_PIXELS * 2];
+//  
+//  uint32_t pixel_sum = 0;
+//  float M = 0.0, S = 0.0;
+//  float value, tmpM;
+//  int k = 1;
+//  
+//  uint16_t pred_img[112][112];
+//  uint8_t buf_idx = 0;
+//  
+//  uint16_t this_pixel = 0;
+//  uint32_t eye_pixels_collected = -1;
+//  uint32_t current_subsample = 0;
+//
+//#ifdef SEND_8BIT
+//  for (int i = 0; i < 2; i++) {
+//    for (int j = 0; j < USB_PIXELS * 2; j++) {
+//      buf8[i][j] = 0;
+//    }
+//  }
+//#endif
+//
+//#ifdef SEND_16BIT
+//  uint16_t *buf16 = (uint16_t *)buf8[0];
+//#else
+//  uint8_t *buf8_active = (uint8_t *)buf8[0];
+//#endif
+//  
+//#ifdef COLUMN_COLLECT
+//  set_pointer_value(REG_COLSEL, 0, CAM1);
+//  set_pointer_value(REG_COLSEL, 0, CAM2);
+//#else
+//  set_pointer_value(REG_ROWSEL, 0, CAM1);
+//  set_pointer_value(REG_ROWSEL, 0, CAM2);
+//#endif
+//  
+////  max = 0;
+////  min = 1000;
+//
+//  int data_cycle = 0;
+//  
+////  int data_cycle = 6; // Start at 2 b/c first two "pixels" transmitted are prediction values from previous cycle
+////#ifdef SEND_16BIT  
+//////  buf16[0] = pred[0];
+//////  buf16[1] = pred[1];
+////  buf8[0][0] = 2;
+////  buf8[0][2] = pred[0];
+////  buf8[0][4] = pred[1];
+////  for (int i = 6; i < 11; i += 2) buf8[0][i] = 1;
+////  for (int i = 1; i < 12; i += 2) buf8[0][i] = 0;
+////#else
+////  buf8_active[0] = 2;
+////  buf8_active[1] = pred[0];
+////  buf8_active[2] = pred[1];
+////  for (int i = 3; i < 6; i++)   buf8_active[i] = 1;
+////#endif
+//  
+//  uint16_t packets_sent = 0;  // For debug purposes only
+////  uint16_t start = 0, total = 0;
+//  for (int row = 0; row < 112; row++) {    
+//#ifdef COLUMN_COLLECT
+//    set_pointer_value(REG_ROWSEL, 0, CAM1);
+//    set_pointer_value(REG_ROWSEL, 0, CAM2);
+//#else
+//    set_pointer_value(REG_COLSEL, 0, CAM1);
+//    set_pointer_value(REG_COLSEL, 0, CAM2);
+//#endif
+//    
+//    delay_us(1);
+//    
+//    for (int col = 0; col < 112; col++) {        
+//      CAM1_INPH_BANK->ODR |= CAM1_INPH_PIN;
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      CAM1_INPH_BANK->ODR &= ~CAM1_INPH_PIN;
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      
+//      if (col != 0) {
+//        
+//#ifdef USE_FPN_EYE
+//        this_pixel = adc_values[1] - FPN_INORDER((row * 112) + (col - 1));
+//#else
+//        this_pixel = adc_values[1];
+//#endif
+//
+//#if defined(OUTMODE) && !defined(COLUMN_COLLECT)
+//      // These pixels don't work in outmode for some reason
+//      // Replace them with the last image's average value
+//#ifdef COLUMN_COLLECT
+//      if (col == 48 && row < 6)
+//        this_pixel = last_avg;
+//#else
+//      if (row == 48 && col < 6)
+//        this_pixel = last_avg;
+//#endif
+//#endif
+//        
+//        //      DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);      
+////        *(__IO uint32_t *) led1 = LED_LOW;
+////        *(__IO uint32_t *) led2 = LED_LOW;
+//        
+//        pred_img[row][col - 1] = this_pixel;
+//        eye_pixels_collected++;
+////        min = (this_pixel < min) ? (this_pixel) : (min);
+////        max = (this_pixel > max) ? (this_pixel) : (max);
+//        
+//        if (MASK(current_subsample, 0) == row && 
+//            MASK(current_subsample, 1) == col - 1)
+//        {
+//          pixel_sum += this_pixel;
+//          
+//          // Standard deviation computation
+//          value = (float)this_pixel;
+//          tmpM = M;
+//          M += (value - tmpM) / k;
+//          S += (value - tmpM) * (value - M);
+//          k++;
+//          current_subsample++;
+//        }
+//
+//#ifdef SEND_EYE
+//
+//#ifdef SEND_16BIT
+////        buf16[data_cycle] = adc_values[1];
+//        buf16[data_cycle] = this_pixel;
+//#else
+//        buf8_active[data_cycle] = CONV_8BIT(this_pixel);
+//#endif
+//        
+//        if (data_cycle == (USB_PIXELS - 1)) {
+//          while (packet_sending == 1);
+//          
+//          data_cycle = -1;
+//          send_packet(buf8[buf_idx], PACKET_SIZE);
+//          packet_sending = 1;
+//          
+//          buf_idx = !buf_idx;
+//          
+//#ifdef SEND_16BIT
+//          buf16 = (uint16_t *)buf8[buf_idx];
+//#else
+//          buf8_active = (uint8_t *)buf8[buf_idx];
+//#endif
+//          
+//          packets_sent += 1;
+//        }
+//        data_cycle++;
+//#endif
+//        
+//      }
+//      
+//      // Do conversion for CAM1
+//      ADC_SoftwareStartConv(ADC1);
+//      
+//      if (col != 0) {
+//        CAM2_INCV_BANK->ODR |= CAM2_INCV_PIN;
+//        CAM2_INCV_BANK->ODR &= ~CAM2_INCV_PIN;
+//      }
+//      
+//      //      DAC_SetChannel1Data(DAC_Align_12b_R, LED_HIGH);
+////      *(__IO uint32_t *) led1 = LED_HIGH;
+////      *(__IO uint32_t *) led2 = LED_HIGH;
+//      
+//      CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      
+//#if defined(OUTMODE) && !defined(COLUMN_COLLECT)
+//      // These pixels don't work in outmode for some reason
+//      // Replace them with the last image's average value
+//#ifdef COLUMN_COLLECT
+//      if (col == 48 && row < 6)
+//        this_pixel = last_avg;
+//#else
+//      if (row == 48 && col < 6)
+//        this_pixel = last_avg;
+//#endif
+//#endif
+//      
+//#if !defined(SEND_EYE)
+//      
+//#ifdef SEND_16BIT
+//      buf16[data_cycle] = adc_values[0];
+//#else
+//      buf8_active[data_cycle] = CONV_8BIT(adc_values[0]);
+//#endif
+//      
+//      if (data_cycle == (USB_PIXELS - 1)) {
+//        while (packet_sending == 1);
+//        
+//        data_cycle = -1;
+//        send_packet(buf8[buf_idx], PACKET_SIZE);
+//        packet_sending = 1;
+//        
+//        buf_idx = !buf_idx;
+//        
+//#ifdef SEND_16BIT
+//        buf16 = (uint16_t *)buf8[buf_idx];
+//#else
+//        buf8_active = (uint8_t *)buf8[buf_idx];
+//#endif
+//        
+//        packets_sent += 1;
+//      }
+//    
+//      data_cycle++;
+//#endif  // !defined(SEND_EYE)
+//      
+//      // Do conversion for CAM2
+//      ADC_SoftwareStartConv(ADC1);
+//
+//      CAM1_INCV_BANK->ODR |= CAM1_INCV_PIN;
+//      CAM1_INCV_BANK->ODR &= ~CAM1_INCV_PIN;
+//    } // for (col)
+//    
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    
+//#ifdef USE_FPN_EYE
+//    // TODO: Get subsampled pixels...
+//    this_pixel = adc_values[1] - FPN_INORDER((row * 112) + 111);
+//#else
+//    this_pixel = adc_values[1];
+//#endif
+//    
+//    //      DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);      
+////    *(__IO uint32_t *) led1 = LED_LOW;
+////    *(__IO uint32_t *) led2 = LED_LOW;
+//    
+//    pred_img[row][111] = this_pixel;
+//    eye_pixels_collected++;
+////    min = (pred_img[row][111] < min) ? (pred_img[row][111]) : (min);
+////    max = (pred_img[row][111] > max) ? (pred_img[row][111]) : (max);
+//    
+//        if (MASK(current_subsample, 0) == row && 
+//            MASK(current_subsample, 1) == 111)
+//        {
+//          pixel_sum += this_pixel;
+//          
+//          // Standard deviation computation
+//          value = (float)this_pixel;
+//          tmpM = M;
+//          M += (value - tmpM) / k;
+//          S += (value - tmpM) * (value - M);
+//          k++;
+//          current_subsample++;
+//        }
+//    
+//#ifdef SEND_EYE
+//
+//#ifdef SEND_16BIT
+////    buf16[data_cycle] = adc_values[1];
+//    buf16[data_cycle] = pred_img[row][111];
+//#else
+//    buf8_active[data_cycle] = CONV_8BIT(pred_img[row][111]);
+//#endif
+//    
+//    if (data_cycle == (USB_PIXELS - 1)) {
+//      while (packet_sending == 1);
+//      
+//      data_cycle = -1;
+//      send_packet(buf8[buf_idx], PACKET_SIZE);
+//      packet_sending = 1;
+//      
+//      buf_idx = !buf_idx;
+//      
+//#ifdef SEND_16BIT
+//      buf16 = (uint16_t *)buf8[buf_idx];
+//#else
+//      buf8_active = (uint8_t *)buf8[buf_idx];
+//#endif
+//      
+//      packets_sent += 1;
+//    }
+//    data_cycle++;
+//#endif
+//    
+//#ifdef COLUMN_COLLECT
+//    inc_pointer_value(REG_COLSEL, 1, CAM1);
+//    inc_pointer_value(REG_COLSEL, 1, CAM2);
+//#else
+//    inc_pointer_value(REG_ROWSEL, 1, CAM1);
+//    inc_pointer_value(REG_ROWSEL, 1, CAM2);
+//#endif
+//  } // for (row)
+//  
+//  if (data_cycle != -1) {
+//    for (int i = data_cycle; i < USB_PIXELS; i++) {
+//#ifdef SEND_16BIT
+//      buf16[i] = 0;
+//#else
+//      buf8_active[i] = 0;
+//#endif
+//    }
+//    
+//    while (packet_sending == 1);
+//    send_packet(buf8[buf_idx], PACKET_SIZE);
+//    
+//    packet_sending = 1;
+//    while (packet_sending == 1);
+//    
+//    packets_sent += 1;
+//  }
+//  
+////  float mean = (float)pixel_sum / (112 * 112);
+//  float mean = (float)pixel_sum / (NUM_SUBSAMPLE);
+//  float std = sqrt(S / (k-1));
+//  
+//#if defined(OUTMODE) && !defined(COLUMN_COLLECT)
+//  last_avg = (uint16_t)mean;
+//#endif
+//  
+//  // Predict gaze, store results in global variable pred[]
+////  predict_gaze_fullimg((uint16_t*)pred_img, min, max);
+//  predict_gaze_fullmean((uint16_t*)pred_img, mean, std);
+//  
+//  data_cycle = 6;
+//#ifdef SEND_16BIT  
+////  buf16[0] = pred[0];
+////  buf16[1] = pred[1];
+//  param_packet[0] = 3;
+//  param_packet[2] = pred[0];
+//  param_packet[4] = pred[1];
+//  for (int i = 6; i < 11; i += 2) param_packet[i] = 1;
+//  for (int i = 1; i < 12; i += 2) param_packet[i] = 0;
+//#else
+//  param_packet[0] = 3;
+//  param_packet[1] = pred[0];
+//  param_packet[2] = pred[1];
+//  for (int i = 3; i < 6; i++)   param_packet[i] = 1;
+//#endif
+//
+//  send_packet(param_packet, PACKET_SIZE);
+//
+//  while(packet_sending == 1);
+//  
+////  clear_ENDP1_packet_buffers();
+//  send_empty_packet();
+//  while(packet_sending == 1);
+//  
+////  packet_sending = 1;
+//  send_empty_packet();
+//  while(packet_sending == 1);
+//  
+//  return 0;
+//}
 
-int stony_image_dual()
+int stony_cider_line(uint8_t rowcol_num, uint16_t *line_buf, uint8_t rowcol_sel)
 {
-  // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, 2 cameras
+  // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, only 1 camera
   // Double-buffered (2-dim array)
-  uint8_t buf8[2][112 * TX_ROWS * 2 * 2];
-  uint16_t *buf16 = (uint16_t *)buf8[0];
-  
-  uint16_t cam2_offset = CAM2_OFFSET;
+//  uint8_t buf8[2][112 * TX_ROWS * 2];  
   volatile uint16_t start, total;
-  uint8_t buf_idx = 0;
   
-  set_pointer_value(REG_ROWSEL, 0, CAM1);
-  set_pointer_value(REG_ROWSEL, 0, CAM2);
-
-  for (int row = 0, data_cycle = 0; row < 112; row++, data_cycle++) {
-    set_pointer_value(REG_COLSEL, 0, CAM1);
+  if (rowcol_sel == SEL_COL) {
+    set_pointer_value(REG_COLSEL, rowcol_num, CAM2);
+    set_pointer_value(REG_ROWSEL, 0, CAM2);
+  } else {
+    set_pointer_value(REG_ROWSEL, rowcol_num, CAM2);
     set_pointer_value(REG_COLSEL, 0, CAM2);
-    
-    delay_us(1);
-    
-    for (int col = 0; col < 112; col++) {      
-      CAM1_INPH_BANK->ODR |= CAM1_INPH_PIN;
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      CAM1_INPH_BANK->ODR &= ~CAM1_INPH_PIN;
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      
-      if (col != 0) {
-        buf16[(data_cycle * 112) + cam2_offset + (col - 1)] = adc_values[1];
-      }
-      
-      // Do conversion for CAM1
-      ADC_SoftwareStartConv(ADC1);
-      
-      if (col != 0) {
-        CAM2_INCV_BANK->ODR |= CAM2_INCV_PIN;
-        CAM2_INCV_BANK->ODR &= ~CAM2_INCV_PIN;
-      }
-      
-      CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      
-      buf16[(data_cycle * 112) + col] = adc_values[0];
-      
-      // Do conversion for CAM2
-      ADC_SoftwareStartConv(ADC1);
-
-      CAM1_INCV_BANK->ODR |= CAM1_INCV_PIN;
-      CAM1_INCV_BANK->ODR &= ~CAM1_INCV_PIN;
-    } // for (col)
-    
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    
-    buf16[(data_cycle * 112) + cam2_offset + 111] = adc_values[1];
-    
-    inc_pointer_value(REG_ROWSEL, 1, CAM1);
-    inc_pointer_value(REG_ROWSEL, 1, CAM2);
-
-    if (data_cycle == TX_ROWS - 1) {
-      if (row > TX_ROWS - 1) {
-        f_finish_write();
-      }
-      
-      if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, TX_BLOCKS) != RES_OK)      return -1;
-      
-      buf_idx = !buf_idx;
-      buf16 = (uint16_t *)buf8[buf_idx];
-      
-      sd_ptr += TX_BLOCKS;
-      data_cycle = -1;
-      
-#if (112 % TX_ROWS != 0)
-      if (row + TX_ROWS > 112) {
-        cam2_offset = CAM2_MOD_OFFSET;
-//        data_val = 0xCCCC;
-      }
-//      else
-//        data_val = 0xBBBB;
-#endif
-      
-//      if (row == 31)    return 0;
-    }
-
-  } // for (row)
-
-#if (112 % TX_ROWS != 0)
-  f_finish_write();
-  
-  if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, TX_MOD_BLOCKS) != RES_OK)      return -1;
-  sd_ptr += TX_MOD_BLOCKS;
-#endif
-  
-  f_finish_write();
-  
-  return 0;
-}
-
-int stony_image_single()
-{
-  // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row
-  // Double-buffered (2-dim array)
-  uint8_t buf8[2][112 * TX_ROWS * 2];
-  uint16_t *buf16 = (uint16_t *)buf8[0];
-  
-  volatile uint16_t start, total;
-  uint8_t buf_idx = 0;
-//  uint16_t min = 65535, max = 0;
-  
-  ADC_RegularChannelConfig(ADC1, CAM1_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
-  ADC_RegularChannelConfig(ADC1, CAM1_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
-  
-  set_pointer_value(REG_ROWSEL, 0, CAM1);
-
-  for (int row = 0, data_cycle = 0; row < 112; row++, data_cycle++) {
-    set_pointer_value(REG_COLSEL, 0, CAM1);
-    
-    delay_us(1);
-    
-    for (int col = 0; col < 112; col++) {      
-      CAM1_INPH_BANK->ODR |= CAM1_INPH_PIN;
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      CAM1_INPH_BANK->ODR &= ~CAM1_INPH_PIN;
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      
-      // Do conversion for CAM2
-      ADC_SoftwareStartConv(ADC1);
-      
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      
-      buf16[(data_cycle * 112) + col] = adc_values[adc_idx];
-      
-//      min = (adc_values[adc_idx] < min) ? (adc_values[adc_idx]) : (min);
-//      max = (adc_values[adc_idx] > max) ? (adc_values[adc_idx]) : (max);
-      
-      adc_idx = !adc_idx;
-
-      CAM1_INCV_BANK->ODR |= CAM1_INCV_PIN;
-      CAM1_INCV_BANK->ODR &= ~CAM1_INCV_PIN;
-    } // for (col)
-    
-    inc_pointer_value(REG_ROWSEL, 1, CAM1);
-
-    if (data_cycle == TX_ROWS - 1) {
-      if (row > TX_ROWS - 1) {
-        f_finish_write();
-      }
-      
-      if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, TX_BLOCKS / 2) != RES_OK)      return -1;
-      
-      buf_idx = !buf_idx;
-      buf16 = (uint16_t *)buf8[buf_idx];
-      
-      sd_ptr += TX_BLOCKS / 2;
-      data_cycle = -1;      
-//      if (row == 31)    return 0;
-    }
-  } // for (row)
-
-#if (112 % TX_ROWS != 0)
-  f_finish_write();
-  
-  if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, TX_MOD_BLOCKS / 2) != RES_OK)      return -1;
-  sd_ptr += TX_MOD_BLOCKS / 2;
-#endif
-  
-  f_finish_write();
-  
-//  last_max = max;
-//  last_min = min;
-  
-  return 0;
-}
-
-int stony_image_test()
-{
-  
-//  sd_ptr = 0; // FIX ME OH MY GOODNESS PLEASE FIX ME
-  
-  // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row
-  // Double-buffered (2-dim array)
-  uint8_t buf8[2][112 * TX_ROWS * 2];
-  uint16_t *buf16 = (uint16_t *)buf8[0];
-  uint16_t subsamples[NUM_SUBSAMPLE];
-  uint16_t sub_idx = 0;
-  uint16_t pix_value;
-  
-  volatile uint16_t start, total;
-  uint8_t buf_idx = 0;
-  
-  uint16_t min = 65535, max = 0;
-  
-  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
-  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
-  
-  set_pointer_value(REG_ROWSEL, 0, CAM2);
-
-  for (int row = 0, data_cycle = 0; row < 112; row++, data_cycle++) {
-    set_pointer_value(REG_COLSEL, 0, CAM2);
-    
-    delay_us(1);
-    
-    for (int col = 0; col < 112; col++) {      
-      CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      
-      // Do conversion for CAM2
-      ADC_SoftwareStartConv(ADC1);
-      
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      
-      
-//      buf16[(data_cycle * 112) + col] = adc_values[adc_idx];
-      pix_value = adc_values[adc_idx];
-      buf16[(data_cycle * 112) + col] = pix_value;
-
-      if (sub_idx < NUM_SUBSAMPLE && row == MASK(sub_idx, 0) && col == MASK(sub_idx, 1)) {
-//        uint16_t temp = buf16[(data_cycle * 112) + col];
-        subsamples[sub_idx] = pix_value - FPN(sub_idx);
-        
-        min = (subsamples[sub_idx] < min) ? (subsamples[sub_idx]) : (min);
-        max = (subsamples[sub_idx] > max) ? (subsamples[sub_idx]) : (max);
-        
-        sub_idx++;
-      }
-      adc_idx = !adc_idx;
-
-      CAM2_INCV_BANK->ODR |= CAM2_INCV_PIN;
-      CAM2_INCV_BANK->ODR &= ~CAM2_INCV_PIN;
-    } // for (col)
-    
-    inc_pointer_value(REG_ROWSEL, 1, CAM2);
-
-    if (data_cycle == TX_ROWS - 1) {
-      if (row > TX_ROWS - 1) {
-        f_finish_write();
-      }
-      
-      if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, TX_BLOCKS / 2) != RES_OK)      return -1;
-      
-      buf_idx = !buf_idx;
-      buf16 = (uint16_t *)buf8[buf_idx];
-      
-      sd_ptr += TX_BLOCKS / 2;
-      data_cycle = -1;      
-//      if (row == 31)    return 0;
-    }
-    
-  } // for (row)
-
-#if (112 % TX_ROWS != 0)
-  f_finish_write();
-  
-  if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, TX_MOD_BLOCKS / 2) != RES_OK)      return -1;
-  sd_ptr += TX_MOD_BLOCKS / 2;
-#endif
-  
-  f_finish_write();
-  
-  if (sub_idx < NUM_SUBSAMPLE)
-    while(1);
-    
-  predict_gaze(subsamples, last_min, last_max);
-  
-  last_min = min;
-  last_max = max;
-  
-  return 0;
-}
-
-int stony_image_minmax()
-{
-  uint16_t lastRow, lastCol;
-  uint16_t pix_value;
-  
-  uint16_t min = 65535, max = 0;
-  
-  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
-  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
-  
-  set_pointer_value(REG_ROWSEL, MASK(0, 0), CAM2);
-  set_pointer_value(REG_COLSEL, 0, CAM2);
-  
-  lastRow = MASK(0, 0);
-  lastCol = 0;
-
-  for (int pixel = 0; pixel < num_subsample; pixel++) {
-      if (MASK(pixel, 0) != lastRow)
-      {
-        char diff = MASK(pixel, 0) - lastRow;
-        
-        inc_pointer_value(REG_ROWSEL, diff, CAM2);
-        
-        lastRow = MASK(pixel, 0);
-
-        set_pointer_value(REG_COLSEL, MASK(pixel, 1), CAM2);
-        
-        lastCol = MASK(pixel, 1);
-        
-        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      } else {
-        inc_value(MASK(pixel, 1) - lastCol, CAM2);
-        
-        lastCol = MASK(pixel, 1);
-      }
-      
-      CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      
-      /* Start ADC1 Software Conversion */
-      ADC_SoftwareStartConv(ADC1);
-      
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-        
-//      subsamples[pixel] = adc_values[adc_idx] - FPN(pixel);
-      pix_value = adc_values[adc_idx] - FPN(pixel);
-      adc_idx = !adc_idx;
-      
-      min = (pix_value < min) ? (pix_value) : (min);
-      max = (pix_value > max) ? (pix_value) : (max);
   }
   
-  last_min = min;
-  last_max = max;
+  delay_us(1);
+  
+  for (int i = 0; i < 112; i++) {      
+    CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    
+    // Do conversion for SINGLE_CAM
+    ADC_SoftwareStartConv(ADC1);
+    
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    
+    if (rowcol_sel == SEL_COL)
+//      line_buf[i] = adc_values[adc_idx] - COL_FPN((i * 112) + rowcol_num);
+      line_buf[i] = adc_values[adc_idx] - COL_FPN((rowcol_num * 112) + i);
+    else
+      line_buf[i] = adc_values[adc_idx] - ROW_FPN((rowcol_num * 112) + i);
+    
+    adc_idx = !adc_idx;
+    
+    CAM2_INCV_BANK->ODR |= CAM2_INCV_PIN;
+    CAM2_INCV_BANK->ODR &= ~CAM2_INCV_PIN;
+  } // for (col)
   
   return 0;
 }
 
-
-void run_cider(float last_r)
+int run_cider(uint8_t *cider_xy)
 {
-  uint16_t row[112], col[112];
   uint8_t row_edges[6] = {0, 0, 0, 0, 0, 0}, col_edges[6] = {0, 0, 0, 0, 0, 0};
-  uint8_t row_start, col_start;
+  int pupil_found = -1;
+  
+  cider_xy[1] = (uint8_t)((pred[1] < 0 ? 0 : pred[1]) > 111 ? 111 : pred[1]);
+  cider_xy[0] = (uint8_t)((pred[0] < 0 ? 0 : pred[0]) > 111 ? 111 : pred[0]);
+  
+  uint8_t col_start = cider_xy[1], row_start = cider_xy[0];
   
   float best_ratio = 0, best_r = 0;
   uint8_t best_center[2] = {0, 0};
   
-//  find_pupil_edge(row_start, row_edges, row);
-//  find_pupil_edge(col_start, col_edges, col);
+  // Configure ADC to read only from eye camera
+  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
+  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
   
-  row_start = 82; col_start = 53;
-  col_edges[0] = 47; col_edges[1] = 63;
-  row_edges[0] = 80; row_edges[1] = 85;
-  row_edges[2] = 72; row_edges[3] = 85;
+  uint16_t row[112], col[112];
+  stony_cider_line(col_start, row, SEL_ROW);
+  stony_cider_line(row_start, col, SEL_COL);
   
-  for (uint8_t i = 0; row_edges[i] != 0 || i==0; i += 2) {
+  // Reconfigure ADC for dual-camera reading
+  ADC_RegularChannelConfig(ADC1, CAM1_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
+  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 2, ADC_SampleTime_4Cycles); // AMM
+  
+  find_pupil_edge(row_start, row_edges, row);
+  find_pupil_edge(col_start, col_edges, col);
+
+  for (uint8_t i = 0; (row_edges[i] != 0 || i==0) && i < 6; i += 2) {
     // Pupil can't be smaller than 4 pixels across
     if ((row_edges[i] - row_edges[i + 1]) < 4 && (row_edges[i] - row_edges[i + 1]) > -4)
       continue;
     
-    for (uint8_t j = 0; col_edges[j] != 0 || j==0; j += 2) {
+    for (uint8_t j = 0; (col_edges[j] != 0 || j==0) && j < 6; j += 2) {
       // Pupil can't be smaller than 4 pixels across
       if ((col_edges[j] - col_edges[j + 1]) < 4 && (col_edges[j] - col_edges[j + 1]) > -4)
         continue;
@@ -792,15 +997,19 @@ void run_cider(float last_r)
       if (last_r != 0 && (r / last_r < 0.75 || r / last_r > 1/0.75))
           continue;
       
+      pupil_found = 1;
       best_ratio = ratio; best_r = r;
       best_center[0] = x_mid >= 0 ? (uint8_t)(x_mid+0.5) : (uint8_t)(x_mid-0.5);
       best_center[1] = y_mid >= 0 ? (uint8_t)(y_mid+0.5) : (uint8_t)(y_mid-0.5);
     }
   }
-          
+  
   pred[0] = best_center[0];
   pred[1] = best_center[1];
   pred_radius = best_r;
+  last_r = best_r;
+
+  return pupil_found;
 }
 
 void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
@@ -835,6 +1044,12 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
     
     med_buf[med_idx] = next_pixel;
     med_idx = !med_idx;
+  }
+  
+  // Then percentile clamping
+  uint16_t perc_val = quick_percentile(pixels);
+  for (uint8_t i = 0; i < 112; i++) {
+    if (pixels[i] < perc_val)   pixels[i] = perc_val;
   }
   
   // Next, do convolution
@@ -947,21 +1162,425 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
   edges[1] += (edges[1] == 111 ? 0 : CONV_OFFSET);
   edge_idx = 2;
   
-  // Check if the region has a specular point on either end
-  for (uint8_t i = 0; i < spec_idx; i++) {
-    if (spec_regions[i] == local_regions[lr_min] - 1) {
-      edges[edge_idx] = peaks[local_regions[lr_min] - 1] + CONV_OFFSET;
-      edges[edge_idx+1] = peaks[local_regions[lr_min] + 1] + CONV_OFFSET;
-      edge_idx += 2;
-    } else if (spec_regions[i] == local_regions[lr_min] + 1) {
-      edges[edge_idx] = peaks[local_regions[lr_min]] + CONV_OFFSET;
-      edges[edge_idx+1] = peaks[local_regions[lr_min] + 2] + CONV_OFFSET;
-      edge_idx += 2;
-    }
-  }
+//  // Check if the region has a specular point on either end
+//  for (uint8_t i = 0; i < spec_idx; i++) {
+//    if (spec_regions[i] == local_regions[lr_min] - 1) {
+//      edges[edge_idx] = peaks[local_regions[lr_min] - 1] + CONV_OFFSET;
+//      edges[edge_idx+1] = peaks[local_regions[lr_min] + 1] + CONV_OFFSET;
+//      edge_idx += 2;
+//    } else if (spec_regions[i] == local_regions[lr_min] + 1) {
+//      edges[edge_idx] = peaks[local_regions[lr_min]] + CONV_OFFSET;
+//      edges[edge_idx+1] = peaks[local_regions[lr_min] + 2] + CONV_OFFSET;
+//      edge_idx += 2;
+//    }
+//  }
   
   return;       // Edge data is stored in argument array
 }
+
+uint16_t quick_percentile(uint16_t *base_row)
+{
+  uint16_t row[112];
+  uint16_t r, w, mid;
+  
+  for (uint16_t i = 0; i < 112; i++) {
+    row[i] = base_row[i];
+  }
+  
+  uint8_t from = 0, to = 111;
+  
+  // Percentile value is hardcoded so it doesn't have to be computed at runtime
+  uint8_t k = (((112 * 100) * CIDER_PERCENTILE) / 10000);
+  
+  // if from == to we reached the kth element
+  while (from < to) {
+    r = from, w = to;
+    mid = row[(r + w) / 2];
+    
+    // stop if the reader and writer meets
+    while (r < w) {
+      
+      if (row[r] >= mid) { // put the large values at the end
+        uint16_t tmp = row[w];
+        row[w] = row[r];
+        row[r] = tmp;
+        w--;
+      } else { // the value is smaller than the pivot, skip
+        r++;
+      }
+    }
+    
+    // if we stepped up (r++) we need to step one down
+    if (row[r] > mid && r != 0)    
+      r--;
+    
+    // the r pointer is on the end of the first k elements
+    if (k <= r) {
+      to = r;
+    } else {
+      from = r + 1;
+    }
+  }
+  
+  return row[k];
+}
+//
+//int stony_send_cider_image(uint8_t *cider_rowcol, uint8_t cider_failed)
+//{
+//  __IO uint32_t led1 = 0, led2 = 0;
+//  uint32_t DAC_Align = DAC_Align_12b_R;
+//  
+//  led1 = led2 = (uint32_t)DAC_BASE;
+//  led1 += DHR12R1_OFFSET + DAC_Align;
+//  led2 += DHR12R2_OFFSET + DAC_Align;
+//  
+////  *(__IO uint32_t *) led1 = LED_LOW;
+////  *(__IO uint32_t *) led2 = LED_LOW;
+//  
+//  // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, 2 cameras
+//  // Double-buffered (2-dim array)
+//  uint8_t buf8[2][USB_PIXELS * 2];
+//  
+//  uint32_t pixel_sum = 0;
+//  float M = 0.0, S = 0.0;
+//  float value, tmpM;
+//  int k = 1;
+//  
+//  uint16_t pred_img[112][112];
+//  uint8_t buf_idx = 0;
+//  
+//  uint16_t this_pixel = 0;
+//  uint32_t eye_pixels_collected = -1;
+//  uint32_t current_subsample = 0;
+//
+//#ifdef SEND_8BIT
+//  for (int i = 0; i < 2; i++) {
+//    for (int j = 0; j < USB_PIXELS * 2; j++) {
+//      buf8[i][j] = 0;
+//    }
+//  }
+//#endif
+//
+//#ifdef SEND_16BIT
+//  uint16_t *buf16 = (uint16_t *)buf8[0];
+//#else
+//  uint8_t *buf8_active = (uint8_t *)buf8[0];
+//#endif
+//  
+//#ifdef COLUMN_COLLECT
+//  set_pointer_value(REG_COLSEL, 0, CAM1);
+//  set_pointer_value(REG_COLSEL, 0, CAM2);
+//#else
+//  set_pointer_value(REG_ROWSEL, 0, CAM1);
+//  set_pointer_value(REG_ROWSEL, 0, CAM2);
+//#endif
+//  
+////  max = 0;
+////  min = 1000;
+//
+//  int data_cycle = 0;
+//  
+//  uint16_t packets_sent = 0;  // For debug purposes only
+////  uint16_t start = 0, total = 0;
+//  for (int row = 0; row < 112; row++) {    
+//#ifdef COLUMN_COLLECT
+//    set_pointer_value(REG_ROWSEL, 0, CAM1);
+//    set_pointer_value(REG_ROWSEL, 0, CAM2);
+//#else
+//    set_pointer_value(REG_COLSEL, 0, CAM1);
+//    set_pointer_value(REG_COLSEL, 0, CAM2);
+//#endif
+//    
+//    delay_us(1);
+//    
+//    for (int col = 0; col < 112; col++) {        
+//      CAM1_INPH_BANK->ODR |= CAM1_INPH_PIN;
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      CAM1_INPH_BANK->ODR &= ~CAM1_INPH_PIN;
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      
+//      if (col != 0) {
+//        
+//#ifdef USE_FPN_EYE
+//        this_pixel = adc_values[1] - FPN_INORDER((row * 112) + (col - 1));
+//#else
+//        this_pixel = adc_values[1];
+//#endif
+//
+//#if defined(OUTMODE) && !defined(COLUMN_COLLECT)
+//      // These pixels don't work in outmode for some reason
+//      // Replace them with the last image's average value
+//#ifdef COLUMN_COLLECT
+//      if (col == 48 && row < 6)
+//        this_pixel = last_avg;
+//#else
+//      if (row == 48 && col < 6)
+//        this_pixel = last_avg;
+//#endif
+//#endif
+//        
+//        //      DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);      
+////        *(__IO uint32_t *) led1 = LED_LOW;
+////        *(__IO uint32_t *) led2 = LED_LOW;
+//        
+//        pred_img[row][col - 1] = this_pixel;
+//        eye_pixels_collected++;
+////        min = (this_pixel < min) ? (this_pixel) : (min);
+////        max = (this_pixel > max) ? (this_pixel) : (max);
+//        
+//        if (MASK(current_subsample, 0) == row && 
+//            MASK(current_subsample, 1) == col - 1)
+//        {
+//          pixel_sum += this_pixel;
+//          
+//          // Standard deviation computation
+//          value = (float)this_pixel;
+//          tmpM = M;
+//          M += (value - tmpM) / k;
+//          S += (value - tmpM) * (value - M);
+//          k++;
+//          current_subsample++;
+//        }
+//
+//#ifdef SEND_EYE
+//
+//#ifdef SEND_16BIT
+////        buf16[data_cycle] = adc_values[1];
+//        buf16[data_cycle] = this_pixel;
+//#else
+//        buf8_active[data_cycle] = CONV_8BIT(this_pixel);
+//#endif
+//        
+//        if (data_cycle == (USB_PIXELS - 1)) {
+//          while (packet_sending == 1);
+//          
+//          data_cycle = -1;
+//          send_packet(buf8[buf_idx], PACKET_SIZE);
+//          packet_sending = 1;
+//          
+//          buf_idx = !buf_idx;
+//          
+//#ifdef SEND_16BIT
+//          buf16 = (uint16_t *)buf8[buf_idx];
+//#else
+//          buf8_active = (uint8_t *)buf8[buf_idx];
+//#endif
+//          
+//          packets_sent += 1;
+//        }
+//        data_cycle++;
+//#endif
+//        
+//      }
+//      
+//      // Do conversion for CAM1
+//      ADC_SoftwareStartConv(ADC1);
+//      
+//      if (col != 0) {
+//        CAM2_INCV_BANK->ODR |= CAM2_INCV_PIN;
+//        CAM2_INCV_BANK->ODR &= ~CAM2_INCV_PIN;
+//      }
+//      
+//      //      DAC_SetChannel1Data(DAC_Align_12b_R, LED_HIGH);
+////      *(__IO uint32_t *) led1 = LED_HIGH;
+////      *(__IO uint32_t *) led2 = LED_HIGH;
+//      
+//      CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      
+//#if defined(OUTMODE) && !defined(COLUMN_COLLECT)
+//      // These pixels don't work in outmode for some reason
+//      // Replace them with the last image's average value
+//#ifdef COLUMN_COLLECT
+//      if (col == 48 && row < 6)
+//        this_pixel = last_avg;
+//#else
+//      if (row == 48 && col < 6)
+//        this_pixel = last_avg;
+//#endif
+//#endif
+//      
+//#if !defined(SEND_EYE)
+//      
+//#ifdef SEND_16BIT
+//      buf16[data_cycle] = adc_values[0];
+//#else
+//      buf8_active[data_cycle] = CONV_8BIT(adc_values[0]);
+//#endif
+//      
+//      if (data_cycle == (USB_PIXELS - 1)) {
+//        while (packet_sending == 1);
+//        
+//        data_cycle = -1;
+//        send_packet(buf8[buf_idx], PACKET_SIZE);
+//        packet_sending = 1;
+//        
+//        buf_idx = !buf_idx;
+//        
+//#ifdef SEND_16BIT
+//        buf16 = (uint16_t *)buf8[buf_idx];
+//#else
+//        buf8_active = (uint8_t *)buf8[buf_idx];
+//#endif
+//        
+//        packets_sent += 1;
+//      }
+//    
+//      data_cycle++;
+//#endif  // !defined(SEND_EYE)
+//      
+//      // Do conversion for CAM2
+//      ADC_SoftwareStartConv(ADC1);
+//
+//      CAM1_INCV_BANK->ODR |= CAM1_INCV_PIN;
+//      CAM1_INCV_BANK->ODR &= ~CAM1_INCV_PIN;
+//    } // for (col)
+//    
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    
+//#ifdef USE_FPN_EYE
+//    // TODO: Get subsampled pixels...
+//    this_pixel = adc_values[1] - FPN_INORDER((row * 112) + 111);
+//#else
+//    this_pixel = adc_values[1];
+//#endif
+//    
+//    //      DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);      
+////    *(__IO uint32_t *) led1 = LED_LOW;
+////    *(__IO uint32_t *) led2 = LED_LOW;
+//    
+//    pred_img[row][111] = this_pixel;
+//    eye_pixels_collected++;
+////    min = (pred_img[row][111] < min) ? (pred_img[row][111]) : (min);
+////    max = (pred_img[row][111] > max) ? (pred_img[row][111]) : (max);
+//    
+//        if (MASK(current_subsample, 0) == row && 
+//            MASK(current_subsample, 1) == 111)
+//        {
+//          pixel_sum += this_pixel;
+//          
+//          // Standard deviation computation
+//          value = (float)this_pixel;
+//          tmpM = M;
+//          M += (value - tmpM) / k;
+//          S += (value - tmpM) * (value - M);
+//          k++;
+//          current_subsample++;
+//        }
+//    
+//#ifdef SEND_EYE
+//        
+//#ifdef SEND_16BIT
+////    buf16[data_cycle] = adc_values[1];
+//    buf16[data_cycle] = pred_img[row][111];
+//#else
+//    buf8_active[data_cycle] = CONV_8BIT(pred_img[row][111]);
+//#endif
+//    
+//    if (data_cycle == (USB_PIXELS - 1)) {
+//      while (packet_sending == 1);
+//      
+//      data_cycle = -1;
+//      send_packet(buf8[buf_idx], PACKET_SIZE);
+//      packet_sending = 1;
+//      
+//      buf_idx = !buf_idx;
+//      
+//#ifdef SEND_16BIT
+//      buf16 = (uint16_t *)buf8[buf_idx];
+//#else
+//      buf8_active = (uint8_t *)buf8[buf_idx];
+//#endif
+//      
+//      packets_sent += 1;
+//    }
+//    data_cycle++;
+//#endif
+//    
+//#ifdef COLUMN_COLLECT
+//    inc_pointer_value(REG_COLSEL, 1, CAM1);
+//    inc_pointer_value(REG_COLSEL, 1, CAM2);
+//#else
+//    inc_pointer_value(REG_ROWSEL, 1, CAM1);
+//    inc_pointer_value(REG_ROWSEL, 1, CAM2);
+//#endif
+//  } // for (row)
+//  
+//  if (data_cycle != -1) {
+//    for (int i = data_cycle; i < USB_PIXELS; i++) {
+//#ifdef SEND_16BIT
+//      buf16[i] = 0;
+//#else
+//      buf8_active[i] = 0;
+//#endif
+//    }
+//    
+//    while (packet_sending == 1);
+//    send_packet(buf8[buf_idx], PACKET_SIZE);
+//    
+//    packet_sending = 1;
+//    while (packet_sending == 1);
+//    
+//    packets_sent += 1;
+//  }
+//  
+////  float mean = (float)pixel_sum / (112 * 112);
+//#ifdef OUTMODE
+//  float mean = (float)pixel_sum / (NUM_SUBSAMPLE);
+//#endif
+//  
+//  float std = sqrt(S / (k-1));
+//  
+//#if defined(OUTMODE) && !defined(COLUMN_COLLECT)
+//  last_avg = (uint16_t)mean;
+//#endif
+//  
+//  data_cycle = 6;
+//#ifdef SEND_16BIT  
+////  buf16[0] = pred[0];
+////  buf16[1] = pred[1];
+//  param_packet[0] = cider_failed + 1;
+//  param_packet[2] = pred[0];
+//  param_packet[4] = pred[1];
+//  param_packet[6] = cider_rowcol[1];
+//  param_packet[8] = cider_rowcol[0];
+//  param_packet[10] = (uint8_t)pred_radius;
+//  for (int i = 1; i < 12; i += 2) param_packet[i] = 0;
+//#else
+//  param_packet[0] = cider_failed + 1;
+//  param_packet[1] = pred[0];
+//  param_packet[2] = pred[1];
+//  param_packet[3] = cider_rowcol[0];
+//  param_packet[4] = cider_rowcol[1];
+//  param_packet[5] = (uint8_t)pred_radius;
+//#endif
+//
+//  send_packet(param_packet, PACKET_SIZE);
+//
+//  while(packet_sending == 1);
+//  
+////  clear_ENDP1_packet_buffers();
+//  send_empty_packet();
+//  while(packet_sending == 1);
+//  
+////  packet_sending = 1;
+//  send_empty_packet();
+//  while(packet_sending == 1);
+//  
+//  return 0;
+//}
 
 int stony_image_subsample()
 {
@@ -1033,8 +1652,8 @@ int stony_image_subsample()
         asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       }
       
-//      subsamples[pixel] = adc_values[adc_idx] - FPN(pixel);
-      pix_value = adc_values[adc_idx] - FPN(pixel);
+//      subsamples[pixel] = adc_values[adc_idx] - ROW_FPN(pixel);
+      pix_value = adc_values[adc_idx] - ROW_FPN(pixel);
       adc_idx = !adc_idx;
       
 //      subsamples[pixel] = pix_value;    // AMM
@@ -1056,6 +1675,63 @@ int stony_image_subsample()
   
   last_min = min;
   last_max = max;
+  
+  return 0;
+}
+
+int stony_image_subsample_nopred()
+{
+  uint16_t lastRow, lastCol;
+  uint16_t pix_value;
+  
+  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
+  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
+  
+  set_pointer_value(REG_ROWSEL, MASK(0, 0), CAM2);
+  set_pointer_value(REG_COLSEL, 0, CAM2);
+  
+  lastRow = MASK(0, 0);
+  lastCol = 0;
+
+  for (int pixel = 0; pixel < NUM_SUBSAMPLE; pixel++) {
+      if (MASK(pixel, 0) != lastRow)
+      {
+        char diff = MASK(pixel, 0) - lastRow;
+        
+        inc_pointer_value(REG_ROWSEL, diff, CAM2);
+        
+        lastRow = MASK(pixel, 0);
+
+        set_pointer_value(REG_COLSEL, MASK(pixel, 1), CAM2);
+        
+        lastCol = MASK(pixel, 1);
+        
+        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      } else {
+        inc_value(MASK(pixel, 1) - lastCol, CAM2);
+        
+        lastCol = MASK(pixel, 1);
+      }
+      
+      CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      
+      /* Start ADC1 Software Conversion */
+      ADC_SoftwareStartConv(ADC1);
+      
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      
+      pix_value = adc_values[adc_idx] - ROW_FPN(pixel);
+      adc_idx = !adc_idx;
+  }
   
   return 0;
 }

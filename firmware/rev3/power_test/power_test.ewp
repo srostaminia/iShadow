@@ -1967,12 +1967,6 @@
     <file>
       <name>$PROJ_DIR$\libstony.h</name>
     </file>
-    <file>
-      <name>$PROJ_DIR$\predict_gaze.c</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\predict_gaze.h</name>
-    </file>
   </group>
   <file>
     <name>$EW_DIR$\arm\inc\ST\iostm32L151xx.h</name>
@@ -1982,6 +1976,12 @@
   </file>
   <file>
     <name>$PROJ_DIR$\main.h</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\..\isoch_camera\predict_gaze.c</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\..\isoch_camera\predict_gaze.h</name>
   </file>
   <file>
     <name>$PROJ_DIR$\TestSDCard.c</name>

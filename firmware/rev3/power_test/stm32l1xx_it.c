@@ -224,4 +224,19 @@ void DMA1_Channel1_IRQHandler(void)
   return;
 }
 
+ /**
+   * @brief  This function handles RTC Auto wake-up interrupt request.
+   * @param  None
+   * @retval None
+   */
+void RTC_WKUP_IRQHandler(void)
+{
+  if(RTC_GetITStatus(RTC_IT_WUT) != RESET)
+  {
+    RTC_ClearITPendingBit(RTC_IT_WUT);
+    EXTI_ClearITPendingBit(EXTI_Line20);
+  }
+}
+
+
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
