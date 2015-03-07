@@ -19,6 +19,9 @@ int main()
   config_ms_timer();
   config_us_delay();
   
+  stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3,
+             SMH_GAIN_3V3, SMH_SELAMP_3V3);
+  
   uint16_t model_time[] = {0, 0};
   get_model_time(model_time);
   
@@ -29,16 +32,6 @@ int main()
   }
   
   const uint16_t SLEEP_TIME = 250 - model_sum;
-  
-  __IO uint32_t led1 = 0, led2 = 0;
-  uint32_t DAC_Align = DAC_Align_12b_R;
-  
-  led1 = led2 = (uint32_t)DAC_BASE;
-  led1 += DHR12R1_OFFSET + DAC_Align;
-  led2 += DHR12R2_OFFSET + DAC_Align;
-  
-  *(__IO uint32_t *) led1 = LED_LOW;
-  *(__IO uint32_t *) led2 = LED_LOW;
   
   uint8_t cycle = 1;
   
@@ -54,6 +47,9 @@ int main()
     if (cycle == 1 || cycle == 2) {      
       DAC_SetChannel2Data(DAC_Align_12b_R, LED_HIGH);
       DAC_SetChannel1Data(DAC_Align_12b_R, LED_HIGH);
+    } else {
+      DAC_SetChannel2Data(DAC_Align_12b_R, LED_LOW);
+      DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);
     }
     
     if (cycle == 1 || cycle == 3) {
@@ -62,7 +58,6 @@ int main()
     }
     
 //    config_ms_timer();
-    
     stony_image_subsample();
     
     if (cycle == 1 || cycle == 2) {
@@ -159,6 +154,8 @@ void delay_us(int delayTime)
 void get_model_time(uint16_t *model_time) {
   volatile uint16_t full_time, acq_time, start;
   
+  stony_image_subsample();
+  
   start = MS_TIME;
   stony_image_subsample();
   full_time = MS_TIME - start;
@@ -187,6 +184,9 @@ void get_model_time(uint16_t *model_time) {
   */
 void StopRTCLSIMode_Measure(uint16_t sleep_time)
 {
+  // 37 kHz with a clock divider of 16
+  uint32_t sleep_regval = (37 * sleep_time) / 16;
+  
   NVIC_InitTypeDef  NVIC_InitStructure;
   EXTI_InitTypeDef  EXTI_InitStructure;
   GPIO_InitTypeDef  GPIO_InitStructure;
@@ -275,7 +275,7 @@ void StopRTCLSIMode_Measure(uint16_t sleep_time)
      RTC Clock Source LSI ~37KHz  
   */
   RTC_WakeUpClockConfig(RTC_WakeUpClock_RTCCLK_Div16);
-  RTC_SetWakeUpCounter(0x2421);
+  RTC_SetWakeUpCounter(sleep_regval);
 
   /* Enable the Wakeup Interrupt */
   RTC_ITConfig(RTC_IT_WUT, ENABLE);

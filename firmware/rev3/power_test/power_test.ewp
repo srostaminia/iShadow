@@ -229,7 +229,7 @@
         <option>
           <name>CCAllowList</name>
           <version>1</version>
-          <state>1111111</state>
+          <state>0000000</state>
         </option>
         <option>
           <name>CCDebugInfo</name>
@@ -321,7 +321,7 @@
         </option>
         <option>
           <name>CCOptLevel</name>
-          <state>3</state>
+          <state>0</state>
         </option>
         <option>
           <name>CCOptStrategy</name>
@@ -330,7 +330,7 @@
         </option>
         <option>
           <name>CCOptLevelSlave</name>
-          <state>3</state>
+          <state>0</state>
         </option>
         <option>
           <name>CompilerMisraRules98</name>
@@ -643,7 +643,7 @@
         </option>
         <option>
           <name>IlinkRawBinaryFile</name>
-          <state>Z:\ammayber On My Mac\eye_exper\embedded_models\addison_nir_newframes_lam0-01_420p.raw</state>
+          <state>Z:\ammayber On My Mac\eye_exper\embedded_models\addison_nnf2_lam0-02154_3242p.raw</state>
         </option>
         <option>
           <name>IlinkRawBinarySymbol</name>
