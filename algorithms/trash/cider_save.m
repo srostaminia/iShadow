@@ -1,4 +1,4 @@
-function [ind,chord_length,pred,radii,ann_used]=cider(X,rep_file,chord_length,thresh,model,make_vid,nDim,scaleVect,contrast_method,percentile)
+function [ind,chord_length,pred,radii,ann_used]=cider_save(X,rep_file,chord_length,thresh,model,make_vid,nDim,scaleVect,contrast_method)
 %function [chord_length,pred,radii,ann_used]=cider(X,ann_file,chord_length,thresh,model,make_vid,nDim,scaleVect)
     addpath('~/iShadow/algorithms/ann/lib');
     addpath('~/iShadow/algorithms/ann/run_ann');
@@ -8,11 +8,11 @@ function [ind,chord_length,pred,radii,ann_used]=cider(X,rep_file,chord_length,th
     X_adjust = X(:,:);
     
     if strcmp(contrast_method,'percentile')
-        X_adjust(:,ind(1:end-1)) = clip_perc(X(:,ind(1:end-1)),percentile);
+        X_adjust(:,ind(1:end-1)) = clip_percentile(X(:,ind(1:end-1)));
     elseif strcmp(contrast_method,'mean')
         X_adjust(:,ind(1:end-1)) = mean_contrast_adjust_nosave(X(:,ind(1:end-1)));
     elseif strcmp(contrast_method,'median')
-        X_adjust(:,ind(1:end-1)) = median_filter_subpixels(X,ind(1:end-1));
+        X_adjust(:,ind(1:end-1)) = median_filter_subpixels(X,ind);
     else
         fprintf('ERROR: need to define contrast method');
         return;

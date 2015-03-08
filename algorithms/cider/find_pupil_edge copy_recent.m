@@ -10,10 +10,6 @@ function edges = find_pupil_edge(start, pixels, peak_thresh, do_round, plot_debu
     % First do median filtering
     pixels = medfilt1(pixels,3);
     
-    % Then do quantile clamping
-    quantile = quick_quantile(pixels, 0.1);
-    pixels = bsxfun(@max, pixels, quantile);
-    
     if plot_debug
         figure;
         subplot(3,1,1);

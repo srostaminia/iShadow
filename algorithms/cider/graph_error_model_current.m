@@ -13,17 +13,25 @@
 
 
 %Error of predicted pupil center for 6 different users for different ANN sizes'),'Each of the ten points represents the average of errors for 5 repetitions of the experiment.','ANN size increases from left to right.'
-function [errStEachSub,err_line_StEachSub,meanErrAllSub,stdErrAllSub,indPerForAllSub,meanErr_line_ForAllSub,stdErr_line_ForAllSub,meanAnnUsedForAllSub,stdAnnUsedForAllSub,meanLineUsedForAllSub,stdLineUsedForAllSub]=graph_error_model_current_fixed(indFile,linestyle,modelName,subList,rootDir,lightingSubFolder,objToPlot,subModelName,compareLine)
+function [nLambda,errStEachSub,err_line_StEachSub,meanErrAllSub,stdErrAllSub,indPerForAllSub,meanErr_line_ForAllSub,stdErr_line_ForAllSub,meanAnnUsedForAllSub,stdAnnUsedForAllSub,meanLineUsedForAllSub,stdLineUsedForAllSub]=graph_error_model_current(indFile,linestyle,modelName,subList,rootDir,lightingSubFolder,objToPlot,subModelName,compareLine)
 %function [errStEachSub,meanErrAllSub,stdErrAllSub,indPerForAllSub,meanErr_line_ForAllSub,stdErr_line_ForAllSub,meanAnnUsedForAllSub,stdAnnUsedForAllSub,meanLineUsedForAllSub,stdLineUsedForAllSub]=graph_error_model_current(indFile,linestyle,modelName,subList,rootDir,lightingSubFolder,objToPlot,subModelName)
 
 uniFolderList={'uniquefy_0'};%,'uniquefy_1'};
 uni=uniFolderList{1};
-lambdaFolderList={'subset_l1_init_strips_k7_lambda0.000100','subset_l1_init_strips_k7_lambda0.000215','subset_l1_init_strips_k7_lambda0.000464','subset_l1_init_strips_k7_lambda0.001000','subset_l1_init_strips_k7_lambda0.002154','subset_l1_init_strips_k7_lambda0.004642','subset_l1_init_strips_k7_lambda0.010000','subset_l1_init_strips_k7_lambda0.021544','subset_l1_init_strips_k7_lambda0.046416','subset_l1_init_strips_k7_lambda0.100000'};
-lambdaStrList={'lambda0.000100','lambda0.000215','lambda0.000464','lambda0.001000','lambda0.002154','lambda0.004642','lambda0.010000','lambda0.021544','lambda0.046416','lambda0.100000'};
+%lambdaFolderList={'subset_l1_init_strips_k7_lambda0.001000','subset_l1_init_strips_k7_lambda0.010000'};
+lambdaFolderList={'subset_l1_init_strips_k7_lambda0.000100','subset_l1_init_strips_k7_lambda0.000215','subset_l1_init_strips_k7_lambda0.000464','subset_l1_init_strips_k7_lambda0.001000','subset_l1_init_strips_k7_lambda0.002154','subset_l1_init_strips_k7_lambda0.004642','subset_l1_init_strips_k7_lambda0.010000','subset_l1_init_strips_k7_lambda0.021544','subset_l1_init_strips_k7_lambda0.046416'};%,'subset_l1_init_strips_k7_lambda0.100000'};
+%lambdaStrList={'lambda0.001000','lambda0.010000'};
+lambdaStrList={'lambda0.000100','lambda0.000215','lambda0.000464','lambda0.001000','lambda0.002154','lambda0.004642','lambda0.010000','lambda0.021544','lambda0.046416'};%,'lambda0.100000'};
 lambdaStrList=fliplr(lambdaStrList);
 lambdaFolderList=fliplr(lambdaFolderList);
 
-nLambda=length(lambdaStrList);
+
+if length(lambdaStrList)==length(lambdaFolderList)
+    nLambda=length(lambdaStrList);
+else
+   fprintf('ERROR: lambda list length is not the same.');
+   return;
+end
 %errList=cell(1,length(subList));
 nUni=length(uniFolderList);
 annUsedStEachLambdaEachSub =struct;
@@ -59,7 +67,6 @@ for i=1:nUsers
     %indFile=i;
     subNameFolder=strcat(subName,lightingSubFolder);%subNameFolderCell{indFile};%
     
-    
     errMatEachSub=zeros(nRep,nLambda); %errSt 5x10
     err_line_MatEachSub=zeros(nRep,nLambda);
     annUsedMatEachSub=zeros(nRep,nLambda);
@@ -76,14 +83,34 @@ for i=1:nUsers
             
             
             dir= fullfile(rootDir,strcat(subNameFolder),'results',lambdaFolder,strcat(modelName,'_',subModelName,'rep',num2str(m),'.mat'));
-            %dir= fullfile(rootDir,strcat(subNameFolder),uni,'results',lambdaFolder,strcat(modelName,'_',subModelName,'rep',num2str(m),'.mat'));
-            
-            data=load(dir);
-            
+             % dir= fullfile(rootDir,strcat(subNameFolder),uni,'results',lambdaFolder,strcat(modelName,'_',subModelName,'rep',num2str(m),'.mat'));
+          
+             data=load(dir);
+%              
+%              figure;
+%              subplot(2,2,1);
+%              errorbar();
+%              histogram(data.center.diff.raw((data.filter),:));%100*mat2gray(data.center.diff.raw((data.filter),:)));
+%            hold on;
+%            
+%           meann= mean(data.center.diff.raw((data.filter),:))
+%              maxx=max(data.center.diff.raw((data.filter),:))
+%           minn=min(data.center.diff.raw((data.filter),:))
+%           plot(meann,0,'xb');
+%          %   h.BinEdges=mat2gray(h.BinEdges)*(maxx-minn)-minn;
+%             % ax = gca;
+%             
+%             a=data.center.diff.raw((data.filter),:);
+%             sum(a<=meann)
+% sum(a>meann)
+
+          %   title('ann model: error distribution')
+             
+
             if compareLine
-                cider_dir= fullfile(rootDir,strcat(subNameFolder),'results',lambdaFolder,strcat('cider','_',subModelName,'rep',num2str(m),'.mat'));
-                % cider_dir= fullfile(rootDir,strcat(subNameFolder),uni,'results',lambdaFolder,strcat('cider','_',subModelName,'rep',num2str(m),'.mat'));
-               cider_data=load(cider_dir);
+                   cider_dir= fullfile(rootDir,strcat(subNameFolder),'results',lambdaFolder,strcat('cider','_',subModelName,'rep',num2str(m),'.mat'));
+                %cider_dir= fullfile(rootDir,strcat(subNameFolder),uni,'results',lambdaFolder,strcat('cider','_',subModelName,'rep',num2str(m),'.mat'));
+                cider_data=load(cider_dir);
             end
             
             %size(pi*((data.radii.true(data.radii.true>0)).^2))
@@ -216,8 +243,6 @@ for i=1:nUsers
     indPerMatForAllSub(i,:)=indStEachSub.mean.(uni).(subName);
 end
 
-save('meanErrMatForAllSub_6subs.mat','meanErrMatForAllSub');
-
 if strcmp(modelName,'cider')
     %stdAnnUsedForAllSub=zeros(nUsers,nLambda);
     
@@ -240,7 +265,7 @@ end
 
 %save(fullfile('annSize.mat'),'indPerMatForAllSub');
 
-
+save('meanErrMatForAllSub.mat','meanErrMatForAllSub');
 
 for i=1:nUsers
     
@@ -292,23 +317,25 @@ end
 
 end
 
+%%
 %inside strcmp(--'target')
 % figure;
 % subplot(2,2,1);
-% histogram(100*mat2gray(data.center.diff.raw.raw((data.filter & ~data.ann_used),:)));
+% histogram(100*mat2gray(data.center.diff.raw((data.filter & ~data.ann_used),:)));
 % xlabel('Error percent of pupil center location')
 % ylabel('Count')
 % title('line model: error distribution')
 % subplot(2,2,2);
-% histogram(100*mat2gray(data.center.diff.raw.raw(data.filter,:)));
+% histogram(100*mat2gray(data.center.diff.raw(data.filter,:)));
 % title('cider model: error distribution')
 % xlabel('Error percent of pupil center location')
 % ylabel('Count')
 % subplot(2,2,3);
-% histogram(100*mat2gray(data.center.diff.raw.raw((data.filter & data.ann_used),:)));
+% histogram(100*mat2gray(data.center.diff.raw((data.filter & data.ann_used),:)));
 % title('ann model: error distribution')
 % xlabel('Error percent of pupil center location')
 % ylabel('Count')
 % suptitle('Pupil Center Error: All data including training data')
-% figure;
+% % figure;
+% 
 
