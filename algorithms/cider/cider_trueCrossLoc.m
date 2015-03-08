@@ -1,4 +1,4 @@
-function [ind,chord_length,pred,radii,ann_used]=cider(X,rep_file,chord_length,thresh,model,make_vid,nDim,scaleVect,contrast_method,percentile)
+function [ind,chord_length,pred,radii,ann_used]=cider_trueCrossLoc(X,gout,rep_file,chord_length,thresh,model,make_vid,nDim,scaleVect,contrast_method,percentile)
 %function [chord_length,pred,radii,ann_used]=cider(X,ann_file,chord_length,thresh,model,make_vid,nDim,scaleVect)
     addpath('~/iShadow/algorithms/ann/lib');
     addpath('~/iShadow/algorithms/ann/run_ann');
@@ -94,7 +94,7 @@ function [ind,chord_length,pred,radii,ann_used]=cider(X,rep_file,chord_length,th
                         pred(i,:) = center;
                     end
                 case 'circle_edge'
-                    [center, radius] = circle_edge_model(reshape(X(i,:), [111 112]), pred(i-1,:), chord_length, thresh, radii(i-1), make_vid);
+                    [center, radius] = circle_edge_model(reshape(X(i,:), [111 112]), gout(i-1,:), chord_length, thresh, radii(i-1), make_vid);
 
                     if (radius == 0)
                         no_pupil = 1;

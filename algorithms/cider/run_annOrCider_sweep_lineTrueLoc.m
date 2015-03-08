@@ -65,15 +65,13 @@ function run_annOrCider_sweep(modelName,result_dir, input_dir,do_uniquefy,nDim,s
                 X=XCell{j};
                 gout=goutCell{j};
                 
-                
                 if nDim==3
                     sqrtRadEllipse=sqrtRadEllipseCell{j};
-                    trueArea=trueAreaCell{j};
                 end
             end
             
             if strcmp(modelName,'cider')
-                [ind,chord_length,center.pred,thirdVar,ann_used] = cider(X, rep_files{j}, 400, 0.22, 'circle_edge', 0,nDim,scaleVect,contrast_method,percentile);
+                [ind,chord_length,center.pred,thirdVar,ann_used] = cider(X, gout,rep_files{j}, 400, 0.22, 'circle_edge', 0,nDim,scaleVect,contrast_method,percentile);
                 
             elseif strcmp(modelName,'ann')
                 [ind,center.pred,thirdVar]= ann(X, rep_files{j},nDim,scaleVect,contrast_method,percentile);
@@ -134,6 +132,8 @@ function run_annOrCider_sweep(modelName,result_dir, input_dir,do_uniquefy,nDim,s
                     filter_ann=filter_ann & radii.true>0;
                 end
                 
+                area.true=area.true;
+                radii.true=radii.true;
                 
                 if strcmp(thirdVarName,'radius')
                     radii.pred=thirdVar;

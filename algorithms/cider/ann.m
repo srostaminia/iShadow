@@ -1,4 +1,4 @@
-function [ind,pred,radii]=ann(X,ann_file,nDim,scaleVect,contrast_method)
+function [ind,pred,radii]=ann(X,ann_file,nDim,scaleVect,contrast_method,percentile)
 %function [pred]=ann(X,ann_file,nDim,scaleVect)
 
 %pred= predicted pupil center
@@ -12,10 +12,12 @@ function [ind,pred,radii]=ann(X,ann_file,nDim,scaleVect,contrast_method)
     X_adjust = X(:,:);
     
     if strcmp(contrast_method,'percentile')
-        X_adjust(:,ind(1:end-1)) = clip_percentile(X(:,ind(1:end-1)));
+        X_adjust(:,ind(1:end-1)) = clip_perc(X(:,ind(1:end-1)),percentile);
     elseif strcmp(contrast_method,'mean')
     
         X_adjust(:,ind(1:end-1)) = mean_contrast_adjust_nosave(X(:,ind(1:end-1)));
+    elseif strcmp(contrast_method,'median')
+        X_adjust(:,ind(1:end-1)) = median_filter_subpixels(X,ind(1:end-1));
     else
         fprintf('ERROR: need to define contrast method');
         return;
