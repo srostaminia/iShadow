@@ -75,13 +75,15 @@ for i=1:nUsers
         for m=1:nRep
             
             
-            dir= fullfile(rootDir,strcat(subNameFolder),uni,'results',lambdaFolder,strcat(modelName,'_',subModelName,'rep',num2str(m),'.mat'));
+            dir= fullfile(rootDir,strcat(subNameFolder),'results',lambdaFolder,strcat(modelName,'_',subModelName,'rep',num2str(m),'.mat'));
+            %dir= fullfile(rootDir,strcat(subNameFolder),uni,'results',lambdaFolder,strcat(modelName,'_',subModelName,'rep',num2str(m),'.mat'));
             
             data=load(dir);
             
             if compareLine
-                cider_dir= fullfile(rootDir,strcat(subNameFolder),uni,'results',lambdaFolder,strcat('cider','_',subModelName,'rep',num2str(m),'.mat'));
-                cider_data=load(cider_dir);
+                cider_dir= fullfile(rootDir,strcat(subNameFolder),'results',lambdaFolder,strcat('cider','_',subModelName,'rep',num2str(m),'.mat'));
+                % cider_dir= fullfile(rootDir,strcat(subNameFolder),uni,'results',lambdaFolder,strcat('cider','_',subModelName,'rep',num2str(m),'.mat'));
+               cider_data=load(cider_dir);
             end
             
             %size(pi*((data.radii.true(data.radii.true>0)).^2))

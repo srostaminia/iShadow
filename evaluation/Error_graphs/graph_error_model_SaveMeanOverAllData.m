@@ -53,13 +53,15 @@ totalFrameEachSub=zeros(nUsers,1);
 % subNameFolderCell=cellstr(strsplit(ls));
 % cd(ori);
 
+center.diff.raw
+radii.diff
+
 
 for i=1:nUsers
     
     subName=subList{i}; %subject name
     %indFile=i;
     subNameFolder=strcat(subName,lightingSubFolder);%subNameFolderCell{indFile};%
-    
     
     errMatEachSub=zeros(nRep,nLambda); %errSt 5x10
     err_line_MatEachSub=zeros(nRep,nLambda);
@@ -74,7 +76,6 @@ for i=1:nUsers
         %lambdaStr=lambdaStrList{k};
         
         for m=1:nRep
-            
             
             dir= fullfile(rootDir,strcat(subNameFolder),uni,'results',lambdaFolder,strcat(modelName,'_',subModelName,'rep',num2str(m),'.mat'));
             
