@@ -58,7 +58,16 @@ int main()
     }
     
 //    config_ms_timer();
-    stony_image_subsample();
+//    stony_image_subsample();
+    
+    volatile uint16_t total, start;
+    start = MS_TIME;
+//    uint8_t tmp[2];
+//    run_cider(tmp);
+    Delay(5);
+    total = MS_TIME - start;
+    
+    start = 0;
     
     if (cycle == 1 || cycle == 2) {
       DAC_SetChannel2Data(DAC_Align_12b_R, LED_LOW);
@@ -151,21 +160,27 @@ void delay_us(int delayTime)
   }
 }
 
-void get_model_time(uint16_t *model_time) {
+uint16_t get_model_time(uint16_t *model_time) {
   volatile uint16_t full_time, acq_time, start;
   
-  stony_image_subsample();
+//  stony_image_subsample();
+  
+  uint8_t tmp[2];
   
   start = MS_TIME;
-  stony_image_subsample();
+//  stony_image_subsample();
+  run_cider(tmp);
   full_time = MS_TIME - start;
   
   start = MS_TIME;
-  stony_image_subsample_nopred();
+//  stony_image_subsample_nopred();
+  run_cider_nopred();
   acq_time = MS_TIME - start;
   
   model_time[0] = acq_time;                     // Acquisiton time
-  model_time[1] = full_time - acq_time;         // Prediction time        
+  model_time[1] = full_time - acq_time;         // Prediction time 
+
+  return full_time;
 }
 
 /**

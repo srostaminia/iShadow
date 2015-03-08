@@ -643,7 +643,7 @@
         </option>
         <option>
           <name>IlinkRawBinaryFile</name>
-          <state>Z:\ammayber On My Mac\eye_exper\embedded_models\addison_nnf2_lam0-02154_3242p.raw</state>
+          <state>Z:\ammayber On My Mac\eye_exper\embedded_models\addison_nnf2_lam0-01_663p.raw</state>
         </option>
         <option>
           <name>IlinkRawBinarySymbol</name>
@@ -1978,10 +1978,10 @@
     <name>$PROJ_DIR$\main.h</name>
   </file>
   <file>
-    <name>$PROJ_DIR$\..\isoch_camera\predict_gaze.c</name>
+    <name>$PROJ_DIR$\predict_gaze.c</name>
   </file>
   <file>
-    <name>$PROJ_DIR$\..\isoch_camera\predict_gaze.h</name>
+    <name>$PROJ_DIR$\predict_gaze.h</name>
   </file>
   <file>
     <name>$PROJ_DIR$\TestSDCard.c</name>

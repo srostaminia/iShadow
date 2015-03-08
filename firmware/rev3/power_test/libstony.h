@@ -155,6 +155,7 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels);
 int stony_send_cider_image(uint8_t *cider_rowcol, uint8_t cider_failed);
 int run_cider(uint8_t *cider_rowcol);
 uint16_t quick_percentile(uint16_t *base_row);
+void run_cider_nopred();
 
 void pulse_resv(uint8_t cam);
 void pulse_incv(uint8_t cam);

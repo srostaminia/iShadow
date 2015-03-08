@@ -1012,6 +1012,13 @@ int run_cider(uint8_t *cider_xy)
   return pupil_found;
 }
 
+void run_cider_nopred()
+{
+  uint16_t row[112], col[112];
+  stony_cider_line(55, row, SEL_ROW);
+  stony_cider_line(55, col, SEL_COL);
+}
+
 void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
 {
   uint16_t med_buf[2], next_pixel;
