@@ -309,9 +309,9 @@ int finish_predict(float ah[6])
     pred[1] = (unsigned short)((y_val * 111) + 0.5);
       
 //    f_finish_write();
-    if (disk_write_fast(0, (uint8_t*)pred, sd_ptr, 1) != RES_OK)      return -1;
-    sd_ptr += 1;
-    f_finish_write();
+//    if (disk_write_fast(0, (uint8_t*)pred, sd_ptr, 1) != RES_OK)      return -1;
+//    sd_ptr += 1;
+//    f_finish_write();
     
     return 0;
 }
