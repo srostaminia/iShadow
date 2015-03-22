@@ -1,5 +1,5 @@
 
-function run_annOrCider_sweep(modelName,result_dir, input_dir,do_uniquefy,nDim,scaleVect,sub_model,contrast_method,percentile,testIndOn,thirdVarName)
+function run_annOrCider_sweep_lineTrueLoc(modelName,result_dir, input_dir,do_uniquefy,nDim,scaleVect,sub_model,contrast_method,percentile,testIndOn,thirdVarName)
     %function run_cider_sweep(result_dir, X, gout,avgEllipseRad,nDim,scaleVect)
     addpath('~/iShadow/algorithms/cider');
     addpath('~/iShadow/algorithms/ann/lib');
@@ -71,8 +71,11 @@ function run_annOrCider_sweep(modelName,result_dir, input_dir,do_uniquefy,nDim,s
             end
             
             if strcmp(modelName,'cider')
-                [ind,chord_length,center.pred,thirdVar,ann_used] = cider(X, gout,rep_files{j}, 400, 0.22, 'circle_edge', 0,nDim,scaleVect,contrast_method,percentile);
-                
+                if idealOn %(input gout as the previous prediction)
+                    [ind,chord_length,center.pred,thirdVar,ann_used] = cider_trueCrossLoc(X, gout,sqrtRadEllipse,rep_files{j}, 400, 0.22, 'circle_edge', 0,nDim,scaleVect,contrast_method,percentile);
+                else
+                    [ind,chord_length,center.pred,thirdVar,ann_used] = cider(X, gout,rep_files{j}, 400, 0.22, 'circle_edge', 0,nDim,scaleVect,contrast_method,percentile);
+                end
             elseif strcmp(modelName,'ann')
                 [ind,center.pred,thirdVar]= ann(X, rep_files{j},nDim,scaleVect,contrast_method,percentile);
             end

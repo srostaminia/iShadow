@@ -45,15 +45,24 @@ function [ind,pred,radii]=ann(X,ann_file,nDim,scaleVect,contrast_method,percenti
     
     
     %%%
-    for i = 1:size(X,1)
-        predVect = scaleVect .* logisticmlp_prediction(these_results.W, [X_adjust(i,:) 1], 7, nDim);
-        pred(i,:) = predVect(1:2);
+%     for i = 1:size(X,1)
+%         predVect = scaleVect .* logisticmlp_prediction(these_results.W, [X_adjust(i,:) 1], 7, nDim);
+%         pred(i,:) = predVect(1:2);
+%         
+%         if  size(predVect,2)==3
+%             radii(i) = predVect(3);
+%             
+%         end
+%     end
+
+        predVect = repmat(scaleVect,size(X,1),1) .* logisticmlp_prediction(these_results.W, [X_adjust ones(size(X_adjust,1), 1)], 7, nDim);
+        pred = predVect(:,1:2);
         
         if  size(predVect,2)==3
-            radii(i) = predVect(3);
+            radii = predVect(:,3);
             
         end
-    end
+    
 
 %     if isequal(size(pred),[size(X,1) 2])
 %         fprintf('pred dimension correct in ann.m\n\n');
