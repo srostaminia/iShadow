@@ -5,11 +5,10 @@ subName='addison';
 addpath('/Users/ytun/Google Drive/IMPORTANT_VISION/MobiSys2015_labeling/data');
 addpath('/Users/ytun/iShadow/algorithms/ann/lib');
 
-labelPupilDir='/Users/ytun/Google Drive/IMPORTANT_VISION/MobiSys2015_labeling/labelPupil';
+labelPupilDir='/Users/ytun/Google Drive/IMPORTANT_VISION/MobiSys2015_labeling/data';
 addpath(labelPupilDir);
 
-dataCalib=load(fullfile(labelPupilDir,strcat(subName,'_outdoors_pupil.mat')));
-
+dataCalib=load(fullfile(labelPupilDir,strcat(subName,'_ohsocold_raw.mat')));
 
 %im=imresize(im,[50 50],'bilinear')
 
@@ -34,7 +33,7 @@ dataCalib=load(fullfile(labelPupilDir,strcat(subName,'_outdoors_pupil.mat')));
 C=-128;
 F=(259*(C+255))/(255*(259-C));
 
-im=rgb2gray(imread('akshaya_calib.png'));
+im=reshape((dataCalib.X(1,:))',111,112);%rgb2gray(imread('akshaya_calib.png'));
 imOri=im;
 
 figure;
@@ -50,7 +49,7 @@ im=F*(im-128)+128;
 
 figure;
 subplot(1,nSubplot,1);
-imshow(im);
+imagesc(im);
 title('dimmed');
 
 C=180;
