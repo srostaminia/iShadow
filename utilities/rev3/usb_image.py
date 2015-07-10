@@ -29,7 +29,9 @@ def main():
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--gen_mask", help="generate new camera mask with name")
     group.add_argument("--noflip", help="don't flip image (debug option)", action='store_true')
+    
     parser.add_argument("--columnwise", help="images being sent in column-major order", action="store_true")
+    parser.add_argument("--norender", help="don't render ANN / CIDER output", action="store_true")
 
     args = parser.parse_args()
     debug_folder = args.debug_folder
@@ -37,6 +39,7 @@ def main():
     gen_mask_file = args.gen_mask
     columnwise = args.columnwise
     noflip = args.noflip
+    norender = args.norender
 
     if (debug_folder != None): 
         if os.path.isdir(debug_folder):
@@ -85,7 +88,7 @@ def main():
 
     packet_size = 92 * 16 / TX_BITS
 
-    if (debug == False and gen_mask == False):
+    if (debug == False and gen_mask == False and norender == False):
         vline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
         hline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
         vline_cider,=ax.plot([-10, -9], [-10, -9], 'b-', linewidth=2)
@@ -198,7 +201,7 @@ def main():
             cider_row = -10
             cider_radius = 0
 
-        if (debug == 0) and gen_mask == 0:
+        if (debug == 0) and gen_mask == 0 and norender == False:
             vline.set_data([pred[0], pred[0]], [max(0, pred[1] - 10), min(111, pred[1] + 10)])
             hline.set_data([max(0, pred[0] - 10), min(111, pred[0] + 10)], [pred[1], pred[1]])
             vline_cider.set_data([cider_col, cider_col], [0, 112])
