@@ -80,7 +80,7 @@ def main():
 
     frame = np.zeros((112*112,))
     fig = plt.figure(999) 
-    image=plt.imshow(np.zeros((112,112)), cmap = pylab.cm.Greys_r, interpolation='nearest')
+    image=plt.imshow(np.zeros((112,112)), cmap = matplotlib.cm.Greys_r, interpolation='nearest')
 
     ax=fig.add_subplot(111)
     ax.set_xlim([0, 112])
