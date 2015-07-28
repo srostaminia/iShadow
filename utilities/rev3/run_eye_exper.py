@@ -9,8 +9,8 @@ from random import shuffle
 # X_DIM=1280
 # Y_DIM=950
 
-X_DIM=1400
-Y_DIM=820
+X_DIM=1900
+Y_DIM=1020
 
 X_ADDITIONAL=0
 
@@ -19,7 +19,7 @@ GRAN=20
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("logfile")
+    # parser.add_argument("logfile")
     parser.add_argument("-i", "--inverse", action='store_true')
     args = parser.parse_args()
 
@@ -30,11 +30,11 @@ def main():
         forecolor = 'black'
         backcolor = 'white'
 
-    # Check to see if we are adding on to existing data
-    if os.path.exists(args.logfile + ".csv") and not os.path.isdir(args.logfile + ".csv"):
-        newData = False
-    else:
-    	newData = True
+    # # Check to see if we are adding on to existing data
+    # if os.path.exists(args.logfile + ".csv") and not os.path.isdir(args.logfile + ".csv"):
+    #     newData = False
+    # else:
+    # 	newData = True
 
     # Build list of points to capture
     points = []
@@ -42,15 +42,17 @@ def main():
     	for j in range(0, Y_DIM+1, GRAN):
     	    points.append([i, j])
 
-    if newData:
-    	index = 0
-    else:	# If any points have already been covered in the data, remove them from the list
-    	index = readExisting(args.logfile + ".csv", points)
+    # if newData:
+    # 	index = 0
+    # else:	# If any points have already been covered in the data, remove them from the list
+    # 	index = readExisting(args.logfile + ".csv", points)
 
-    indexFile = open(args.logfile + ".csv", 'a')
-    writer = csv.writer(indexFile)
+    # indexFile = open(args.logfile + ".csv", 'a')
+    # writer = csv.writer(indexFile)
 
     shuffle(points)
+
+    index = 0
 
     # Setup graphics window
     win = graphics.GraphWin("Eye Experiment", X_DIM + X_ADDITIONAL, Y_DIM)
@@ -68,7 +70,7 @@ def main():
     	circle.setFill(forecolor)
 
     	time.sleep(0.5)
-    	writer.writerow([index, point[0], point[1], X_DIM, Y_DIM])
+    	# writer.writerow([index, point[0], point[1], X_DIM, Y_DIM])
     	
     	index += 1
     	circle.setFill(forecolor)
@@ -93,9 +95,9 @@ def moveCircle(circle, loc, win, index):
     newX = loc[0] + (X_ADDITIONAL / 2)
     newY = loc[1]
 
-    if index % 20 == 0:
-    	text = graphics.Text(graphics.Point(newX,newY), str(index))
-        text.draw(win)
+    # if index % 20 == 0:
+    # 	text = graphics.Text(graphics.Point(newX,newY), str(index))
+    #     text.draw(win)
 
     center = circle.getCenter()
     oldX = center.getX()
@@ -123,7 +125,7 @@ def moveCircle(circle, loc, win, index):
     	circle.move(0, step)
         # time.sleep(.00005)
 
-    if index % 20 == 0:
-    	text.undraw()
+    # if index % 20 == 0:
+    # 	text.undraw()
 
 main()
