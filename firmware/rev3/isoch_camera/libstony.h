@@ -4,6 +4,8 @@
 #include "stm32l1xx.h"
 #include "predict_gaze.h"
 
+
+
 // Uncomment to use CIDER (overrides some other config options)
 #define CIDER_MODE
 
@@ -13,7 +15,7 @@
 
 // Comment out to use unmasked eye pixels
 // (overriden by CIDER_MODE)
-#define USE_FPN_EYE
+//#define USE_FPN_EYE
 
 // Comment out to collect data row-wise instead of column-wise
 #define COLUMN_COLLECT
@@ -28,8 +30,9 @@
 //#define SEND_16BIT
 #define SEND_8BIT
 
-// Percentile value for cross model pixel clamping
-#define CIDER_PERCENTILE        10
+
+
+
 
 // CIDER overrides (don't touch)
 #ifdef CIDER_MODE
@@ -139,6 +142,9 @@
 // CIDER parameters
 #define SPEC_THRESH     150
 #define CONV_OFFSET     4
+// Percentile value for cross model pixel clamping
+#define CIDER_PERCENTILE        10
+
 
 void stony_pin_config();
 void stony_init(short vref, short nbias, short aobias, char gain, char selamp);
@@ -153,6 +159,7 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels);
 int stony_send_cider_image(uint8_t *cider_rowcol, uint8_t cider_failed);
 int run_cider(uint8_t *cider_rowcol);
 uint16_t quick_percentile(uint16_t *base_row);
+int stony_mask_subsample();
 
 void pulse_resv(uint8_t cam);
 void pulse_incv(uint8_t cam);

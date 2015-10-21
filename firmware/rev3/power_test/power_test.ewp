@@ -643,7 +643,7 @@
         </option>
         <option>
           <name>IlinkRawBinaryFile</name>
-          <state>Z:\ammayber On My Mac\eye_exper\embedded_models\addison_nnf2_lam0-01_663p.raw</state>
+          <state>Z:\ammayber On My Mac\eye_exper\demofile_2273p.raw</state>
         </option>
         <option>
           <name>IlinkRawBinarySymbol</name>
@@ -1968,6 +1968,12 @@
       <name>$PROJ_DIR$\libstony.h</name>
     </file>
   </group>
+  <file>
+    <name>$PROJ_DIR$\cycle_count.c</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\cycle_count.h</name>
+  </file>
   <file>
     <name>$EW_DIR$\arm\inc\ST\iostm32L151xx.h</name>
   </file>

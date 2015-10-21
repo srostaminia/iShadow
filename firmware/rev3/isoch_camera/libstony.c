@@ -914,7 +914,7 @@ int stony_cider_line(uint8_t rowcol_num, uint16_t *line_buf, uint8_t rowcol_sel)
     asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
     asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
     
-    // Do conversion for SINGLE_CAM
+    // Do conversion for CAM2
     ADC_SoftwareStartConv(ADC1);
     
     asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
@@ -1573,5 +1573,160 @@ int stony_send_cider_image(uint8_t *cider_rowcol, uint8_t cider_failed)
   send_empty_packet();
   while(packet_sending == 1);
   
+  return 0;
+}
+
+
+int stony_mask_subsample()
+{
+  uint32_t pixel_sum = 0;
+  uint16_t pix_value;
+  
+  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
+  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
+  
+//  int16_t last_row = -1, last_col = -1;
+  for (uint32_t i = 0; i < NUM_SUBSAMPLE; i++) {
+//    if (last_col == -1 || last_col != col[i]) {
+//      set_pointer_value(REG_COLSEL, col[i], CAM2);
+//      set_pointer_value(REG_ROWSEL, row[i], CAM2);
+//      
+//      last_col = col[i];
+//      last_row = row[i];
+//    } else {
+//      for (uint8_t j = 0; j < (row[i] - last_row); j++)
+//        pulse_incv(CAM2);
+//      
+//      last_row = row[i];
+//    }
+    
+    set_pointer_value(REG_COLSEL, MASK(i,1), CAM2);
+    set_pointer_value(REG_ROWSEL, MASK(i,0), CAM2);
+  
+    CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    CAM2_INPH_BANK->ODR &= CAM2_INPH_PIN;
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    
+    // Do conversion for CAM2
+    ADC_SoftwareStartConv(ADC1);
+    
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    
+    pix_value = adc_values[adc_idx] - COL_FPN((MASK(i,1) * 112) + MASK(i,0));
+    pixel_sum += pix_value;
+    adc_idx = !adc_idx;
+  }
+  
+  set_pointer_value(REG_COLSEL, 0, CAM2);
+  set_pointer_value(REG_ROWSEL, 0, CAM2);
+  
+  return 0;
+}
+
+int stony_image_ann()
+{
+  uint16_t lastRow, lastCol;
+  uint16_t pix_value;
+  
+  uint16_t pred_pixels[NUM_SUBSAMPLE];
+  
+  uint32_t pixel_sum = 0;
+  float M = 0.0, S = 0.0;
+  float value, tmpM;
+  int k = 1;
+  uint32_t current_subsample = 0;
+  
+  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
+  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
+  
+  set_pointer_value(REG_COLSEL, MASK(0, 1), CAM2);
+  set_pointer_value(REG_ROWSEL, 0, CAM2);
+  
+  lastRow = 0;
+  lastCol = MASK(0, 1);
+
+  for (int pixel = 0; pixel < NUM_SUBSAMPLE; pixel++) {   
+      if (MASK(pixel, 1) != lastCol)
+      {
+        // Set row to zero to avoid precharging any other rows
+        set_pointer_value(REG_ROWSEL, 0, CAM2);
+        
+        char diff = MASK(pixel, 1) - lastCol;
+        
+        inc_pointer_value(REG_COLSEL, diff, CAM2);
+        
+        lastCol = MASK(pixel, 1);
+
+        set_pointer_value(REG_ROWSEL, MASK(pixel, 0), CAM2);
+        
+        lastRow = MASK(pixel, 0);
+        
+        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      } else {
+        inc_value(MASK(pixel, 0) - lastRow, CAM2);
+        
+        lastRow = MASK(pixel, 0);
+      }
+      
+      CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      
+      /* Start ADC1 Software Conversion */
+      ADC_SoftwareStartConv(ADC1);
+      
+      if (pixel > 0) {
+        pixel_sum += pix_value;
+        
+        // Standard deviation computation
+        value = (float)pix_value;
+        tmpM = M;
+        M += (value - tmpM) / k;
+        S += (value - tmpM) * (value - M);
+        k++;
+        current_subsample++;
+      }
+      
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+
+      pix_value = adc_values[adc_idx] - COL_FPN((MASK(pixel,0) * 112) + MASK(pixel,1));
+      adc_idx = !adc_idx;
+  }
+  
+  pixel_sum += pix_value;
+  
+  // Standard deviation computation
+  value = (float)pix_value;
+  tmpM = M;
+  M += (value - tmpM) / k;
+  S += (value - tmpM) * (value - M);
+  k++;
+  current_subsample++;
+  
+  if (current_subsample != NUM_SUBSAMPLE)
+    while(1);
+  
+  float mean = (float)pixel_sum / (NUM_SUBSAMPLE);
+  float std = sqrt(S / (k-1));
+  
+  // Predict gaze, store results in global variable pred[]
+  predict_gaze_mean(pred_pixels, mean, std);
+
   return 0;
 }

@@ -2,6 +2,8 @@
 #include "stm32l1xx.h"
 #include "main.h"
 #include "diskio.h"
+#include "math.h"
+#include "predict_gaze.h"
 
 extern __IO  uint32_t Receive_length ;
 extern uint32_t sd_ptr;
@@ -10,6 +12,28 @@ extern volatile uint16_t time_start, time_total;
 
 int adc_idx = 0;
 __IO uint16_t adc_values[2];
+
+#ifdef CIDER_MODE
+extern unsigned short num_subsample;
+extern unsigned short num_hidden;
+extern unsigned int bh_offset;
+extern unsigned int bo_offset;
+extern unsigned int mask_offset;
+extern unsigned int who_offset;
+extern unsigned int wih_offset;
+extern unsigned int fpn_offset;
+extern unsigned int col_fpn_offset;
+
+unsigned short model_data[];
+
+extern int8_t pred[2];
+extern float pred_radius;
+float last_r = 0;
+#endif
+
+#ifdef OUTDOOR_SWITCH
+extern uint8_t outdoor_mode;
+#endif
 
 // ----------------Small helper functions, not to be exported-------------------
 inline static void set_pin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin, uint8_t val)
@@ -166,6 +190,19 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
 {
   short config;
   char flagUseAmplifier;
+
+#ifdef CIDER_MODE
+  num_subsample = model_data[0];
+  num_hidden = model_data[1];
+  
+  bh_offset = 2;
+  bo_offset = bh_offset + num_hidden * 2;
+  mask_offset = bo_offset + 4;
+  who_offset = mask_offset + num_subsample * 2;
+  wih_offset = who_offset + num_hidden * 2 * 2;
+  fpn_offset = wih_offset + (num_hidden * num_subsample * 2);
+  col_fpn_offset = fpn_offset + 112 * 112;
+#endif
   
   // Set MCU pins to interface with CPLD
   stony_pin_config();
@@ -405,7 +442,15 @@ int stony_image_dual()
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
       if (col != 0) {
+#if !defined(OUTDOOR_SWITCH)
         buf16[(data_cycle * 112) + cam2_offset + (col - 1)] = adc_values[1];
+#else
+        if (row == 0 && col == 1) {
+          buf16[(data_cycle * 112) + cam2_offset + (col - 1)] = outdoor_mode;
+        } else {
+          buf16[(data_cycle * 112) + cam2_offset + (col - 1)] = adc_values[1];
+        }
+#endif
       }
       
       // Do conversion for CAM1
@@ -423,7 +468,15 @@ int stony_image_dual()
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
+#if !defined(OUTDOOR_SWITCH)
       buf16[(data_cycle * 112) + col] = adc_values[0];
+#else
+      if (row == 0 && col == 0) {
+        buf16[(data_cycle * 112) + col] = outdoor_mode;
+      } else {
+        buf16[(data_cycle * 112) + col] = adc_values[0];
+      }
+#endif
       
       // Do conversion for CAM2
       ADC_SoftwareStartConv(ADC1);
@@ -579,53 +632,56 @@ int stony_image_single()
   return 0;
 }
 
-int stony_cider_line(uint8_t rowcol_num, uint8_t *sd_buf, uint8_t rowcol_sel)
-{
-  // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, only 1 camera
-  // Double-buffered (2-dim array)
-//  uint8_t buf8[2][112 * TX_ROWS * 2];
-  uint16_t *buf16 = (uint16_t *)sd_buf;
-  
-  volatile uint16_t start, total;
-  
-  if (rowcol_sel == 0) {
-    set_pointer_value(REG_COLSEL, rowcol_num, SINGLE_CAM);
-    set_pointer_value(REG_ROWSEL, 0, SINGLE_CAM);
-  } else {
-    set_pointer_value(REG_ROWSEL, rowcol_num, SINGLE_CAM);
-    set_pointer_value(REG_COLSEL, 0, SINGLE_CAM);
-  }
-  
-  delay_us(1);
-  
-  for (int i = 0; i < 112; i++) {      
-    SINGLE_PARAM(INPH_BANK)->ODR |= SINGLE_PARAM(INPH_PIN);
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    SINGLE_PARAM(INPH_BANK)->ODR &= ~SINGLE_PARAM(INPH_PIN);
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    
-    // Do conversion for SINGLE_CAM
-    ADC_SoftwareStartConv(ADC1);
-    
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-    
-    buf16[i] = adc_values[adc_idx];
-    adc_idx = !adc_idx;
-    
-    SINGLE_PARAM(INCV_BANK)->ODR |= SINGLE_PARAM(INCV_PIN);
-    SINGLE_PARAM(INCV_BANK)->ODR &= ~SINGLE_PARAM(INCV_PIN);
-  } // for (col)
-  
-  return 0;
-}
+//int stony_cider_line(uint8_t rowcol_num, uint16_t *line_buf, uint8_t rowcol_sel)
+//{
+//  // 112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, only 1 camera
+//  // Double-buffered (2-dim array)
+////  uint8_t buf8[2][112 * TX_ROWS * 2];  
+//  volatile uint16_t start, total;
+//  
+//  if (rowcol_sel == SEL_COL) {
+//    set_pointer_value(REG_COLSEL, rowcol_num, CAM2);
+//    set_pointer_value(REG_ROWSEL, 0, CAM2);
+//  } else {
+//    set_pointer_value(REG_ROWSEL, rowcol_num, CAM2);
+//    set_pointer_value(REG_COLSEL, 0, CAM2);
+//  }
+//  
+//  delay_us(1);
+//  
+//  for (int i = 0; i < 112; i++) {      
+//    CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    
+//    // Do conversion for SINGLE_CAM
+//    ADC_SoftwareStartConv(ADC1);
+//    
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//    
+//    if (rowcol_sel == SEL_COL)
+////      line_buf[i] = adc_values[adc_idx] - COL_FPN((i * 112) + rowcol_num);
+//      line_buf[i] = adc_values[adc_idx] - COL_FPN((rowcol_num * 112) + i);
+//    else
+//      line_buf[i] = adc_values[adc_idx] - ROW_FPN((rowcol_num * 112) + i);
+//    
+//    adc_idx = !adc_idx;
+//    
+//    CAM2_INCV_BANK->ODR |= CAM2_INCV_PIN;
+//    CAM2_INCV_BANK->ODR &= ~CAM2_INCV_PIN;
+//  } // for (col)
+//  
+//  return 0;
+//}
 
 int stony_single_pixel(uint8_t loc[2], uint16_t reps, uint16_t delay, uint8_t *sd_buf)
 {
@@ -684,7 +740,7 @@ int stony_mask_subsample(uint8_t *row, uint8_t *col, uint32_t num_pixels, uint8_
 {
   uint16_t *buf16 = (uint16_t *)sd_buf;
   
-  int16_t last_row = -1, last_col = -1;
+//  int16_t last_row = -1, last_col = -1;
   for (uint32_t i = 0; i < num_pixels; i++) {
 //    if (last_col == -1 || last_col != col[i]) {
 //      set_pointer_value(REG_COLSEL, col[i], SINGLE_CAM);
@@ -726,6 +782,8 @@ int stony_mask_subsample(uint8_t *row, uint8_t *col, uint32_t num_pixels, uint8_
   
   set_pointer_value(REG_COLSEL, 0, SINGLE_CAM);
   set_pointer_value(REG_ROWSEL, 0, SINGLE_CAM);
+  
+  return 0;
 }
 
 int stony_mask_fullsample(uint8_t *row, uint8_t *col, uint32_t num_pixels, uint8_t *sd_buf)
@@ -735,7 +793,7 @@ int stony_mask_fullsample(uint8_t *row, uint8_t *col, uint32_t num_pixels, uint8
   
   set_pointer_value(REG_COLSEL, 0, SINGLE_CAM);
   
-  int16_t last_row = -1, last_col = -1;
+//  int16_t last_row = -1, last_col = -1;
   for (uint8_t col_idx = 0; col_idx < 112; col_idx++) {
     set_pointer_value(REG_ROWSEL, 1, SINGLE_CAM);
     
@@ -779,4 +837,390 @@ int stony_mask_fullsample(uint8_t *row, uint8_t *col, uint32_t num_pixels, uint8
   
   set_pointer_value(REG_COLSEL, 0, SINGLE_CAM);
   set_pointer_value(REG_ROWSEL, 0, SINGLE_CAM);
+  
+  return 0;
 }
+//
+//int run_cider(uint8_t *cider_xy)
+//{
+//  uint8_t row_edges[6] = {0, 0, 0, 0, 0, 0}, col_edges[6] = {0, 0, 0, 0, 0, 0};
+//  int pupil_found = -1;
+//  
+//  cider_xy[1] = (uint8_t)((pred[1] < 0 ? 0 : pred[1]) > 111 ? 111 : pred[1]);
+//  cider_xy[0] = (uint8_t)((pred[0] < 0 ? 0 : pred[0]) > 111 ? 111 : pred[0]);
+//  
+//  uint8_t col_start = cider_xy[1], row_start = cider_xy[0];
+//  
+//  float best_ratio = 0, best_r = 0;
+//  uint8_t best_center[2] = {0, 0};
+//  
+//  // Configure ADC to read only from eye camera
+//  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
+//  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
+//  
+//  uint16_t row[112], col[112];
+//  stony_cider_line(col_start, row, SEL_ROW);
+//  stony_cider_line(row_start, col, SEL_COL);
+//  
+//  // Reconfigure ADC for dual-camera reading
+//  ADC_RegularChannelConfig(ADC1, CAM1_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
+//  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 2, ADC_SampleTime_4Cycles); // AMM
+//  
+//  find_pupil_edge(row_start, row_edges, row);
+//  find_pupil_edge(col_start, col_edges, col);
+//
+//  for (uint8_t i = 0; (row_edges[i] != 0 || i==0) && i < 6; i += 2) {
+//    // Pupil can't be smaller than 4 pixels across
+//    if ((row_edges[i] - row_edges[i + 1]) < 4 && (row_edges[i] - row_edges[i + 1]) > -4)
+//      continue;
+//    
+//    for (uint8_t j = 0; (col_edges[j] != 0 || j==0) && j < 6; j += 2) {
+//      // Pupil can't be smaller than 4 pixels across
+//      if ((col_edges[j] - col_edges[j + 1]) < 4 && (col_edges[j] - col_edges[j + 1]) > -4)
+//        continue;
+//      
+//      float x_mid, y_mid;
+//      x_mid = (row_edges[i] + row_edges[i + 1]) / (float)2;
+//      y_mid = (col_edges[j] + col_edges[j + 1]) / (float)2;
+//      
+//      float r1, r2;
+//      r1 = sqrt(((x_mid - row_edges[i]) * (x_mid - row_edges[i])) + ((y_mid - col_start) * (y_mid - col_start)));
+//      r2 = sqrt(((x_mid - row_start) * (x_mid - row_start)) + ((y_mid - col_edges[j]) * (y_mid - col_edges[j])));
+//      
+//      float ratio = r1 / r2;
+//      if ((ratio < 0.6) || (ratio > (1/0.6)) || fabs(ratio - 1) > fabs(best_ratio - 1))
+//          continue;
+//      
+//      float r = (r1 + r2) / 2;
+//      if (last_r != 0 && (r / last_r < 0.75 || r / last_r > 1/0.75))
+//          continue;
+//      
+//      pupil_found = 1;
+//      best_ratio = ratio; best_r = r;
+//      best_center[0] = x_mid >= 0 ? (uint8_t)(x_mid+0.5) : (uint8_t)(x_mid-0.5);
+//      best_center[1] = y_mid >= 0 ? (uint8_t)(y_mid+0.5) : (uint8_t)(y_mid-0.5);
+//    }
+//  }
+//  
+//  pred[0] = best_center[0];
+//  pred[1] = best_center[1];
+//  pred_radius = best_r;
+//  last_r = best_r;
+//
+//  return pupil_found;
+//}
+//
+//
+//void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
+//{
+//  uint16_t med_buf[2], next_pixel;
+//  uint8_t med_idx, small_val, reg_size, edge_idx;
+//  uint8_t peak_after, local_regions[3], lr_idx, lr_min;
+//  uint8_t peaks[53], peak_idx, spec_regions[53], spec_idx;
+//  int16_t conv_sum, conv_abs, reg_sum, edge_mean, region_means[53];
+//  int16_t edge_detect[106];
+//  
+//  uint8_t in_specular = 0, new_peak = 0; 
+//  
+//  // First do median filtering
+//  med_buf[0] = pixels[0];
+//  med_buf[1] = pixels[1];
+//  med_idx = 0;
+//  small_val = (pixels[0] < pixels[1]) ? 0 : 1;
+//  
+//  for (uint8_t i = 2; i < 112; i++) {
+//    next_pixel = pixels[i];
+//    
+//    if (next_pixel < med_buf[small_val]) {
+//      pixels[i - 1] = med_buf[small_val];
+//      small_val = med_idx;
+//    } else if (next_pixel > med_buf[!small_val]) {
+//      pixels[i - 1] = med_buf[!small_val];
+//      small_val = !med_idx;
+//    } else {
+//      pixels[i - 1] = next_pixel;
+//    }
+//    
+//    med_buf[med_idx] = next_pixel;
+//    med_idx = !med_idx;
+//  }
+//  
+//  // Then percentile clamping
+//  uint16_t perc_val = quick_percentile(pixels);
+//  for (uint8_t i = 0; i < 112; i++) {
+//    if (pixels[i] < perc_val)   pixels[i] = perc_val;
+//  }
+//  
+//  // Next, do convolution
+//  conv_sum = -pixels[0] - pixels[1] - pixels[2] + pixels[4] + pixels[5] + pixels[6];
+//  conv_abs = (conv_sum < 0) ? (-conv_sum) : (conv_sum);
+//  edge_detect[0] = conv_abs;
+//  edge_mean = 0;
+//  for (uint8_t i = 4; i < 108; i++) {
+//    conv_sum += pixels[i - 4];
+//    conv_sum -= pixels[i - 1];
+//    conv_sum -= pixels[i];
+//    conv_sum += pixels[i + 3];
+//    
+//    conv_abs = (conv_sum < 0) ? (-conv_sum) : (conv_sum);
+//    
+//    edge_detect[i - 3] = conv_abs;
+//    edge_mean += conv_abs;
+//  }
+//  edge_mean /= 106;
+//  
+//  // Then peak identification (+ weeding out peaks resulting from specular reflection)
+//  // and calculating region means (+ identifying specular regions)
+//  peaks[0] = 0; reg_sum = pixels[1] + pixels[2] + pixels[3];
+//  peak_idx = 1; in_specular = 0; new_peak = 0; peak_after = 0;
+//  for (uint8_t i = 1; i < 105; i++) {
+//    if (edge_detect[i] > SPEC_THRESH) {
+//      if (in_specular == 0) {
+//        in_specular = 1;
+//        if (i > 1 && peaks[peak_idx - 1] != (i - 1)) {
+//          peaks[peak_idx] = i - 1;
+//          spec_regions[spec_idx] = peak_idx;
+//          peak_idx++; new_peak = 1;
+//        } else {
+//          spec_regions[spec_idx] = peak_idx - 1;
+//        }
+//        spec_idx++;
+//      } else if (in_specular == 2) {
+//        in_specular++;
+//      }
+//    } else if (edge_detect[i] < SPEC_THRESH && in_specular != 0) {
+//      if (in_specular == 1)
+//        in_specular++;
+//      else if (in_specular == 3) {
+//        in_specular = 0;
+//        peaks[peak_idx] = i;
+//        peak_idx++; new_peak = 1;
+//      }
+//    } else {
+//      if (edge_detect[i] >= edge_detect[i - 1] && edge_detect[i] > edge_detect[i + 1] && edge_detect[i] > edge_mean) {
+//        peaks[peak_idx] = i;
+//        peak_idx++; new_peak = 1;
+//      }
+//    }
+//    
+//    reg_sum += pixels[i + 3];
+//    
+//    if (new_peak == 1) {
+//      reg_size = peaks[peak_idx - 1] - peaks[peak_idx - 2] + (peak_idx == 2 ? 3 : 0);
+//      
+//      // If we retroactively made the previous point a peak, need to adjust the mean calculation
+//      if (in_specular == 1) {
+//        region_means[peak_idx - 2] = (reg_sum - pixels[i + 3]) / reg_size;
+//        reg_sum = pixels[i + 3];
+//      } else {
+//        region_means[peak_idx - 2] = reg_sum / reg_size;
+//        reg_sum = 0;
+//      }
+//      
+//      new_peak = 0;
+//      if (peak_after == 0 && peaks[peak_idx - 1] > start_point)
+//        peak_after = peak_idx - 1;
+//    }
+//  }
+//  
+//  // Set last peak as last pixel
+//  peaks[peak_idx] = 111;
+//  peak_idx++;
+//  reg_sum += pixels[108] + pixels[109] + pixels[110] + pixels[111];
+//  reg_size = peaks[peak_idx - 1] - peaks[peak_idx - 2];
+//  region_means[peak_idx - 2] = reg_sum / reg_size;
+//  
+//  if (peak_after == 0)
+//    peak_after = peak_idx - 1;
+//  
+//  // Identify the local regions around the start point
+//  lr_idx = 0;
+//  if (peak_after > 2) {
+//    local_regions[lr_idx] = peak_after - 2;
+//    lr_idx++;
+//  }
+//  
+//  local_regions[lr_idx] = peak_after - 1;
+//  lr_idx++;
+//  
+//  if (peak_after < peak_idx - 1) {
+//    local_regions[lr_idx] = peak_after;
+//    lr_idx++;
+//  }
+//  
+//  // Select the local region with the lowest mean
+//  lr_min = 0;
+//  for (uint8_t i = 1; i < lr_idx; i++) {
+//    if (region_means[local_regions[i]] < region_means[local_regions[lr_min]])
+//      lr_min = i;
+//  }
+//  
+//  edges[0] = peaks[local_regions[lr_min]];
+//  edges[0] += (edges[0] == 0 ? 0 : CONV_OFFSET);
+//  edges[1] = peaks[local_regions[lr_min]+1];
+//  edges[1] += (edges[1] == 111 ? 0 : CONV_OFFSET);
+//  edge_idx = 2;
+//  
+////  // Check if the region has a specular point on either end
+////  for (uint8_t i = 0; i < spec_idx; i++) {
+////    if (spec_regions[i] == local_regions[lr_min] - 1) {
+////      edges[edge_idx] = peaks[local_regions[lr_min] - 1] + CONV_OFFSET;
+////      edges[edge_idx+1] = peaks[local_regions[lr_min] + 1] + CONV_OFFSET;
+////      edge_idx += 2;
+////    } else if (spec_regions[i] == local_regions[lr_min] + 1) {
+////      edges[edge_idx] = peaks[local_regions[lr_min]] + CONV_OFFSET;
+////      edges[edge_idx+1] = peaks[local_regions[lr_min] + 2] + CONV_OFFSET;
+////      edge_idx += 2;
+////    }
+////  }
+//  
+//  return;       // Edge data is stored in argument array
+//}
+//
+//uint16_t quick_percentile(uint16_t *base_row)
+//{
+//  uint16_t row[112];
+//  uint16_t r, w, mid;
+//  
+//  for (uint16_t i = 0; i < 112; i++) {
+//    row[i] = base_row[i];
+//  }
+//  
+//  uint8_t from = 0, to = 111;
+//  
+//  // Percentile value is hardcoded so it doesn't have to be computed at runtime
+//  uint8_t k = (((112 * 100) * CIDER_PERCENTILE) / 10000);
+//  
+//  // if from == to we reached the kth element
+//  while (from < to) {
+//    r = from, w = to;
+//    mid = row[(r + w) / 2];
+//    
+//    // stop if the reader and writer meets
+//    while (r < w) {
+//      
+//      if (row[r] >= mid) { // put the large values at the end
+//        uint16_t tmp = row[w];
+//        row[w] = row[r];
+//        row[r] = tmp;
+//        w--;
+//      } else { // the value is smaller than the pivot, skip
+//        r++;
+//      }
+//    }
+//    
+//    // if we stepped up (r++) we need to step one down
+//    if (row[r] > mid && r != 0)    
+//      r--;
+//    
+//    // the r pointer is on the end of the first k elements
+//    if (k <= r) {
+//      to = r;
+//    } else {
+//      from = r + 1;
+//    }
+//  }
+//  
+//  return row[k];
+//}
+//
+//int stony_image_ann()
+//{
+//  uint16_t lastRow, lastCol;
+//  uint16_t pix_value;
+//  
+//  uint16_t pred_pixels[NUM_SUBSAMPLE];
+//  
+//  uint32_t pixel_sum = 0;
+//  float M = 0.0, S = 0.0;
+//  float value, tmpM;
+//  int k = 1;
+//  uint32_t current_subsample = 0;
+//  
+//  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
+//  ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
+//  
+//  set_pointer_value(REG_ROWSEL, 0, CAM2);
+//  set_pointer_value(REG_COLSEL, MASK(0, 1), CAM2);
+//  
+//  lastRow = 0;
+//  lastCol = MASK(0, 1);
+//
+//  for (int pixel = 0; pixel < NUM_SUBSAMPLE; pixel++) {   
+//      if (MASK(pixel, 1) != lastCol)
+//      {
+//        // Set row to zero to avoid precharging any other rows
+//        set_pointer_value(REG_ROWSEL, 0, CAM2);
+//        
+//        char diff = MASK(pixel, 1) - lastCol;
+//        
+//        inc_pointer_value(REG_COLSEL, diff, CAM2);
+//        
+//        lastCol = MASK(pixel, 1);
+//
+//        set_pointer_value(REG_ROWSEL, MASK(pixel, 0), CAM2);
+//        
+//        lastRow = MASK(pixel, 0);
+//        
+//        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      } else {
+//        inc_value(MASK(pixel, 0) - lastRow, CAM2);
+//        
+//        lastRow = MASK(pixel, 0);
+//      }
+//      
+//      CAM2_INPH_BANK->ODR |= CAM2_INPH_PIN;
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      CAM2_INPH_BANK->ODR &= ~CAM2_INPH_PIN;
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      
+//      /* Start ADC1 Software Conversion */
+//      ADC_SoftwareStartConv(ADC1);
+//      
+//      if (pixel > 0) {
+//        pixel_sum += pix_value;
+//        
+//        // Standard deviation computation
+//        value = (float)pix_value;
+//        tmpM = M;
+//        M += (value - tmpM) / k;
+//        S += (value - tmpM) * (value - M);
+//        k++;
+//        current_subsample++;
+//      }
+//      else {
+//        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//        asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//      }
+//
+//      pix_value = adc_values[adc_idx] - COL_FPN(pixel);
+//      adc_idx = !adc_idx;
+//  }
+//  
+//  pixel_sum += pix_value;
+//  
+//  // Standard deviation computation
+//  value = (float)pix_value;
+//  tmpM = M;
+//  M += (value - tmpM) / k;
+//  S += (value - tmpM) * (value - M);
+//  k++;
+//  current_subsample++;
+//  
+//  if (current_subsample != NUM_SUBSAMPLE)
+//    while(1);
+//  
+//  float mean = (float)pixel_sum / (NUM_SUBSAMPLE);
+//  float std = sqrt(S / (k-1));
+//  
+//  // Predict gaze, store results in global variable pred[]
+//  predict_gaze_mean(pred_pixels, mean, std);
+//
+//  return 0;
+//}
+//

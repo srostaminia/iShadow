@@ -13,6 +13,15 @@ extern uint32_t sd_ptr;
 
 volatile uint16_t time_start, time_total;
 
+#ifdef CIDER_MODE
+extern uint8_t pred[2];
+extern float last_r;
+#endif
+
+#ifdef OUTDOOR_SWITCH
+uint8_t outdoor_mode = 0;
+#endif
+
 int main()
 {  
   volatile uint16_t start, total;
@@ -24,21 +33,67 @@ int main()
   
   config_us_delay();
   
-//  stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3,
-//            SMH_GAIN_3V3, SMH_SELAMP_3V3);
+  stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3,
+            SMH_GAIN_3V3, SMH_SELAMP_3V3);
   
-    stony_init(41, 50, 41,
-            4, SMH_SELAMP_3V3);
+//    stony_init(39, 50, 41,
+//            2, SMH_SELAMP_3V3);
   
   if (disk_initialize(0) != SD_OK)
     while(1);
   
   config_ms_timer();
   
+//  stony_image_single();  
+  
+//#ifdef CIDER_MODE
+//  uint8_t use_ann = 1;
+//  uint8_t cider_xy[2];
+//  
+//  pred[0] = 255;
+//  pred[1] = 255;
+  
+//  while(1) {
+//    if (use_ann) {
+//      stony_image_ann();
+//      use_ann = 0;
+//      last_r = 0;
+//    }
+//    else {
+//      if (run_cider(cider_xy) < 0)
+//        use_ann = 1;
+//    }
+//
+//  stony_image_dual();
+//
+//  }
+//#elif defined(OUTDOOR_SWITCH)
+//  uint8_t outdoor_state = 0;
+//  while(1) {
+//    outdoor_state = check_outdoors();
+//    
+//    if (outdoor_state ^ outdoor_mode) {
+//      if (outdoor_state) {
+//        outdoor_mode = 1;
+//        stony_init(39, 50, 41, 2, SMH_SELAMP_3V3);
+//      } else {
+//        outdoor_mode = 0;
+//        stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3,
+//                   SMH_GAIN_3V3, SMH_SELAMP_3V3);
+//      }
+//    } else {
+//      stony_pin_config();
+//    }
+//    
+//    if (stony_image_dual())
+//      while(1);
+//  }
+//#else
   while(1) {
     if (stony_image_dual())
       while(1);
   }
+//#endif
   
 //  stony_image_single();
 //  uint8_t loc1[2] = {55, 56};
@@ -48,7 +103,7 @@ int main()
   
 //  single_pixel_test(loc1, 56, 0);
 //  single_pixel_test(loc2, 56, 0);
-//  single_line_test(55, 1);
+//  single_line_test(58, 1);
 //  
 //  stony_image_single();
 //  
@@ -57,27 +112,34 @@ int main()
   return total;
 }
 
-int single_line_test(uint8_t rowcol_num, uint8_t rowcol_sel)
-{
-  uint8_t sd_buf[112 * 2 * 2];
-  
-  ADC_RegularChannelConfig(ADC1, SINGLE_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
-  ADC_RegularChannelConfig(ADC1, SINGLE_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
-  
-  stony_cider_line(rowcol_num, sd_buf, rowcol_sel);
-  stony_cider_line(rowcol_num - 1, sd_buf + 224, rowcol_sel);
-  
-  Delay(300);
-  
-  stony_cider_line(rowcol_num - 1, sd_buf + 224, rowcol_sel);
-  stony_cider_line(rowcol_num, sd_buf + 224, rowcol_sel);
-    
-  if (disk_write_fast(0, sd_buf, sd_ptr, 1) != RES_OK)      return -1;
-  f_finish_write();
-  sd_ptr += 1;
-  
-  return 0;
-}
+//int single_line_test(uint8_t rowcol_num, uint8_t rowcol_sel)
+//{
+//  uint8_t sd_buf[112 * 112 * 2];
+//  
+//  ADC_RegularChannelConfig(ADC1, SINGLE_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
+//  ADC_RegularChannelConfig(ADC1, SINGLE_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
+//  
+//  for (int i = 0; i < 20; i++) {
+//    stony_cider_line(rowcol_num + i, sd_buf + (224 * i), rowcol_sel);
+//  }
+//    
+//  for (int i = 0; i < 2; i++) {
+//    if (disk_write_fast(0, sd_buf + TX_BLOCKS / 2 * 512 * i, sd_ptr, TX_BLOCKS / 2) != RES_OK)      return -1;
+//    f_finish_write();
+//    sd_ptr += TX_BLOCKS / 2;  
+//  }
+//  
+//#if (112 % TX_ROWS != 0)
+//  f_finish_write();
+//  
+//  if (disk_write_fast(0, (uint8_t *)sd_buf + TX_BLOCKS * 512, sd_ptr, TX_MOD_BLOCKS / 2) != RES_OK)      return -1;
+//  sd_ptr += TX_MOD_BLOCKS / 2;
+//#endif
+//  
+//  f_finish_write();
+//  
+//  return 0;
+//}
 
 int ann_mask_test()
 {
@@ -181,47 +243,47 @@ int single_pixel_test(uint8_t loc[2], uint16_t lines, uint16_t delay)
   return 0;
 }
 
-int cider_line_test(int8_t rowcol_num, int8_t rowcol_sel)
-{
-  //   112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, only 1 camera
-//   Double-buffered (2-dim array)
-  uint8_t sd_buf[2][TX_ROWS][112 * 2];
-  uint8_t buf_idx = 0;
-  uint16_t this_rowcol;
-  
-  ADC_RegularChannelConfig(ADC1, SINGLE_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
-  ADC_RegularChannelConfig(ADC1, SINGLE_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
-  
-  for (int i = 0, buf_line = 1; i < 112; i++, buf_line++) {
-    this_rowcol = (rowcol_num < 0) ? (i) : (rowcol_num);
-    stony_cider_line(this_rowcol, sd_buf[buf_idx][buf_line - 1], rowcol_sel);
-    
-    if (buf_line == TX_ROWS) {
-      buf_line = 0;
-      if (i > TX_ROWS - 1) {
-        f_finish_write();
-      }
-      
-      if (disk_write_fast(0, (uint8_t *)sd_buf[buf_idx], sd_ptr, TX_BLOCKS / 2) != RES_OK)      return -1;
-      
-      buf_idx = !buf_idx;
-      
-      sd_ptr += TX_BLOCKS / 2;
-//      if (row == 31)    return 0;
-    }
-  }
-  
-#if (112 % TX_ROWS != 0)
-  f_finish_write();
-  
-  if (disk_write_fast(0, (uint8_t *)sd_buf[buf_idx], sd_ptr, TX_MOD_BLOCKS / 2) != RES_OK)      return -1;
-  sd_ptr += TX_MOD_BLOCKS / 2;
-#endif
-  
-  f_finish_write();
-  
-  return 0;
-}
+//int cider_line_test(int8_t rowcol_num, int8_t rowcol_sel)
+//{
+//  //   112 pixels per row, TX_ROWS rows per data transfer, 2 bytes per row, only 1 camera
+////   Double-buffered (2-dim array)
+//  uint8_t sd_buf[2][TX_ROWS][112 * 2];
+//  uint8_t buf_idx = 0;
+//  uint16_t this_rowcol;
+//  
+//  ADC_RegularChannelConfig(ADC1, SINGLE_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
+//  ADC_RegularChannelConfig(ADC1, SINGLE_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
+//  
+//  for (int i = 0, buf_line = 1; i < 112; i++, buf_line++) {
+//    this_rowcol = (rowcol_num < 0) ? (i) : (rowcol_num);
+//    stony_cider_line(this_rowcol, sd_buf[buf_idx][buf_line - 1], rowcol_sel);
+//    
+//    if (buf_line == TX_ROWS) {
+//      buf_line = 0;
+//      if (i > TX_ROWS - 1) {
+//        f_finish_write();
+//      }
+//      
+//      if (disk_write_fast(0, (uint8_t *)sd_buf[buf_idx], sd_ptr, TX_BLOCKS / 2) != RES_OK)      return -1;
+//      
+//      buf_idx = !buf_idx;
+//      
+//      sd_ptr += TX_BLOCKS / 2;
+////      if (row == 31)    return 0;
+//    }
+//  }
+//  
+//#if (112 % TX_ROWS != 0)
+//  f_finish_write();
+//  
+//  if (disk_write_fast(0, (uint8_t *)sd_buf[buf_idx], sd_ptr, TX_MOD_BLOCKS / 2) != RES_OK)      return -1;
+//  sd_ptr += TX_MOD_BLOCKS / 2;
+//#endif
+//  
+//  f_finish_write();
+//  
+//  return 0;
+//}
 
 /**
   * @brief  Inserts a delay time.
@@ -289,4 +351,61 @@ void delay_us(int delayTime)
   for (int i = 0; i < delayTime; i++) {
     asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
   }
+}
+
+#ifdef OUTDOOR_SWITCH
+uint8_t check_outdoors() {
+  uint16_t photo_val;
+  
+  init_photodiode();
+  
+  ADC_SoftwareStartConv(ADC1);
+  while(ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) == RESET);
+  photo_val = ADC_GetConversionValue(ADC1);
+  
+  if (photo_val > OUTDOOR_THRESH)
+    return 1;
+  else
+    return 0;
+}
+#endif
+
+void init_photodiode(void) {
+  // Enable HSI oscillator (required for ADC operation)
+  RCC_HSICmd(ENABLE);
+  
+  ADC_DMACmd(ADC1, DISABLE);
+  ADC_Cmd(ADC1, DISABLE);
+  
+  ADC_InitTypeDef ADC_InitStructure;
+  GPIO_InitTypeDef GPIO_InitStructure;
+  
+  GPIO_InitStructure.GPIO_OType = GPIO_OType_PP;
+  GPIO_InitStructure.GPIO_Speed = GPIO_Speed_40MHz;
+  GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AN;
+  GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
+  GPIO_InitStructure.GPIO_Pin   = GPIO_Pin_6;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+  
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
+
+  ADC_BankSelection(ADC1, ADC_Bank_A);
+  
+  ADC_StructInit(&ADC_InitStructure);
+  ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
+  ADC_InitStructure.ADC_ScanConvMode = DISABLE;
+  ADC_InitStructure.ADC_ContinuousConvMode = DISABLE;
+  ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
+  ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
+  ADC_InitStructure.ADC_NbrOfConversion = 1;
+  ADC_Init(ADC1, &ADC_InitStructure);
+  
+  ADC_RegularChannelConfig(ADC1, ADC_Channel_6, 1, ADC_SampleTime_4Cycles);
+  
+  /* Enable ADC1 */
+  ADC_Cmd(ADC1, ENABLE);
+
+  /* Wait until ADC1 ON status */
+  while (ADC_GetFlagStatus(ADC1, ADC_FLAG_ADONS) == RESET);
 }

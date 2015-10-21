@@ -7,8 +7,50 @@
 #include "libstony.h"
 #include "stm32l152d_eval_sdio_sd.h"
 #include "diskio.h"
+#include "cycle_count.h"
 
 static __IO uint32_t TimingDelay;
+
+uint32_t cycles_elapsed;
+
+#define SLEEP_MS         182
+
+//int main()
+//{
+//  if (SysTick_Config(SystemCoreClock / 1000)) {
+//    while (1);
+//  }
+//  
+//  config_ms_timer();
+//  config_us_delay();
+//  
+//  stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3,
+//           SMH_GAIN_3V3, SMH_SELAMP_3V3);
+//  
+//  while (1) {
+//    if (SysTick_Config(SystemCoreClock / 1000)) {
+//      while (1);
+//    }
+//    
+//    dac_init();
+//  
+//    stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3,
+//               SMH_GAIN_3V3, SMH_SELAMP_3V3);
+//    
+//    DAC_SetChannel2Data(DAC_Align_12b_R, LED_HIGH);
+//    DAC_SetChannel1Data(DAC_Align_12b_R, LED_HIGH);
+//    
+//    config_us_delay();
+//    config_ms_timer();
+//    Delay(WAKE_US);
+////    delay_us(WAKE_US);
+//    
+//    if (WAKE_US != TOTAL_PERIOD_US) {
+//      StopRTCLSIMode_Measure(TOTAL_PERIOD_US - WAKE_US);
+//      SystemInit();
+//    }
+//  }
+//}
 
 int main()
 {  
@@ -22,19 +64,19 @@ int main()
   stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3,
              SMH_GAIN_3V3, SMH_SELAMP_3V3);
   
-  uint16_t model_time[] = {0, 0};
-  get_model_time(model_time);
-  
-  uint16_t model_sum = model_time[0] + model_time[1];
-  
-  if (model_sum >= 250) {
-    while(1);
-  }
-  
-  const uint16_t SLEEP_TIME = 250 - model_sum;
-  
-  uint8_t cycle = 1;
-  
+//  uint32_t model_time[] = {0, 0};
+//  get_model_time(model_time);
+//  
+//  uint32_t model_sum = model_time[0] + model_time[1];
+//  
+//  if (model_sum >= 250) {
+//    while(1);
+//  }
+//  
+//  const uint16_t SLEEP_TIME = 250 - model_sum;
+//  
+//  uint8_t cycle = 1;
+//  
   while (1) {
     if (SysTick_Config(SystemCoreClock / 1000)) {
       while (1);
@@ -44,53 +86,105 @@ int main()
     
 //    config_us_delay();
     
-    if (cycle == 1 || cycle == 2) {      
+//    if (cycle == 1 || cycle == 2) {      
       DAC_SetChannel2Data(DAC_Align_12b_R, LED_HIGH);
       DAC_SetChannel1Data(DAC_Align_12b_R, LED_HIGH);
-    } else {
-      DAC_SetChannel2Data(DAC_Align_12b_R, LED_LOW);
-      DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);
-    }
+//    } else {
+//      DAC_SetChannel2Data(DAC_Align_12b_R, LED_LOW);
+//      DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);
+//    }
     
-    if (cycle == 1 || cycle == 3) {
+//    if (cycle == 1 || cycle == 3) {
       stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3,
                  SMH_GAIN_3V3, SMH_SELAMP_3V3);
-    }
+//    }
     
 //    config_ms_timer();
-//    stony_image_subsample();
+    stony_image_subsample();
     
-    volatile uint16_t total, start;
-    start = MS_TIME;
+//    volatile uint16_t total, start;
+//    start = MS_TIME;
 //    uint8_t tmp[2];
 //    run_cider(tmp);
-    Delay(5);
-    total = MS_TIME - start;
+//    Delay(5);
+//    total = MS_TIME - start;
     
-    start = 0;
-    
-    if (cycle == 1 || cycle == 2) {
+//    if (cycle == 1 || cycle == 2) {
       DAC_SetChannel2Data(DAC_Align_12b_R, LED_LOW);
       DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);
-    }
+//    }
     
-    if (cycle == 1 || cycle == 3)
+//    if (cycle == 1 || cycle == 3)
       stony_sleep();
     
-    if (cycle == 4) {
-      cycle = 0;
-      StopRTCLSIMode_Measure(SLEEP_TIME * 2);
-    } else {
-      StopRTCLSIMode_Measure(SLEEP_TIME);
-    }
+//    if (cycle == 4) {
+//      cycle = 0;
+//      StopRTCLSIMode_Measure(550);
+//    } else {
+      StopRTCLSIMode_Measure(SLEEP_MS);
+//    }
     
     SystemInit();
     
-    cycle += 1;
+//    cycle += 1;
   }
   
   return 0;
 }
+
+uint32_t get_model_cycles(uint32_t *model_cycles) {
+  volatile uint32_t full_cycles, acq_cycles, start;
+  
+  stony_image_subsample();
+  
+  uint8_t tmp[2];
+  
+  stopwatch_reset();
+  cycles_elapsed = 0;
+//  start = stopwatch_getticks();
+//  stony_image_subsample();
+  run_cider(tmp);
+//  full_cycles = stopwatch_getticks() - start;
+  full_cycles = cycles_elapsed;
+  
+  stopwatch_reset();
+  cycles_elapsed = 0;
+//  start = stopwatch_getticks();
+//  stony_image_subsample_nopred();
+  run_cider_nopred();
+//  acq_cycles = stopwatch_getticks() - start;
+  acq_cycles = cycles_elapsed;
+  
+  model_cycles[0] = acq_cycles;                     // Acquisiton cycles
+  model_cycles[1] = full_cycles - acq_cycles;         // Prediction cycles 
+
+  return full_cycles;
+}
+
+
+uint32_t get_model_time(uint32_t *model_time) {
+  volatile uint16_t full_time, acq_time, start;
+  
+  stony_image_subsample();
+  
+  uint8_t tmp[2];
+  
+  start = MS_TIME;
+  stony_image_subsample();
+//  run_cider(tmp);
+  full_time = MS_TIME - start;
+  
+  start = MS_TIME;
+  stony_image_subsample_nopred();
+//  run_cider_nopred();
+  acq_time = MS_TIME - start;
+  
+  model_time[0] = acq_time;                     // Acquisiton time
+  model_time[1] = full_time - acq_time;         // Prediction time 
+
+  return full_time;
+}
+
 
 /**
   * @brief  Inserts a delay time.
@@ -152,37 +246,13 @@ void config_us_delay()
 #pragma inline=never
 void delay_us(int delayTime)
 {
-//  uint16_t start = TIM5->CNT;
-//  while((uint16_t)(TIM5->CNT - start) <= delayTime);
+  uint16_t start = TIM5->CNT;
+  while((uint16_t)(TIM5->CNT - start) <= delayTime);
   
-  for (int i = 0; i < delayTime; i++) {
-    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-  }
+//  for (int i = 0; i < delayTime; i++) {
+//    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//  }
 }
-
-uint16_t get_model_time(uint16_t *model_time) {
-  volatile uint16_t full_time, acq_time, start;
-  
-//  stony_image_subsample();
-  
-  uint8_t tmp[2];
-  
-  start = MS_TIME;
-//  stony_image_subsample();
-  run_cider(tmp);
-  full_time = MS_TIME - start;
-  
-  start = MS_TIME;
-//  stony_image_subsample_nopred();
-  run_cider_nopred();
-  acq_time = MS_TIME - start;
-  
-  model_time[0] = acq_time;                     // Acquisiton time
-  model_time[1] = full_time - acq_time;         // Prediction time 
-
-  return full_time;
-}
-
 /**
   * @brief  This function configures the system to enter Stop mode with RTC 
   *         clocked by LSI for current consumption measurement purpose.
@@ -197,10 +267,11 @@ uint16_t get_model_time(uint16_t *model_time) {
   * @param  None
   * @retval None
   */
-void StopRTCLSIMode_Measure(uint16_t sleep_time)
+void StopRTCLSIMode_Measure(uint16_t sleep_ms)
 {
   // 37 kHz with a clock divider of 16
-  uint32_t sleep_regval = (37 * sleep_time) / 16;
+  uint32_t sleep_regval = (37 * sleep_ms) / 16;
+//  uint32_t sleep_regval = 0;
   
   NVIC_InitTypeDef  NVIC_InitStructure;
   EXTI_InitTypeDef  EXTI_InitStructure;
@@ -303,6 +374,15 @@ void StopRTCLSIMode_Measure(uint16_t sleep_time)
     
   /* Enter Stop Mode */
   PWR_EnterSTOPMode(PWR_Regulator_LowPower, PWR_STOPEntry_WFI);
+//  
+//  /* Enable the power down mode during Sleep mode */
+//  FLASH_SLEEPPowerDownCmd(ENABLE);
+//  
+//  /* Request to enter SLEEP mode with regulator in low power mode */
+//  PWR_EnterSleepMode(PWR_Regulator_LowPower, PWR_SLEEPEntry_WFI);
+//  
+//    /* Enable the power down mode during Sleep mode */
+//  FLASH_SLEEPPowerDownCmd(DISABLE);
 
   /* Infinite loop */
 //  while (1)

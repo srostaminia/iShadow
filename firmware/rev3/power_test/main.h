@@ -66,7 +66,8 @@ void config_ms_timer();
 void set_mco();
 void delay_us(int delayTime);
 
-uint16_t get_model_time(uint16_t *model_time);
+uint32_t get_model_cycles(uint32_t *model_cycles);
+uint32_t get_model_time(uint32_t *model_time);
 void StopRTCLSIMode_Measure(uint16_t sleep_time);
 
 

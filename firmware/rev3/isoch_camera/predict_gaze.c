@@ -262,6 +262,44 @@ void predict_gaze_fullmean(uint16_t img[], float mean, float std)
     return;
 }
 
+void predict_gaze_mean(uint16_t pixels[], float mean, float std)
+{
+    int i, j;
+    float ah[6];
+    float x, x_val, y_val;
+
+    for (i = 0; i < NUM_HIDDEN; i++)  {
+        ah[i] = BH(i);
+    }
+    
+//    float std2 = calc_std(img);
+//    float mean = ((float)sum) / (112*112);
+
+    uint16_t subsample;
+    for (i = 0; i < NUM_SUBSAMPLE; i++) {
+        subsample = pixels[i];
+        x = (float)(subsample - mean) / std;
+
+        for (j = 0; j < NUM_HIDDEN; j++) {
+            ah[j] += x * WIH(i, j);
+        }
+    }
+    
+    x_val = BO(0);
+    y_val = BO(1);
+
+    for (i = 0; i < NUM_HIDDEN; i++) {
+        x_val += WHO(i, 0) * tanh_approx(ah[i]);
+        y_val += WHO(i, 1) * tanh_approx(ah[i]);
+    }
+    
+    // pred = global for storing prediction values
+    pred[0] = (unsigned short)((x_val * 112) + 0.5);
+    pred[1] = (unsigned short)((y_val * 111) + 0.5);
+    
+    return;
+}
+
 float calc_std(uint16_t img[])
 {
     float M = 0.0;
@@ -309,9 +347,9 @@ int finish_predict(float ah[6])
     pred[1] = (unsigned short)((y_val * 111) + 0.5);
       
 //    f_finish_write();
-    if (disk_write_fast(0, (uint8_t*)pred, sd_ptr, 1) != RES_OK)      return -1;
-    sd_ptr += 1;
-    f_finish_write();
+//    if (disk_write_fast(0, (uint8_t*)pred, sd_ptr, 1) != RES_OK)      return -1;
+//    sd_ptr += 1;
+//    f_finish_write();
     
     return 0;
 }
