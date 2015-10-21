@@ -28,6 +28,7 @@ extern "C" {
 void predict_gaze(unsigned short subsamples[], uint16_t min, uint16_t max);
 void predict_gaze_fullimg(unsigned short img[], uint16_t min, uint16_t max);
 void predict_gaze_fullmean(uint16_t img[], float mean, float std);
+void predict_gaze_mean(uint16_t *pixels, float mean, float std);
 int finish_predict(float ah[6]);
 
 float tanh_approx(float input);

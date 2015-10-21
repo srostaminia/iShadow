@@ -34,7 +34,7 @@ int main()
   config_us_delay();
   
 #ifdef OUTMODE
-  stony_init(41, 50, 41,
+  stony_init(39, 50, 41,
             2, SMH_SELAMP_3V3);
 #else
   stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3,
@@ -72,7 +72,6 @@ int main()
     } 
 #else
     stony_image_dual_subsample();
-//    stony_send_cider_image(last_pred, 1);
 #endif // ifdef CIDER_MODE
     
     while (packet_sending == 1);

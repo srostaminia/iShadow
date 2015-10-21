@@ -5,6 +5,7 @@
 #include "stm32l152d_eval_sdio_sd.h"
 #include "predict_gaze.h"
 #include "math.h"
+#include "cycle_count.h"
 
 //#define TX_ROWS         48
 //
@@ -28,6 +29,8 @@ extern int8_t pred[2];
 extern float pred_radius;
 float last_r = 0;
 //uint16_t pred_img[112][112];
+
+extern uint32_t cycles_elapsed;
 
 uint16_t last_min = 1000, last_max = 0;
 
@@ -960,17 +963,30 @@ int run_cider(uint8_t *cider_xy)
   ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
   ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 2, ADC_SampleTime_4Cycles);
   
+  cycles_elapsed += stopwatch_getticks();
+  stopwatch_reset();
+  
   uint16_t row[112], col[112];
   stony_cider_line(col_start, row, SEL_ROW);
+  cycles_elapsed += stopwatch_getticks();
+  stopwatch_reset();
+  
   stony_cider_line(row_start, col, SEL_COL);
+  cycles_elapsed += stopwatch_getticks();
+  stopwatch_reset();
   
   // Reconfigure ADC for dual-camera reading
   ADC_RegularChannelConfig(ADC1, CAM1_ADC_CHAN, 1, ADC_SampleTime_4Cycles);
   ADC_RegularChannelConfig(ADC1, CAM2_ADC_CHAN, 2, ADC_SampleTime_4Cycles); // AMM
   
   find_pupil_edge(row_start, row_edges, row);
+  stopwatch_reset();
+  cycles_elapsed += stopwatch_getticks();
+  
   find_pupil_edge(col_start, col_edges, col);
-
+  stopwatch_reset();
+  cycles_elapsed += stopwatch_getticks();
+  
   for (uint8_t i = 0; (row_edges[i] != 0 || i==0) && i < 6; i += 2) {
     // Pupil can't be smaller than 4 pixels across
     if ((row_edges[i] - row_edges[i + 1]) < 4 && (row_edges[i] - row_edges[i + 1]) > -4)
@@ -1009,6 +1025,8 @@ int run_cider(uint8_t *cider_xy)
   pred_radius = best_r;
   last_r = best_r;
 
+  cycles_elapsed += stopwatch_getticks();
+  stopwatch_reset();
   return pupil_found;
 }
 
@@ -1016,7 +1034,11 @@ void run_cider_nopred()
 {
   uint16_t row[112], col[112];
   stony_cider_line(55, row, SEL_ROW);
+  cycles_elapsed += stopwatch_getticks();
+  stopwatch_reset();
+  
   stony_cider_line(55, col, SEL_COL);
+  cycles_elapsed += stopwatch_getticks();
 }
 
 void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
@@ -1613,7 +1635,7 @@ int stony_image_subsample()
   lastRow = MASK(0, 0);
   lastCol = 0;
 
-  for (int pixel = 0; pixel < NUM_SUBSAMPLE; pixel++) {
+  for (int pixel = 0; pixel < NUM_SUBSAMPLE; pixel++) {    
       if (MASK(pixel, 0) != lastRow)
       {
         char diff = MASK(pixel, 0) - lastRow;
@@ -1682,7 +1704,7 @@ int stony_image_subsample()
   
   last_min = min;
   last_max = max;
-  
+
   return 0;
 }
 
@@ -1700,7 +1722,7 @@ int stony_image_subsample_nopred()
   lastRow = MASK(0, 0);
   lastCol = 0;
 
-  for (int pixel = 0; pixel < NUM_SUBSAMPLE; pixel++) {
+  for (int pixel = 0; pixel < NUM_SUBSAMPLE; pixel++) {    
       if (MASK(pixel, 0) != lastRow)
       {
         char diff = MASK(pixel, 0) - lastRow;
@@ -1739,6 +1761,6 @@ int stony_image_subsample_nopred()
       pix_value = adc_values[adc_idx] - ROW_FPN(pixel);
       adc_idx = !adc_idx;
   }
-  
+
   return 0;
 }

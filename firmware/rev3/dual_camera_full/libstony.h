@@ -3,10 +3,24 @@
 
 #include "stm32l1xx.h"
 
+//#define CIDER_MODE
+
+//#define OUTDOOR_SWITCH
+
 // Camera to use for single-camera functions
-#define SINGLE_CAM      CAM1
+#define SINGLE_CAM      CAM2
 
 //#define COLUMN_COLLECT
+
+
+
+#if defined(CIDER_MODE) && defined(OUTDOOR_SWITCH)
+#error ERROR: Cannot use CIDER_MODE and OUTDOOR_SWITCH simultaneously (libstony.h)
+#endif
+
+#ifdef OUTDOOR_SWITCH
+#define OUTDOOR_THRESH          300
+#endif
 
 #define LED_LOW         0
 
@@ -71,6 +85,9 @@
 #define SINGLE_PARAM(PNAME)    CAM2 ## _ ## PNAME
 #endif
 
+#define SEL_ROW              1
+#define SEL_COL              0
+
 #define REG_COLSEL      0  //select column
 #define REG_ROWSEL      1  //select row
 #define REG_VSW         2  //vertical switching
@@ -90,14 +107,36 @@
 #define ADC1_DR_ADDRESS                 ((uint32_t)0x40012458)
 #define DMA_DIR_PeripheralToMemory      ((uint32_t)0x00000000)
 
+// CIDER parameters
+#ifdef CIDER_MODE
+#define SPEC_THRESH     150
+#define CONV_OFFSET     4
+// Percentile value for cross model pixel clamping
+#define CIDER_PERCENTILE        10
+
+#define BH(X)           *((float*)(model_data + bh_offset + ((X) * 2)))  
+#define BO(X)           *((float*)(model_data + bo_offset + ((X) * 2)))
+#define MASK(X, Y)      model_data[mask_offset + ((X) * 2) + (Y)]
+#define WHO(X, Y)       *((float*)(model_data + who_offset + ((X) * 4) + ((Y) * 2)))
+#define WIH(X, Y)       *((float*)(model_data + wih_offset + ((X) * num_hidden * 2) + ((Y) * 2)))
+#define ROW_FPN(X)          model_data[fpn_offset + (X)]
+#define COL_FPN(X)      model_data[col_fpn_offset + (X)]
+
+#endif  // CIDER_MODE
+
 void stony_pin_config();
 void stony_init(short vref, short nbias, short aobias, char gain, char selamp);
 int stony_read_pixel();
 int stony_image_dual();
+int stony_image_dual_subsample();
 int stony_image_single();
-int stony_cider_line(uint8_t rowcol_num, uint8_t *sd_buf, uint8_t rowcol_sel);
+int stony_cider_line(uint8_t rowcol_num, uint16_t *line_buf, uint8_t rowcol_sel);
 int stony_single_pixel(uint8_t loc[2], uint16_t reps, uint16_t delay, uint8_t *sd_buf);
 void dac_init();
+int run_cider(uint8_t *cider_rowcol);
+uint16_t quick_percentile(uint16_t *base_row);
+void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels);
+int stony_image_ann();
 
 void pulse_resv(uint8_t cam);
 void pulse_incv(uint8_t cam);
