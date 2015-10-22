@@ -1,1 +1,6 @@
 Debug/
+List/
+Obj/
+Exe/
+settings/
+*.dep
