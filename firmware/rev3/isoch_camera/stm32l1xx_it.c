@@ -33,6 +33,7 @@
 #include "hw_config.h"
 #include "usb_lib.h"
 #include "usb_istr.h"
+#include "stm32l152d_eval_sdio_sd.h"
 
 uint16_t Out_Data_Offset;
 extern uint16_t In_Data_Offset;
@@ -189,6 +190,23 @@ void USBWakeUp_IRQHandler(void)
 #endif
 {
   EXTI_ClearITPendingBit(EXTI_Line18);
+}
+
+void SDIO_IRQHandler(void)
+{
+  SD_ProcessIRQSrc();
+}
+
+/**
+* @brief  This function handles DMA2 Stream3 or DMA2 Stream6 global interrupts
+*         requests.
+* @param  None
+* @retval None
+*/
+void SD_SDIO_DMA_IRQHANDLER(void)
+{
+  /* Process DMA2 Stream3 or DMA2 Stream6 Interrupt Sources */
+  SD_ProcessDMAIRQ();
 }
 
 /******************************************************************************/

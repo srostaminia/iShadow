@@ -35,7 +35,8 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "stm32l1xx.h"
-
+#include "lowlevel.h"
+   
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
@@ -52,6 +53,8 @@ void PendSV_Handler(void);
 void SysTick_Handler(void);
 void USBWakeUp_IRQHandler(void);
 void USB_FS_WKUP_IRQHandler(void);
+void SDIO_IRQHandler(void);
+void SD_SDIO_DMA_IRQHANDLER(void);
 
 #ifdef __cplusplus
 }
