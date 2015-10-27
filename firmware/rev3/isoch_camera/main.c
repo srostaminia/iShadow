@@ -7,7 +7,10 @@
 #include "usb_lib.h"
 #include "usb_desc.h"
 #include "usb_pwr.h"
-#include "libstony.h"
+#include "stonyman.h"
+#include "assert.h"
+#include "stm32l152d_eval_sdio_sd.h"
+#include "diskio.h"
 
 extern uint32_t MUTE_DATA;
 extern uint16_t In_Data_Offset;
@@ -40,45 +43,69 @@ int main()
   stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3,
             SMH_GAIN_3V3, SMH_SELAMP_3V3);
 #endif
+
+#ifdef SD_SEND
+  sd_test();
+#elif defined(USB_SEND)
+  usb_test();
+#endif
+
+  return 0;
+}
+
+void sd_test()
+{
+  assert (disk_initialize(0) == SD_OK);
   
+  while (1) {
+    stony_single();
+  }
+}
+
+void usb_test()
+{
   Set_System();
   Set_USBClock();
   USB_Interrupts_Config();
   USB_Init();
   Speaker_Config();
-
-#ifdef CIDER_MODE
-  uint8_t use_ann = 1;
-  uint8_t cider_xy[2];
-#endif
   
-  pred[0] = 255;
-  pred[1] = 255;
   while (1) {
     clear_ENDP1_packet_buffers();
+    stony_single();
     while (packet_sending == 1);
-
-#ifdef CIDER_MODE
-    if (use_ann) {
-      stony_image_dual_subsample();
-      use_ann = 0;
-      last_r = 0;
-    }
-    else {
-      if (run_cider(cider_xy) < 0)
-        use_ann = 1;
-      
-      stony_send_cider_image(cider_xy, use_ann);
-    } 
-#else
-    stony_image_dual_subsample();
-#endif // ifdef CIDER_MODE
-    
-    while (packet_sending == 1);
-
   }
 
-  return 0;
+//#ifdef CIDER_MODE
+//  uint8_t use_ann = 1;
+//  uint8_t cider_xy[2];
+//#endif
+//  
+//  pred[0] = 255;
+//  pred[1] = 255;
+//  while (1) {
+//    clear_ENDP1_packet_buffers();
+//    while (packet_sending == 1);
+//
+//#ifdef CIDER_MODE
+//    if (use_ann) {
+//      stony_image_dual_subsample();
+//      use_ann = 0;
+//      last_r = 0;
+//    }
+//    else {
+//      if (run_cider(cider_xy) < 0)
+//        use_ann = 1;
+//      
+//      stony_send_cider_image(cider_xy, use_ann);
+//    } 
+//#else
+//    stony_image_dual_subsample();
+//#endif // ifdef CIDER_MODE
+//    
+//    while (packet_sending == 1);
+//
+//  }
 }
 
 /**

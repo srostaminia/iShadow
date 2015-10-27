@@ -66,6 +66,8 @@ void set_mco();
 void delay_us(int delayTime);
 void config_ms_timer();
 void delay_ms(int DelayTime);
+void usb_test();
+void sd_test();
 
 #endif /* __MAIN_H */
 

@@ -12,7 +12,7 @@
       <name>General</name>
       <archiveVersion>3</archiveVersion>
       <data>
-        <version>21</version>
+        <version>22</version>
         <wantNonLocal>1</wantNonLocal>
         <debug>1</debug>
         <option>
@@ -29,7 +29,7 @@
         </option>
         <option>
           <name>Variant</name>
-          <version>20</version>
+          <version>21</version>
           <state>38</state>
         </option>
         <option>
@@ -60,7 +60,7 @@
         </option>
         <option>
           <name>FPU</name>
-          <version>2</version>
+          <version>4</version>
           <state>0</state>
         </option>
         <option>
@@ -87,7 +87,7 @@
         </option>
         <option>
           <name>OGLastSavedByProductVersion</name>
-          <state>6.50.6.4952</state>
+          <state>7.40.1.8463</state>
         </option>
         <option>
           <name>GeneralEnableMisra</name>
@@ -137,12 +137,12 @@
         </option>
         <option>
           <name>GFPUCoreSlave</name>
-          <version>20</version>
+          <version>21</version>
           <state>38</state>
         </option>
         <option>
           <name>GBECoreSlave</name>
-          <version>20</version>
+          <version>21</version>
           <state>38</state>
         </option>
         <option>
@@ -153,13 +153,17 @@
           <name>OGUseCmsisDspLib</name>
           <state>0</state>
         </option>
+        <option>
+          <name>GRuntimeLibThreads</name>
+          <state>0</state>
+        </option>
       </data>
     </settings>
     <settings>
       <name>ICCARM</name>
       <archiveVersion>2</archiveVersion>
       <data>
-        <version>28</version>
+        <version>31</version>
         <wantNonLocal>1</wantNonLocal>
         <debug>1</debug>
         <option>
@@ -173,11 +177,11 @@
         </option>
         <option>
           <name>CCPreprocFile</name>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>CCPreprocComments</name>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>CCPreprocLine</name>
@@ -230,7 +234,7 @@
         <option>
           <name>CCAllowList</name>
           <version>1</version>
-          <state>1111111</state>
+          <state>00000000</state>
         </option>
         <option>
           <name>CCDebugInfo</name>
@@ -298,14 +302,15 @@
         </option>
         <option>
           <name>CCIncludePath2</name>
-          <state>$PROJ_DIR$\..\..\common_libs\CMSIS\Device\ST\STM32L1xx\Include\</state>
-          <state>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\inc</state>
+          <state>$PROJ_DIR$\..\..\lib\CMSIS\Device\ST\STM32L1xx\Include\</state>
+          <state>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\inc</state>
           <state>$PROJ_DIR$</state>
-          <state>$PROJ_DIR$\..\..\common_libs\CMSIS\Include</state>
+          <state>$PROJ_DIR$\..\..\lib\CMSIS\Include</state>
           <state>$PROJ_DIR$\Startup Files\Flash</state>
-          <state>$PROJ_DIR$\..\..\common_libs\STM32_USB-FS-Device_Driver\inc</state>
+          <state>$PROJ_DIR$\..\..\lib\STM32_USB-FS-Device_Driver\inc</state>
           <state>$PROJ_DIR$\inc</state>
-          <state>$PROJ_DIR$\..\..\common_libs\SDIO_Driver</state>
+          <state>$PROJ_DIR$\..\..\lib\SDIO_Driver</state>
+          <state>C:\Users\Addison\GitHub\iShadow\firmware\lib\stonyman</state>
         </option>
         <option>
           <name>CCStdIncCheck</name>
@@ -325,7 +330,7 @@
         </option>
         <option>
           <name>CCOptLevel</name>
-          <state>3</state>
+          <state>0</state>
         </option>
         <option>
           <name>CCOptStrategy</name>
@@ -334,7 +339,7 @@
         </option>
         <option>
           <name>CCOptLevelSlave</name>
-          <state>3</state>
+          <state>0</state>
         </option>
         <option>
           <name>CompilerMisraRules98</name>
@@ -398,13 +403,26 @@
           <name>IccFloatSemantics</name>
           <state>0</state>
         </option>
+        <option>
+          <name>CCNoLiteralPool</name>
+          <state>0</state>
+        </option>
+        <option>
+          <name>CCOptStrategySlave</name>
+          <version>0</version>
+          <state>2</state>
+        </option>
+        <option>
+          <name>CCGuardCalls</name>
+          <state>1</state>
+        </option>
       </data>
     </settings>
     <settings>
       <name>AARM</name>
       <archiveVersion>2</archiveVersion>
       <data>
-        <version>8</version>
+        <version>9</version>
         <wantNonLocal>1</wantNonLocal>
         <debug>1</debug>
         <option>
@@ -561,6 +579,10 @@
           <state>-mcpu=cortex-m3</state>
           <state>-mthumb</state>
         </option>
+        <option>
+          <name>AsmNoLiteralPool</name>
+          <state>0</state>
+        </option>
       </data>
     </settings>
     <settings>
@@ -599,6 +621,7 @@
       <data>
         <extensions></extensions>
         <cmdline></cmdline>
+        <hasPrio>0</hasPrio>
       </data>
     </settings>
     <settings>
@@ -618,7 +641,7 @@
       <name>ILINK</name>
       <archiveVersion>0</archiveVersion>
       <data>
-        <version>15</version>
+        <version>16</version>
         <wantNonLocal>1</wantNonLocal>
         <debug>1</debug>
         <option>
@@ -898,6 +921,10 @@
           <version>0</version>
           <state>0</state>
         </option>
+        <option>
+          <name>IlinkThreadsSlave</name>
+          <state>1</state>
+        </option>
       </data>
     </settings>
     <settings>
@@ -937,7 +964,7 @@
       <name>General</name>
       <archiveVersion>3</archiveVersion>
       <data>
-        <version>21</version>
+        <version>22</version>
         <wantNonLocal>1</wantNonLocal>
         <debug>0</debug>
         <option>
@@ -954,7 +981,7 @@
         </option>
         <option>
           <name>Variant</name>
-          <version>20</version>
+          <version>21</version>
           <state>0</state>
         </option>
         <option>
@@ -985,7 +1012,7 @@
         </option>
         <option>
           <name>FPU</name>
-          <version>2</version>
+          <version>4</version>
           <state>0</state>
         </option>
         <option>
@@ -1062,12 +1089,12 @@
         </option>
         <option>
           <name>GFPUCoreSlave</name>
-          <version>20</version>
+          <version>21</version>
           <state>0</state>
         </option>
         <option>
           <name>GBECoreSlave</name>
-          <version>20</version>
+          <version>21</version>
           <state>0</state>
         </option>
         <option>
@@ -1078,13 +1105,17 @@
           <name>OGUseCmsisDspLib</name>
           <state>0</state>
         </option>
+        <option>
+          <name>GRuntimeLibThreads</name>
+          <state>0</state>
+        </option>
       </data>
     </settings>
     <settings>
       <name>ICCARM</name>
       <archiveVersion>2</archiveVersion>
       <data>
-        <version>28</version>
+        <version>31</version>
         <wantNonLocal>1</wantNonLocal>
         <debug>0</debug>
         <option>
@@ -1154,7 +1185,7 @@
         <option>
           <name>CCAllowList</name>
           <version>1</version>
-          <state>1111111</state>
+          <state>11111110</state>
         </option>
         <option>
           <name>CCDebugInfo</name>
@@ -1315,13 +1346,26 @@
           <name>IccFloatSemantics</name>
           <state>0</state>
         </option>
+        <option>
+          <name>CCNoLiteralPool</name>
+          <state>0</state>
+        </option>
+        <option>
+          <name>CCOptStrategySlave</name>
+          <version>0</version>
+          <state>0</state>
+        </option>
+        <option>
+          <name>CCGuardCalls</name>
+          <state>1</state>
+        </option>
       </data>
     </settings>
     <settings>
       <name>AARM</name>
       <archiveVersion>2</archiveVersion>
       <data>
-        <version>8</version>
+        <version>9</version>
         <wantNonLocal>1</wantNonLocal>
         <debug>0</debug>
         <option>
@@ -1477,6 +1521,10 @@
           <name>AExtraOptionsV2</name>
           <state></state>
         </option>
+        <option>
+          <name>AsmNoLiteralPool</name>
+          <state>0</state>
+        </option>
       </data>
     </settings>
     <settings>
@@ -1515,6 +1563,7 @@
       <data>
         <extensions></extensions>
         <cmdline></cmdline>
+        <hasPrio>0</hasPrio>
       </data>
     </settings>
     <settings>
@@ -1534,7 +1583,7 @@
       <name>ILINK</name>
       <archiveVersion>0</archiveVersion>
       <data>
-        <version>15</version>
+        <version>16</version>
         <wantNonLocal>1</wantNonLocal>
         <debug>0</debug>
         <option>
@@ -1814,6 +1863,10 @@
           <version>0</version>
           <state>0</state>
         </option>
+        <option>
+          <name>IlinkThreadsSlave</name>
+          <state>1</state>
+        </option>
       </data>
     </settings>
     <settings>
@@ -1846,25 +1899,25 @@
   <group>
     <name>SDIO Driver</name>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\SDIO_Driver\diskio.h</name>
+      <name>$PROJ_DIR$\..\..\lib\SDIO_Driver\diskio.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\SDIO_Driver\lowlevel.c</name>
+      <name>$PROJ_DIR$\..\..\lib\SDIO_Driver\lowlevel.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\SDIO_Driver\stm32l152d_eval_sdio_sd.c</name>
+      <name>$PROJ_DIR$\..\..\lib\SDIO_Driver\stm32l152d_eval_sdio_sd.c</name>
     </file>
   </group>
   <group>
     <name>SPL Config</name>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\CMSIS\Include\core_cm3.h</name>
+      <name>$PROJ_DIR$\..\..\lib\CMSIS\Include\core_cm3.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\Startup Files\Flash\startup_stm32l1xx_hd.s</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\CMSIS\Device\ST\STM32L1xx\Include\stm32l1xx.h</name>
+      <name>$PROJ_DIR$\..\..\lib\CMSIS\Device\ST\STM32L1xx\Include\stm32l1xx.h</name>
     </file>
     <file>
       <name>$PROJ_DIR$\stm32l1xx_conf.h</name>
@@ -1879,127 +1932,127 @@
       <name>$PROJ_DIR$\system_stm32l1xx.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\CMSIS\Device\ST\STM32L1xx\Include\system_stm32l1xx.h</name>
+      <name>$PROJ_DIR$\..\..\lib\CMSIS\Device\ST\STM32L1xx\Include\system_stm32l1xx.h</name>
     </file>
   </group>
   <group>
     <name>SPL Source</name>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\misc.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\misc.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_adc.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_adc.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_aes.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_aes.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_aes_util.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_aes_util.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_comp.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_comp.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_crc.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_crc.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_dac.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_dac.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_dbgmcu.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_dbgmcu.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_dma.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_dma.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_exti.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_exti.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_flash.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_flash.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_flash_ramfunc.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_flash_ramfunc.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_fsmc.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_fsmc.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_gpio.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_gpio.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_i2c.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_i2c.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_iwdg.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_iwdg.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_lcd.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_lcd.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_opamp.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_opamp.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_pwr.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_pwr.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_rcc.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_rcc.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_rtc.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_rtc.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_sdio.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_sdio.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_spi.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_spi.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_syscfg.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_syscfg.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_tim.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_tim.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_usart.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_usart.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_wwdg.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32L1xx_StdPeriph_Driver\src\stm32l1xx_wwdg.c</name>
     </file>
   </group>
   <group>
     <name>STM32_USB-FS-Device_Driver</name>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32_USB-FS-Device_Driver\src\usb_core.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32_USB-FS-Device_Driver\src\usb_core.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32_USB-FS-Device_Driver\src\usb_init.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32_USB-FS-Device_Driver\src\usb_init.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32_USB-FS-Device_Driver\src\usb_int.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32_USB-FS-Device_Driver\src\usb_int.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32_USB-FS-Device_Driver\src\usb_mem.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32_USB-FS-Device_Driver\src\usb_mem.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32_USB-FS-Device_Driver\src\usb_regs.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32_USB-FS-Device_Driver\src\usb_regs.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\..\..\common_libs\STM32_USB-FS-Device_Driver\src\usb_sil.c</name>
+      <name>$PROJ_DIR$\..\..\lib\STM32_USB-FS-Device_Driver\src\usb_sil.c</name>
     </file>
   </group>
   <group>
     <name>Stonyman</name>
     <file>
-      <name>$PROJ_DIR$\libstony.c</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\libstony.h</name>
-    </file>
-    <file>
       <name>$PROJ_DIR$\predict_gaze.c</name>
     </file>
     <file>
       <name>$PROJ_DIR$\predict_gaze.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\lib\stonyman\stonyman.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\lib\stonyman\stonyman.h</name>
     </file>
   </group>
   <group>
