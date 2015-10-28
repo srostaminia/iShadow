@@ -9,7 +9,7 @@ TriggerName=main
 LimitSize=0
 ByteLimit=50
 [DebugChecksum]
-Checksum=1336321768
+Checksum=64126587
 [Exceptions]
 StopOnUncaught=_ 0
 StopOnThrow=_ 0
@@ -60,7 +60,7 @@ Graph=0
 Symbiont=0
 Exclusions=
 [stlink]
-stlinkserialNo=2798FD0D
+stlinkserialNo=D3982BC3
 stlinkfoundProbes=
 [CodeCoverage]
 Enabled=_ 0

@@ -402,18 +402,18 @@ int stony_single()
   // TODO: LED code
 
   // Double-buffered (2-dim array), two bytes per pixel
-  uint8_t buf8[2][TX_PIXELS * 2];
+  uint8_t base_buffers[2][TX_PIXELS * 2];
 
 #ifdef DO_8BIT_CONV
-    uint8_t *buf8_active = (uint8_t *)buf8[0];
+    uint8_t *active_buffer = (uint8_t *)base_buffers[0];
 
     for (int i = 0; i < 2; i++) {
       for (int j = 0; j < USB_PIXELS * 2; j++) {
-        buf8[i][j] = 0;
+        base_buffers[i][j] = 0;
       }
     }
 #else
-    uint16_t *buf16 = (uint16_t *)buf8[0];
+    uint16_t *active_buffer = (uint16_t *)base_buffers[0];
 #endif
 
 #ifdef COLUMN_COLLECT
@@ -455,27 +455,19 @@ int stony_single()
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
-#ifdef DO_8BIT_CONV
-      buf8_active[data_cycle] = CONV_8BIT(adc_values[adc_idx]);
-#else
-      buf16[data_cycle] = adc_values[adc_idx];
-#endif
+      active_buffer[data_cycle] = RESIZE_PIXEL(adc_values[adc_idx]);
 
 #ifdef USB_SEND
       if (data_cycle == USB_PIXELS - 1) {
         while (packet_sending == 1);
         
         data_cycle = -1;
-        send_packet(buf8[buf_idx], PACKET_SIZE);
+        send_packet(base_buffers[buf_idx], PACKET_SIZE);
         packet_sending = 1;
         
         buf_idx = !buf_idx;
 
-#ifdef DO_8BIT_CONV
-        buf8_active = (uint8_t *)buf8[buf_idx];
-#else
-        buf16 = (uint16_t *)buf8[buf_idx];
-#endif
+        active_buffer = CAST_PIXEL_BUFFER(base_buffers[buf_idx]);
       }
 #endif // USB_SEND
       
@@ -493,15 +485,11 @@ int stony_single()
         f_finish_write();
       }
       
-      if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, SD_BLOCKS / 2) != RES_OK)      return -1;
+      if (disk_write_fast(0, (uint8_t *)base_buffers[buf_idx], sd_ptr, SD_BLOCKS / 2) != RES_OK)      return -1;
       
       buf_idx = !buf_idx;
 
-#ifdef DO_8BIT_CONV
-      buf8_active = (uint8_t *)buf8[buf_idx];
-#else
-      buf16 = (uint16_t *)buf8[buf_idx];
-#endif
+      active_buffer = CAST_PIXEL_BUFFER(base_buffers[buf_idx]);
       
       sd_ptr += SD_BLOCKS / 2;
       data_cycle = 0;
@@ -515,11 +503,11 @@ int stony_single()
 
 #ifdef USB_16BIT
     for (int i = data_cycle; i < USB_PIXELS; i++)
-      buf16[i] = 0;
+      active_buffer[i] = 0;
 #endif
     
     while (packet_sending == 1);
-    send_packet(buf8[buf_idx], PACKET_SIZE);
+    send_packet(base_buffers[buf_idx], PACKET_SIZE);
   }
 
   param_packet[0] = 0;
@@ -546,7 +534,7 @@ int stony_single()
 #if (112 % SD_ROWS != 0)
   f_finish_write();
   
-  if (disk_write_fast(0, (uint8_t *)buf8[buf_idx], sd_ptr, SD_MOD_BLOCKS / 2) != RES_OK)      return -1;
+  if (disk_write_fast(0, (uint8_t *)base_buffers[buf_idx], sd_ptr, SD_MOD_BLOCKS / 2) != RES_OK)      return -1;
   sd_ptr += SD_MOD_BLOCKS / 2;
 #endif // (112 % SD_ROWS != 0)
   
