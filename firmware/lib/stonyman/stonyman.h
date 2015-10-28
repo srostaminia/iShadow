@@ -4,7 +4,7 @@
 #include "stm32l1xx.h"
 
 // Choose USB or SD transmission
-// #define USB_SEND
+//#define USB_SEND
 #define SD_SEND
 
 // Select primary camera, will be used for single-camera functions
@@ -118,10 +118,9 @@
 	#endif
 
 	#ifdef USB_16BIT
-		#define USB_PIXELS      92
+		#define USB_PIXELS      			92
 	#else
-		#define USB_PIXELS      112
-		#define CONV_8BIT(X)    (((X) >> 2) & 0xFF)
+		#define USB_PIXELS      			112
 	#endif
 
 	#define TX_PIXELS					USB_PIXELS
@@ -130,6 +129,12 @@
 
 #if defined(USB_SEND) && defined(USB_8BIT)
 	#define DO_8BIT_CONV
+
+	#define RESIZE_PIXEL(X) 			(((X) >> 2) & 0xFF)
+	#define CAST_PIXEL_BUFFER(X)	((uint8_t *)X)
+#else
+	#define RESIZE_PIXEL(X) 			(X)
+	#define CAST_PIXEL_BUFFER(X)	((uint16_t *)X)
 #endif
 
 #define DHR12R1_OFFSET      ((uint32_t)0x00000008)
