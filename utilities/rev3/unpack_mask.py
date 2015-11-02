@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 import sys
 import argparse
 import time
@@ -14,7 +16,7 @@ def main():
 
     args = parser.parse_args()
 
-    input_filename = "/dev/disk1"
+    input_filename = "/dev/disk2"
     mask_filename = args.name + ".pi"
 
     try:
