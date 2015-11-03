@@ -71,6 +71,9 @@ def main():
     else:
         gen_mask = True
 
+    if debug == True or gen_mask == True:
+        norender = True
+
     endp = get_usb_endp()
 
     #imfig = pylab.figure()
@@ -90,7 +93,7 @@ def main():
 
     packet_size = 92 * 16 / TX_BITS
 
-    if (debug == False and gen_mask == False and norender == False):
+    if norender:
         vline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
         hline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
         vline_cider,=ax.plot([-10, -9], [-10, -9], 'b-', linewidth=2)
@@ -203,20 +206,21 @@ def main():
             cider_row = -10
             cider_radius = 0
 
-        if model_type == 0:
-            vline.set_data([-10, -10], [-10, -10])
-            hline.set_data([-10, -10], [-10, -10])
-            vline_cider.set_data([-10, -10], [-10, -10])
-            hline_cider.set_data([-10, -10], [-10, -10])
-            circle.center = -10, -10
-            circle.set_radius(1)
-        elif debug == 0 and gen_mask == 0 and norender == False:
-            vline.set_data([pred[0], pred[0]], [max(0, pred[1] - 10), min(111, pred[1] + 10)])
-            hline.set_data([max(0, pred[0] - 10), min(111, pred[0] + 10)], [pred[1], pred[1]])
-            vline_cider.set_data([cider_col, cider_col], [0, 112])
-            hline_cider.set_data([0, 112], [cider_row, cider_row])
-            circle.center = pred[0], pred[1]
-            circle.set_radius(cider_radius)
+        if norender:
+            if model_type == 0:
+                vline.set_data([-10, -10], [-10, -10])
+                hline.set_data([-10, -10], [-10, -10])
+                vline_cider.set_data([-10, -10], [-10, -10])
+                hline_cider.set_data([-10, -10], [-10, -10])
+                circle.center = -10, -10
+                circle.set_radius(1)
+            else:
+                vline.set_data([pred[0], pred[0]], [max(0, pred[1] - 10), min(111, pred[1] + 10)])
+                hline.set_data([max(0, pred[0] - 10), min(111, pred[0] + 10)], [pred[1], pred[1]])
+                vline_cider.set_data([cider_col, cider_col], [0, 112])
+                hline_cider.set_data([0, 112], [cider_row, cider_row])
+                circle.center = pred[0], pred[1]
+                circle.set_radius(cider_radius)
 
         print "Pixels:", pixels
         print "Packets:", packets

@@ -8,6 +8,7 @@ import pylab
 import struct
 import pickle
 import os
+import shutil
 
 def main():
     parser = argparse.ArgumentParser()
@@ -18,6 +19,7 @@ def main():
     parser.add_argument("eye_mask", nargs='?', help="eye-facing camera mask (only used for interleaved images)", default=None)
     parser.add_argument("--columnwise", action="store_true", help="images recorded columnwise on hardware instead of rowwise")
     parser.add_argument("--disknum", help="/dev/disk[N] to open (default = 2)", type=int)
+    parser.add_argument("--overwrite", action="store_true", help="overwrite data folder if it already exists")
     
     groupA = parser.add_mutually_exclusive_group()
     groupA.add_argument("-o", "--offset", help="Number of images / pairs to skip on SD card", type=int)
@@ -35,6 +37,7 @@ def main():
     num_images = args.num_images
     interleaved = not args.no_interleave
     columnwise = args.columnwise
+    overwrite = args.overwrite
     num_skip = args.offset if args.offset != None else 0
     outdoor_masks = args.outdoor_switch
 
@@ -81,6 +84,9 @@ def main():
             input_file.seek(num_skip * 25088)
 
         if not os.path.exists(file_prefix):
+            os.makedirs(file_prefix)
+        elif overwrite == True:
+            shutil.rmtree(file_prefix)
             os.makedirs(file_prefix)
         else:
             print "Error: data folder " + file_prefix + " already exists."
@@ -174,22 +180,11 @@ def main():
             print "Input file", file_prefix + "\\" + file_prefix + "_b.raw", "could not be opened."
             sys.exit()
 
-    if columnwise:
-        # image = image.T
-        out_mask = out_mask.T
-
-        if interleaved:
-            eye_mask = eye_mask.T
-
-            if outdoor_masks != None:
-                outdoor_out_mask = outdoor_out_mask.T
-                outdoor_eye_mask = outdoor_eye_mask.T
-
     if (interleaved):
-        disp_save_images(output_b, eye_mask, file_prefix + "_eye", num_images, outdoor_eye_mask)
-        disp_save_images(output_a, out_mask, file_prefix + "_out", num_images, outdoor_out_mask)
+        disp_save_images(output_b, eye_mask, file_prefix + "_eye", num_images, columnwise, outdoor_eye_mask)
+        disp_save_images(output_a, out_mask, file_prefix + "_out", num_images, columnwise, outdoor_out_mask)
     else:
-        disp_save_images(output_a, out_mask, file_prefix, num_images)
+        disp_save_images(output_a, out_mask, file_prefix, num_images, columnwise)
 
     output_a.close()
 
@@ -218,7 +213,7 @@ def load_mask(mask_filename):
     return mask_data
 
 
-def disp_save_images(image_file, mask_data, out_filename, num_images, outdoor_mask=None):
+def disp_save_images(image_file, mask_data, out_filename, num_images, columnwise, outdoor_mask=None):
     success = True
 
     print "Saving", out_filename + ":"
@@ -232,15 +227,15 @@ def disp_save_images(image_file, mask_data, out_filename, num_images, outdoor_ma
                 print i, '/', 
 
         if outdoor_mask == None:
-            success = read_packed_image(image_file, mask_data, out_filename, i)
+            success = read_packed_image(image_file, mask_data, out_filename, columnwise, i)
         else:
-            success = read_packed_switching_image(image_file, mask_data, outdoor_mask, out_filename, i)
+            success = read_packed_switching_image(image_file, mask_data, outdoor_mask, out_filename, columnwise, i)
 
         i += 1
 
     print
 
-def read_packed_image(image_file, mask_data, out_filename, index):
+def read_packed_image(image_file, mask_data, out_filename, columnwise, index):
     image = []
     for i in range(112):
         image.append([])
@@ -256,19 +251,18 @@ def read_packed_image(image_file, mask_data, out_filename, index):
             
             image[i].append(value)
 
+    image = np.array(image)
+
     # print image[0]
     # image = image[1:]
     
     figure = pylab.figure()
 
-    # image[::2] -= mask_data[55]
-    # image[1::2] -= mask_data[60]
-
-    # image[:20] -= mask_data[58:78]
-
-    # image -= mask_data[55]
     image -= mask_data
     image = image[1:]
+
+    if (columnwise):
+        image = image.T
 
     pylab.figimage(image, cmap = pylab.cm.Greys_r)
 
@@ -287,7 +281,7 @@ def read_packed_image(image_file, mask_data, out_filename, index):
 
     return True
 
-def read_packed_switching_image(image_file, mask_data, outdoor_mask, out_filename, index):
+def read_packed_switching_image(image_file, mask_data, outdoor_mask, out_filename, columnwise, index):
     image = []
     for i in range(112):
         image.append([])
@@ -305,6 +299,8 @@ def read_packed_switching_image(image_file, mask_data, outdoor_mask, out_filenam
     
     figure = pylab.figure()
 
+    image = np.array(image)
+
     outdoor_mode = image[0][0]
 
     if outdoor_mode == 1:
@@ -315,6 +311,9 @@ def read_packed_switching_image(image_file, mask_data, outdoor_mask, out_filenam
         image -= mask_data
 
     image = image[1:]
+
+    if (columnwise):
+        image = image.T
 
     pylab.figimage(image, cmap = pylab.cm.Greys_r)
 
