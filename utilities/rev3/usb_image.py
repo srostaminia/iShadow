@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 import usb.control, usb.core
 import sys
 import argparse
@@ -69,6 +71,9 @@ def main():
     else:
         gen_mask = True
 
+    if debug == True or gen_mask == True:
+        norender = True
+
     endp = get_usb_endp()
 
     #imfig = pylab.figure()
@@ -88,7 +93,7 @@ def main():
 
     packet_size = 92 * 16 / TX_BITS
 
-    if (debug == False and gen_mask == False and norender == False):
+    if norender:
         vline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
         hline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
         vline_cider,=ax.plot([-10, -9], [-10, -9], 'b-', linewidth=2)
@@ -108,7 +113,7 @@ def main():
             pixels = len(start_pixels)
             frame[:pixels] = start_pixels
 
-            if (debug and iters == 1):
+            if (debug):
                 if TX_BITS == 8:
                     print_packets(next_start, 184)
                 elif TX_BITS == 16:
@@ -141,7 +146,7 @@ def main():
                 # For 8-bit transmission
                 unpacked = struct.unpack('B' * 1840, data)
 
-            if (debug and iters == 1):
+            if (debug):
                 print_packets(unpacked, packet_size)
 
             param_idx = check_param_packet(unpacked, packet_size)
@@ -169,7 +174,7 @@ def main():
             pixels += new_pixels
 
             # print unpacked, "\n"
-            if (debug and iters == 1):
+            if (debug):
                 print "Pixels in packet:", new_pixels
                 print "Total pixels:", pixels, "\n\n"
 
@@ -201,19 +206,27 @@ def main():
             cider_row = -10
             cider_radius = 0
 
-        if (debug == 0) and gen_mask == 0 and norender == False:
-            vline.set_data([pred[0], pred[0]], [max(0, pred[1] - 10), min(111, pred[1] + 10)])
-            hline.set_data([max(0, pred[0] - 10), min(111, pred[0] + 10)], [pred[1], pred[1]])
-            vline_cider.set_data([cider_col, cider_col], [0, 112])
-            hline_cider.set_data([0, 112], [cider_row, cider_row])
-            circle.center = pred[0], pred[1]
-            circle.set_radius(cider_radius)
+        if norender:
+            if model_type == 0:
+                vline.set_data([-10, -10], [-10, -10])
+                hline.set_data([-10, -10], [-10, -10])
+                vline_cider.set_data([-10, -10], [-10, -10])
+                hline_cider.set_data([-10, -10], [-10, -10])
+                circle.center = -10, -10
+                circle.set_radius(1)
+            else:
+                vline.set_data([pred[0], pred[0]], [max(0, pred[1] - 10), min(111, pred[1] + 10)])
+                hline.set_data([max(0, pred[0] - 10), min(111, pred[0] + 10)], [pred[1], pred[1]])
+                vline_cider.set_data([cider_col, cider_col], [0, 112])
+                hline_cider.set_data([0, 112], [cider_row, cider_row])
+                circle.center = pred[0], pred[1]
+                circle.set_radius(cider_radius)
 
         print "Pixels:", pixels
         print "Packets:", packets
         print "Prediction (X, Y):", pred[0], pred[1]
 
-        if model_type != 3:
+        if model_type == 1 or model_type == 2:
             print "CIDER Point (X, Y):", cider_col, cider_row
             print "CIDER Radius:", cider_radius
             
@@ -249,7 +262,7 @@ def main():
 
         # endp.read(1840)
 
-        if (debug and iters == 2):        
+        if (debug and iters < 2):        
             out_text = open(debug_folder + "/usb_frame.txt",'w')
             for line in frame:
                 for item in line:

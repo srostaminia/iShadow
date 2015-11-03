@@ -1,3 +1,5 @@
+#!/usr/bin/env python2
+
 import usb.control, usb.core
 import time
 import sys
