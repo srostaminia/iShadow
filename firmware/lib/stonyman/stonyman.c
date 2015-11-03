@@ -16,7 +16,13 @@ extern uint32_t sd_ptr;
 #include "hw_config.h"
 
 extern volatile uint8_t packet_sending;
-extern uint8_t param_packet[PACKET_SIZE];
+extern uint8_t param_packet[USB_PACKET_SIZE];
+#endif
+
+#ifdef USE_PARAM_FILE
+// This is declared extern because it is referencing an external binary file
+// that must be provided in the project settings (see readme)
+extern uint8_t model_data[];
 #endif
 
 int adc_idx = 0;
@@ -80,19 +86,21 @@ inline static void pulse_incp(uint8_t cam)
   }
 }
 
-inline static void pulse_inph(unsigned short time, uint8_t cam)
-{
-  if (cam == OUT_CAM) {
-    OCAM_INPH_BANK->ODR |= OCAM_INPH_PIN;
-    delay_us(time);
-    OCAM_INPH_BANK->ODR &= ~OCAM_INPH_PIN;
-  }
-  else {
-    ECAM_INPH_BANK->ODR |= ECAM_INPH_PIN;
-    delay_us(time);
-    ECAM_INPH_BANK->ODR &= ~ECAM_INPH_PIN;
-  }
-}
+// Commented out because I am *sick* of getting the unused function warning
+// Uncommend if we bring it back into the code at any point
+// inline static void pulse_inph(unsigned short time, uint8_t cam) 
+// {
+//   if (cam == OUT_CAM) {
+//     OCAM_INPH_BANK->ODR |= OCAM_INPH_PIN;
+//     delay_us(time);
+//     OCAM_INPH_BANK->ODR &= ~OCAM_INPH_PIN;
+//   }
+//   else {
+//     ECAM_INPH_BANK->ODR |= ECAM_INPH_PIN;
+//     delay_us(time);
+//     ECAM_INPH_BANK->ODR &= ~ECAM_INPH_PIN;
+//   }
+// }
 
 // clear_values
 // Resets the value of all registers to zero
@@ -192,18 +200,19 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
   short config;
   char flagUseAmplifier;
 
-#ifdef LOAD_MODEL
-  num_subsample = model_data[0];
-  num_hidden = model_data[1];
-  
-  bh_offset = 2;
-  bo_offset = bh_offset + num_hidden * 2;
-  mask_offset = bo_offset + 4;
-  who_offset = mask_offset + num_subsample * 2;
-  wih_offset = who_offset + num_hidden * 2 * 2;
-  fpn_offset = wih_offset + (num_hidden * num_subsample * 2);
-  col_fpn_offset = fpn_offset + 112 * 112;
-#endif
+// TODO: move this to dedicated CIDER file    
+//#ifdef USE_PARAM_FILE
+//  num_subsample = model_data[0];
+//  num_hidden = model_data[1];
+//  
+//  bh_offset = 2;
+//  bo_offset = bh_offset + num_hidden * 2;
+//  mask_offset = bo_offset + 4;
+//  who_offset = mask_offset + num_subsample * 2;
+//  wih_offset = who_offset + num_hidden * 2 * 2;
+//  fpn_offset = wih_offset + (num_hidden * num_subsample * 2);
+//  col_fpn_offset = fpn_offset + 112 * 112;
+//#endif
   
   // Set MCU pins
   stony_pin_config();
@@ -228,7 +237,6 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
   clear_values(EYE_CAM);
 
   //set up biases
-  // TODO russ: haven't looked at what this function does
   set_biases(vref,nbias,aobias,OUT_CAM);
   set_biases(vref,nbias,aobias,EYE_CAM);
 
@@ -415,32 +423,26 @@ int stony_single()
 #else
     uint16_t *active_buffer = (uint16_t *)base_buffers[0];
 #endif
-
-#ifdef COLUMN_COLLECT
-  uint8_t outer_reg = REG_COLSEL, inner_reg = REG_ROWSEL;
-#else
-  uint8_t outer_reg = REG_ROWSEL, inner_reg = REG_COLSEL;
-#endif
   
   volatile uint16_t start, total;
   uint8_t buf_idx = 0;
   
-  ADC_RegularChannelConfig(ADC1, SINGLE_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
-  ADC_RegularChannelConfig(ADC1, SINGLE_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
+  ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
+  ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
   
-  set_pointer_value(outer_reg, 0, PRIMARY_CAM);
+  set_pointer_value(OUTER_REG, 0, PRIMARY_CAM);
 
   int data_cycle = 0;
   for (int i_outer = 0; i_outer < 112; i_outer++) {
-    set_pointer_value(inner_reg, 0, PRIMARY_CAM);
+    set_pointer_value(INNER_REG, 0, PRIMARY_CAM);
 
     delay_us(1);
     
     for (int j_inner = 0; j_inner < 112; j_inner++, data_cycle++) {      
-      SINGLE_PARAM(INPH_BANK)->ODR |= SINGLE_PARAM(INPH_PIN);
+      PRIMARY_PARAM(INPH_BANK)->ODR |= PRIMARY_PARAM(INPH_PIN);
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      SINGLE_PARAM(INPH_BANK)->ODR &= ~SINGLE_PARAM(INPH_PIN);
+      PRIMARY_PARAM(INPH_BANK)->ODR &= ~PRIMARY_PARAM(INPH_PIN);
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
@@ -455,14 +457,14 @@ int stony_single()
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
-      active_buffer[data_cycle] = RESIZE_PIXEL(adc_values[adc_idx]);
+      active_buffer[data_cycle] = RESIZE_PIXEL(adc_values[adc_idx] - FPN_PRI(i_outer, j_inner));
 
 #ifdef USB_SEND
       if (data_cycle == USB_PIXELS - 1) {
         while (packet_sending == 1);
         
         data_cycle = -1;
-        send_packet(base_buffers[buf_idx], PACKET_SIZE);
+        send_packet(base_buffers[buf_idx], USB_PACKET_SIZE);
         packet_sending = 1;
         
         buf_idx = !buf_idx;
@@ -473,11 +475,11 @@ int stony_single()
       
       adc_idx = !adc_idx;
 
-      SINGLE_PARAM(INCV_BANK)->ODR |= SINGLE_PARAM(INCV_PIN);
-      SINGLE_PARAM(INCV_BANK)->ODR &= ~SINGLE_PARAM(INCV_PIN);
+      PRIMARY_PARAM(INCV_BANK)->ODR |= PRIMARY_PARAM(INCV_PIN);
+      PRIMARY_PARAM(INCV_BANK)->ODR &= ~PRIMARY_PARAM(INCV_PIN);
     } // for (j_inner)
     
-    inc_pointer_value(outer_reg, 1, PRIMARY_CAM);
+    inc_pointer_value(OUTER_REG, 1, PRIMARY_CAM);
 
 #ifdef SD_SEND
     if (data_cycle / 112 == SD_ROWS) {
@@ -499,7 +501,7 @@ int stony_single()
 
 #ifdef USB_SEND
 
-  if (data_cycle != -1) {
+  if (data_cycle != 0) {
 
 #ifdef USB_16BIT
     for (int i = data_cycle; i < USB_PIXELS; i++)
@@ -507,7 +509,7 @@ int stony_single()
 #endif
     
     while (packet_sending == 1);
-    send_packet(base_buffers[buf_idx], PACKET_SIZE);
+    send_packet(base_buffers[buf_idx], USB_PACKET_SIZE);
   }
 
   param_packet[0] = 0;
@@ -518,7 +520,8 @@ int stony_single()
   for (int i = 1; i < 6; i++)   param_packet[i] = 1;
 #endif
 
-  send_packet(param_packet, PACKET_SIZE);
+  while(packet_sending == 1);
+  send_packet(param_packet, USB_PACKET_SIZE);
   while(packet_sending == 1);
   
   send_empty_packet();
@@ -536,6 +539,211 @@ int stony_single()
   
   if (disk_write_fast(0, (uint8_t *)base_buffers[buf_idx], sd_ptr, SD_MOD_BLOCKS / 2) != RES_OK)      return -1;
   sd_ptr += SD_MOD_BLOCKS / 2;
+#endif // (112 % SD_ROWS != 0)
+  
+  f_finish_write();
+#endif // SD_SEND
+  
+  return 0;
+}
+
+
+
+
+
+
+
+
+
+// stony_dual()
+// Capture images simultaneously from both cameras
+// (note: only one camera can be streamed when in USB mode - selected by
+// PRIMARY_CAM in stonyman.h - though both cameras will still be read from)
+int stony_dual()
+{
+  __IO uint32_t led1 = 0, led2 = 0;
+  uint32_t DAC_Align = DAC_Align_12b_R;
+  
+  led1 = led2 = (uint32_t)DAC_BASE;
+  led1 += DHR12R1_OFFSET + DAC_Align;
+  led2 += DHR12R2_OFFSET + DAC_Align;
+  
+  // TODO: LED code
+
+  // Double-buffered (2-dim array), two bytes per pixel, two cameras
+  uint8_t base_buffers[2][TX_PIXELS * 2 * 2];
+
+#ifdef DO_8BIT_CONV
+    uint8_t *active_buffer = (uint8_t *)base_buffers[0];
+
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < USB_PIXELS * 2; j++) {
+        base_buffers[i][j] = 0;
+      }
+    }
+#else
+    uint16_t *active_buffer = (uint16_t *)base_buffers[0];
+#endif
+  
+  uint16_t secondary_offset = TX_PIXELS;
+  uint8_t buf_idx = 0;
+  
+  ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
+  ADC_RegularChannelConfig(ADC1, SECONDARY_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
+  
+  set_pointer_value(OUTER_REG, 0, OUT_CAM);
+  set_pointer_value(OUTER_REG, 0, EYE_CAM);
+
+  int data_cycle = 0;
+
+for (int i_outer = 0; i_outer < 112; i_outer++) {    
+    set_pointer_value(INNER_REG, 0, OUT_CAM);
+    set_pointer_value(INNER_REG, 0, EYE_CAM);
+    
+    delay_us(1);
+    
+    for (int j_inner = 0; j_inner < 112; j_inner++, data_cycle++) {        
+      PRIMARY_PARAM(INPH_BANK)->ODR |= PRIMARY_PARAM(INPH_PIN);
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      PRIMARY_PARAM(INPH_BANK)->ODR &= ~PRIMARY_PARAM(INPH_PIN);
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      
+      if (j_inner != 0) {        
+        // DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);      
+        // *(__IO uint32_t *) led1 = LED_LOW;
+        // *(__IO uint32_t *) led2 = LED_LOW;
+
+        active_buffer[(data_cycle - 1) + secondary_offset] = RESIZE_PIXEL(adc_values[1] - FPN_SEC(i_outer, (j_inner - 1)));
+      }
+      
+      // Do conversion for PRIMARY_CAM
+      ADC_SoftwareStartConv(ADC1);
+      
+      if (j_inner != 0) {
+        SECONDARY_PARAM(INCV_BANK)->ODR |= SECONDARY_PARAM(INCV_PIN);
+        SECONDARY_PARAM(INCV_BANK)->ODR &= ~SECONDARY_PARAM(INCV_PIN);
+      }
+      
+      SECONDARY_PARAM(INPH_BANK)->ODR |= SECONDARY_PARAM(INPH_PIN);
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      SECONDARY_PARAM(INPH_BANK)->ODR &= ~SECONDARY_PARAM(INPH_PIN);
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      
+      active_buffer[data_cycle] = RESIZE_PIXEL(adc_values[0] - FPN_PRI(i_outer, j_inner));
+
+#ifdef USB_SEND
+      if (data_cycle == USB_PIXELS - 1) {
+        while (packet_sending == 1);
+        
+        data_cycle = -1;
+        send_packet(base_buffers[buf_idx], USB_PACKET_SIZE);
+        packet_sending = 1;
+        
+        buf_idx = !buf_idx;
+
+        active_buffer = CAST_PIXEL_BUFFER(base_buffers[buf_idx]);
+      }
+#endif // USB_SEND
+      
+      // Do conversion for SECONDARY_CAM
+      ADC_SoftwareStartConv(ADC1);
+
+      PRIMARY_PARAM(INCV_BANK)->ODR |= PRIMARY_PARAM(INCV_PIN);
+      PRIMARY_PARAM(INCV_BANK)->ODR &= ~PRIMARY_PARAM(INCV_PIN);
+    } // for (j_inner)
+    
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+    
+    // DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);      
+    // *(__IO uint32_t *) led1 = LED_LOW;
+    // *(__IO uint32_t *) led2 = LED_LOW;
+    
+    active_buffer[(data_cycle - 1) + secondary_offset] = RESIZE_PIXEL(adc_values[1] - FPN_SEC(i_outer, 111));
+    
+    inc_pointer_value(OUTER_REG, 1, OUT_CAM);
+    inc_pointer_value(OUTER_REG, 1, EYE_CAM);
+
+#ifdef SD_SEND
+    if (data_cycle / 112 == SD_ROWS) {
+      if (i_outer > SD_ROWS - 1) {
+        f_finish_write();
+      }
+      
+      if (disk_write_fast(0, (uint8_t *)base_buffers[buf_idx], sd_ptr, SD_BLOCKS) != RES_OK)      return -1;
+      
+      buf_idx = !buf_idx;
+
+      active_buffer = CAST_PIXEL_BUFFER(base_buffers[buf_idx]);
+      
+      sd_ptr += SD_BLOCKS;
+      data_cycle = 0;
+
+#if (112 % SD_ROWS != 0)
+      if (i_outer + SD_ROWS > 112) {
+        secondary_offset = SD_MOD_OFFSET;
+
+        for (int i = 0; i < TX_PIXELS * 2; i++) {
+          active_buffer[i] = 0;
+      }
+    }
+#endif
+    }
+#endif // SD_SEND
+  } // for (i_outer)
+
+#ifdef USB_SEND
+
+  if (data_cycle != 0) {
+
+#ifdef USB_16BIT
+    for (int i = data_cycle; i < USB_PIXELS; i++)
+      active_buffer[i] = 0;
+#endif
+    
+    while (packet_sending == 1);
+    send_packet(base_buffers[buf_idx], USB_PACKET_SIZE);
+  }
+
+  param_packet[0] = 0;
+
+#ifdef USB_16BIT
+  for (int i = 1; i < 12; i++) param_packet[i] = 1;
+#else
+  for (int i = 1; i < 6; i++)   param_packet[i] = 1;
+#endif
+
+  while(packet_sending == 1);
+  send_packet(param_packet, USB_PACKET_SIZE);
+  while(packet_sending == 1);
+  
+  send_empty_packet();
+  while(packet_sending == 1);
+  
+  send_empty_packet();
+  while(packet_sending == 1);
+
+#endif // USB_SEND
+
+#ifdef SD_SEND
+
+#if (112 % SD_ROWS != 0)
+  f_finish_write();
+  
+  if (disk_write_fast(0, (uint8_t *)base_buffers[buf_idx], sd_ptr, SD_MOD_BLOCKS) != RES_OK)      return -1;
+  sd_ptr += SD_MOD_BLOCKS;
 #endif // (112 % SD_ROWS != 0)
   
   f_finish_write();

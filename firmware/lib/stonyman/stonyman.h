@@ -3,28 +3,29 @@
 
 #include "stm32l1xx.h"
 
+// TODO: Split these out into a project-specific config header or something
+
 // Choose USB or SD transmission
-//#define USB_SEND
-#define SD_SEND
+#define USB_SEND
+// #define SD_SEND
 
 // Select primary camera, will be used for single-camera functions
 // (overriden by CIDER_MODE)
 //#define EYE_CAM_PRIMARY
 #define OUT_CAM_PRIMARY
 
+// CIDER MODE CURRENTLY NOT IMPLEMENTED!!
 // Uncomment to use CIDER (overrides some other config options)
 //#define CIDER_MODE
 
-// Comment out to use unmasked eye pixels
-// (overriden by CIDER_MODE)
-//#define USE_FPN_EYE
-
 // Comment out to collect data row-wise instead of column-wise
-//#define COLUMN_COLLECT
+#define COLUMN_COLLECT
 
+// OUTMODE CURRENTLY NOT IMPLEMENTED!!
 // Uncomment to use outdoor settings
 //#define OUTMODE
 
+// LED FUNCTIONS NOT FULLY IMPLEMENTED!!
 // Comment out to leave LEDs on at all times
 //#define LED_DUTY_CYCLE
 
@@ -33,6 +34,10 @@
 //#define USB_16BIT
 #define USB_8BIT
 
+// PARAM / FPN FILE CURRENTLY NOT WORKING!!
+// #define USE_PARAM_FILE
+
+// OUTDOOR_SWITCH CURRENTLY NOT IMPLEMENTED!
 // Uncomment to switch to outdoor mode based on photodiode
 //#define OUTDOOR_SWITCH
 
@@ -92,14 +97,13 @@
 	#define SD_ROWS         48
 	#define TX_PIXELS				SD_ROWS * 112
 
-	#define ECAM_OFFSET     SD_ROWS * 112
 	//#define ECAM_OFFSET     5376
 	#define SD_BLOCKS       (SD_ROWS * 112 * 4) / 512
 
 	#if (112 % SD_ROWS != 0)
 
-		#define ECAM_MOD_OFFSET (112 % SD_ROWS) * 112
-		#define SD_MOD_BLOCKS   ((112 % SD_ROWS) * 112 * 4 ) / 512
+		#define SD_MOD_OFFSET (112 % SD_ROWS) * 112
+		#define SD_MOD_BLOCKS ((112 % SD_ROWS) * 112 * 4 ) / 512
 
 		#if ((112 % SD_ROWS) * 112 * 4 ) % 512 != 0
 			#error ERROR: SD_ROWS INVALID, DOES NOT ALIGN TO 512B BOUNDARY
@@ -124,6 +128,8 @@
 	#endif
 
 	#define TX_PIXELS					USB_PIXELS
+
+	#define USB_PACKET_SIZE		PACKET_SIZE
 
 #endif // USB_SEND
 
@@ -173,12 +179,28 @@
 #define OUT_CAM             0
 #define EYE_CAM             1
 
+// TODO: Figure out how to make primary / secondary camera switching play nicely with all the FPN options...
+// BINGO! Just have a fixed order and fill in unused masks with zeros! :D :D :D
+// We'll need to start storing metadata in the binary mask / param files so we can figure out what they contain after the fact, just FYI. Ugh.
+
 #ifdef OUT_CAM_PRIMARY
 	#define PRIMARY_CAM						 OUT_CAM
-	#define SINGLE_PARAM(PNAME)    OCAM ## _ ## PNAME
+	#define SECONDARY_CAM					 EYE_CAM
+
+	#define PRIMARY_PARAM(PNAME)   OCAM ## _ ## PNAME
+	#define SECONDARY_PARAM(PNAME) ECAM ## _ ## PNAME
+
+	#define PRIMARY_FPN_START			 OUT_FPN_START
+	#define SECONDARY_FPN_START		 EYE_FPN_START
 #elif defined(EYE_CAM_PRIMARY)
 	#define PRIMARY_CAM						 EYE_CAM
-	#define SINGLE_PARAM(PNAME)    ECAM ## _ ## PNAME
+	#define SECONDARY_CAM					 OUT_CAM
+
+	#define PRIMARY_PARAM(PNAME)   ECAM ## _ ## PNAME
+	#define SECONDARY_PARAM(PNAME) OCAM ## _ ## PNAME
+
+	#define PRIMARY_FPN_START			 EYE_FPN_START
+	#define SECONDARY_FPN_START		 OUT_FPN_START	
 #endif
 
 #define SEL_ROW              1
@@ -202,6 +224,49 @@
 
 #define ADC1_DR_ADDRESS                 ((uint32_t)0x40012458)
 #define DMA_DIR_PeripheralToMemory      ((uint32_t)0x00000000)
+
+
+// TODO: Switch this to ROW_COLLECT, column should be default from now on.
+#ifdef COLUMN_COLLECT
+
+	#define OUTER_REG			REG_COLSEL
+	#define INNER_REG			REG_ROWSEL
+
+	#ifdef USE_PARAM_FILE
+		#define FPN_OFFSET 		0
+		#define FPN_T_OFFSET	12544
+	#endif
+
+#else
+
+	#define OUTER_REG			REG_ROWSEL
+	#define INNER_REG			REG_COLSEL
+
+	#ifdef USE_PARAM_FILE
+		#define FPN_OFFSET 		12544
+		#define FPN_T_OFFSET	0
+	#endif
+
+#endif // COLUMN_COLLECT
+
+#ifdef USE_PARAM_FILE
+
+	#define OUT_FPN_START		0
+	#define EYE_FPN_START		(112 * 112 * 2)  
+
+	#define FPN_PRI(X, Y)		model_data[PRIMARY_FPN_START + FPN_OFFSET + (((X) * 112) + (Y))]
+	#define FPN_T_PRI(X, Y)	model_data[PRIMARY_FPN_START + FPN_T_OFFSET + (((X) * 112) + (Y))]
+	#define FPN_SEC(X, Y)		model_data[SECONDARY_FPN_START + FPN_OFFSET + (((X) * 112) + (Y))]
+	#define FPN_T_SEC(X, Y)	model_data[SECONDARY_FPN_START + FPN_T_OFFSET + (((X) * 112) + (Y))]
+
+#else
+
+	#define FPN_PRI(X, Y)		0
+	#define FPN_T_PRI(X, Y)	0
+	#define FPN_SEC(X, Y)		0
+	#define FPN_T_SEC(X, Y)	0
+
+#endif // USE_PARAM_FILE
 
 // CIDER parameters
 #ifdef CIDER_MODE
@@ -241,5 +306,6 @@ void adc_dma_init();
 void dac_init();
 
 int stony_single();
+int stony_dual();
 
 #endif // __STONYMAN_H
