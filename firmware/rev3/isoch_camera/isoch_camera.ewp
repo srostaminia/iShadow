@@ -670,7 +670,7 @@
         </option>
         <option>
           <name>IlinkRawBinaryFile</name>
-          <state>Z:\ammayber On My Mac\eye_exper\annfile_2273p.raw</state>
+          <state>Z:\ammayber On My Mac\eye_exper\model_blank.raw</state>
         </option>
         <option>
           <name>IlinkRawBinarySymbol</name>
@@ -873,7 +873,7 @@
         </option>
         <option>
           <name>IlinkOptInline</name>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>IlinkOptExceptionsAllow</name>

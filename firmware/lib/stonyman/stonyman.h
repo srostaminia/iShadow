@@ -19,7 +19,7 @@
 //#define CIDER_MODE
 
 // Comment out to collect data row-wise instead of column-wise
-#define COLUMN_COLLECT
+//#define COLUMN_COLLECT
 
 // OUTMODE CURRENTLY NOT IMPLEMENTED!!
 // Uncomment to use outdoor settings
@@ -35,7 +35,7 @@
 #define USB_8BIT
 
 // PARAM / FPN FILE CURRENTLY NOT WORKING!!
-// #define USE_PARAM_FILE
+#define USE_PARAM_FILE
 
 // OUTDOOR_SWITCH CURRENTLY NOT IMPLEMENTED!
 // Uncomment to switch to outdoor mode based on photodiode
@@ -234,7 +234,7 @@
 
 	#ifdef USE_PARAM_FILE
 		#define FPN_OFFSET 		0
-		#define FPN_T_OFFSET	12544
+		#define FPN_T_OFFSET	(112 * 112)
 	#endif
 
 #else
@@ -243,7 +243,7 @@
 	#define INNER_REG			REG_COLSEL
 
 	#ifdef USE_PARAM_FILE
-		#define FPN_OFFSET 		12544
+		#define FPN_OFFSET 		(112 * 112)
 		#define FPN_T_OFFSET	0
 	#endif
 
@@ -251,10 +251,10 @@
 
 #ifdef USE_PARAM_FILE
 
-	#define OUT_FPN_START		0
-	#define EYE_FPN_START		(112 * 112 * 2)  
+	#define EYE_FPN_START		0
+	#define OUT_FPN_START		(112 * 112 * 2)  
 
-	#define FPN_PRI(X, Y)		model_data[PRIMARY_FPN_START + FPN_OFFSET + (((X) * 112) + (Y))]
+	#define FPN_PRI(X, Y)		((uint16_t*)(model_data))[PRIMARY_FPN_START + FPN_OFFSET + (((X) * 112) + (Y))]
 	#define FPN_T_PRI(X, Y)	model_data[PRIMARY_FPN_START + FPN_T_OFFSET + (((X) * 112) + (Y))]
 	#define FPN_SEC(X, Y)		model_data[SECONDARY_FPN_START + FPN_OFFSET + (((X) * 112) + (Y))]
 	#define FPN_T_SEC(X, Y)	model_data[SECONDARY_FPN_START + FPN_T_OFFSET + (((X) * 112) + (Y))]
