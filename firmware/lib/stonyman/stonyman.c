@@ -10,14 +10,14 @@
 #include "diskio.h"
 
 extern uint32_t sd_ptr;
-#endif
+#endif // SD_SEND
 
 #ifdef USB_SEND
 #include "hw_config.h"
 
 extern volatile uint8_t packet_sending;
-extern uint8_t param_packet[USB_PACKET_SIZE];
-#endif
+static uint8_t param_packet[USB_PACKET_SIZE];
+#endif // USB_SEND
 
 #ifdef USE_PARAM_FILE
 // This is declared extern because it is referencing an external binary file
@@ -104,7 +104,7 @@ inline static void pulse_incp(uint8_t cam)
 
 // clear_values
 // Resets the value of all registers to zero
-void clear_values(uint8_t cam)
+inline static void clear_values(uint8_t cam)
 {
   short i;
 
@@ -116,7 +116,7 @@ void clear_values(uint8_t cam)
 
 // set_pointer_value
 // Sets the pointer to a register and sets the value of that register
-void set_pointer_value(char ptr, short val, uint8_t cam)
+inline static void set_pointer_value(char ptr, short val, uint8_t cam)
 {
   set_pointer(ptr, cam);  //set pointer to register
   set_value(val, cam);  //set value of that register
@@ -124,7 +124,7 @@ void set_pointer_value(char ptr, short val, uint8_t cam)
 
 // inc_pointer_value
 // Sets the pointer to a register and increments by the given amount
-void inc_pointer_value(char ptr, short val, uint8_t cam)
+inline static void inc_pointer_value(char ptr, short val, uint8_t cam)
 {
   set_pointer(ptr, cam);  //set pointer to register
   inc_value(val, cam);  //set value of that register
@@ -132,7 +132,7 @@ void inc_pointer_value(char ptr, short val, uint8_t cam)
 
 // set_pointer
 // Sets the pointer system register to the desired value
-void set_pointer(char ptr, uint8_t cam)
+inline static void set_pointer(char ptr, uint8_t cam)
 {
   short ii;
   
@@ -148,7 +148,7 @@ void set_pointer(char ptr, uint8_t cam)
 
 // set_value
 // Sets the value of the current register
-void set_value(short val, uint8_t cam)
+inline static void set_value(short val, uint8_t cam)
 {
   short ii;
   
@@ -164,7 +164,7 @@ void set_value(short val, uint8_t cam)
 
 // inc_value
 // Increments the current register the given number of times
-void inc_value(short val, uint8_t cam)
+inline static void inc_value(short val, uint8_t cam)
 {
   short ii;
 
@@ -177,18 +177,37 @@ void inc_value(short val, uint8_t cam)
 
 // set_biases
 // Sets all three biases
-void set_biases(short vref,short nbias,short aobias, uint8_t cam)
+inline static void set_biases(short vref,short nbias,short aobias, uint8_t cam)
 {
   set_pointer_value(REG_VREF,vref,cam);
   set_pointer_value(REG_NBIAS,nbias,cam);
   set_pointer_value(REG_AOBIAS,aobias,cam);
 }
 
+// ----------------Data TX helper functions------------------------------------
+#ifdef USB_SEND
+inline static void usb_finish_tx(uint8_t *param_packet, uint8_t packet_length)
+{
+  for (int i = packet_length; i < PARAM_PACKET_LENGTH; i++)  
+    CAST_PIXEL_BUFFER(param_packet)[i] = 1;
+
+  while(packet_sending == 1);
+  send_packet(param_packet, USB_PACKET_SIZE);
+  while(packet_sending == 1);
+  
+  send_empty_packet();
+  while(packet_sending == 1);
+  
+  send_empty_packet();
+  while(packet_sending == 1);
+}
+#endif // USB_SEND
+
 // ----------------Initialization functions------------------------------------
 
 // stony_init_default()
 // Master init function - sets up MCU pins and configures Stonyman
-void stony_init_default()
+inline void stony_init_default()
 {
 	stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3, 
 		SMH_GAIN_3V3, SMH_SELAMP_3V3);
@@ -213,6 +232,11 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
 //  fpn_offset = wih_offset + (num_hidden * num_subsample * 2);
 //  col_fpn_offset = fpn_offset + 112 * 112;
 //#endif
+
+#ifdef USB_SEND
+  for (int i = 0; i < USB_PACKET_SIZE; i++)
+    param_packet[i] = 0;
+#endif // USB_SEND
   
   // Set MCU pins
   stony_pin_config();
@@ -412,6 +436,9 @@ int stony_single()
   // Double-buffered (2-dim array), two bytes per pixel
   uint8_t base_buffers[2][TX_PIXELS * 2];
 
+  volatile uint16_t start, total;
+  uint8_t buf_idx = 0;
+
 #ifdef DO_8BIT_CONV
     uint8_t *active_buffer = (uint8_t *)base_buffers[0];
 
@@ -423,9 +450,6 @@ int stony_single()
 #else
     uint16_t *active_buffer = (uint16_t *)base_buffers[0];
 #endif
-  
-  volatile uint16_t start, total;
-  uint8_t buf_idx = 0;
   
   ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
   ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
@@ -513,22 +537,7 @@ int stony_single()
   }
 
   param_packet[0] = 0;
-
-#ifdef USB_16BIT
-  for (int i = 1; i < 12; i++) param_packet[i] = 1;
-#else
-  for (int i = 1; i < 6; i++)   param_packet[i] = 1;
-#endif
-
-  while(packet_sending == 1);
-  send_packet(param_packet, USB_PACKET_SIZE);
-  while(packet_sending == 1);
-  
-  send_empty_packet();
-  while(packet_sending == 1);
-  
-  send_empty_packet();
-  while(packet_sending == 1);
+  usb_finish_tx(param_packet, 1);
 
 #endif // USB_SEND
 
@@ -573,6 +582,9 @@ int stony_dual()
   // Double-buffered (2-dim array), two bytes per pixel, two cameras
   uint8_t base_buffers[2][TX_PIXELS * 2 * 2];
 
+  uint16_t secondary_offset = BUFFER_HALF;
+  uint8_t buf_idx = 0;
+
 #ifdef DO_8BIT_CONV
     uint8_t *active_buffer = (uint8_t *)base_buffers[0];
 
@@ -584,9 +596,6 @@ int stony_dual()
 #else
     uint16_t *active_buffer = (uint16_t *)base_buffers[0];
 #endif
-  
-  uint16_t secondary_offset = TX_PIXELS;
-  uint8_t buf_idx = 0;
   
   ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
   ADC_RegularChannelConfig(ADC1, SECONDARY_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
@@ -639,7 +648,7 @@ for (int i_outer = 0; i_outer < 112; i_outer++) {
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
-      active_buffer[data_cycle] = RESIZE_PIXEL(adc_values[0] - FPN_PRI(i_outer, j_inner));
+       active_buffer[data_cycle] = RESIZE_PIXEL(adc_values[0] - FPN_PRI(i_outer, j_inner));
 
 #ifdef USB_SEND
       if (data_cycle == USB_PIXELS - 1) {
@@ -718,22 +727,7 @@ for (int i_outer = 0; i_outer < 112; i_outer++) {
   }
 
   param_packet[0] = 0;
-
-#ifdef USB_16BIT
-  for (int i = 1; i < 12; i++) param_packet[i] = 1;
-#else
-  for (int i = 1; i < 6; i++)   param_packet[i] = 1;
-#endif
-
-  while(packet_sending == 1);
-  send_packet(param_packet, USB_PACKET_SIZE);
-  while(packet_sending == 1);
-  
-  send_empty_packet();
-  while(packet_sending == 1);
-  
-  send_empty_packet();
-  while(packet_sending == 1);
+  usb_finish_tx(param_packet, 1);
 
 #endif // USB_SEND
 

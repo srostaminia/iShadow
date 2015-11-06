@@ -2250,12 +2250,6 @@
     <file>
       <name>$PROJ_DIR$\predict_gaze.h</name>
     </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\lib\stonyman\stonyman.c</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\lib\stonyman\stonyman.h</name>
-    </file>
   </group>
   <group>
     <name>USB</name>
@@ -2286,6 +2280,12 @@
   </file>
   <file>
     <name>$PROJ_DIR$\main.h</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\..\..\lib\stonyman\stonyman.c</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\..\..\lib\stonyman\stonyman.h</name>
   </file>
 </project>
 
