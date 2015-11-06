@@ -11,8 +11,8 @@
 
 // Select primary camera, will be used for single-camera functions
 // (overriden by CIDER_MODE)
-//#define EYE_CAM_PRIMARY
-#define OUT_CAM_PRIMARY
+#define EYE_CAM_PRIMARY
+//#define OUT_CAM_PRIMARY
 
 // CIDER MODE CURRENTLY NOT IMPLEMENTED!!
 // Uncomment to use CIDER (overrides some other config options)
@@ -96,6 +96,7 @@
 
 	#define SD_ROWS         48
 	#define TX_PIXELS				SD_ROWS * 112
+	#define BUFFER_HALF			SD_ROWS * 112
 
 	//#define ECAM_OFFSET     5376
 	#define SD_BLOCKS       (SD_ROWS * 112 * 4) / 512
@@ -115,6 +116,8 @@
 
 #ifdef USB_SEND
 
+	#define PARAM_PACKET_LENGTH			6
+
 	#if defined(USB_16BIT) && defined(USB_8BIT)
 		#error ERROR: CANNOT DEFINE BOTH USB_16BIT AND USB_8BIT (STONYMAN.H)
 	#elif !defined(USB_16BIT) && !defined(USB_8BIT)
@@ -123,8 +126,10 @@
 
 	#ifdef USB_16BIT
 		#define USB_PIXELS      			92
+		#define BUFFER_HALF						92
 	#else
 		#define USB_PIXELS      			112
+		#define BUFFER_HALF						224
 	#endif
 
 	#define TX_PIXELS					USB_PIXELS
@@ -137,10 +142,10 @@
 	#define DO_8BIT_CONV
 
 	#define RESIZE_PIXEL(X) 			(((X) >> 2) & 0xFF)
-	#define CAST_PIXEL_BUFFER(X)	((uint8_t *)X)
+	#define CAST_PIXEL_BUFFER(X)	((uint8_t *)(X))
 #else
 	#define RESIZE_PIXEL(X) 			(X)
-	#define CAST_PIXEL_BUFFER(X)	((uint16_t *)X)
+	#define CAST_PIXEL_BUFFER(X)	((uint16_t *)(X))
 #endif
 
 #define DHR12R1_OFFSET      ((uint32_t)0x00000008)
@@ -255,9 +260,9 @@
 	#define OUT_FPN_START		(112 * 112 * 2)  
 
 	#define FPN_PRI(X, Y)		((uint16_t*)(model_data))[PRIMARY_FPN_START + FPN_OFFSET + (((X) * 112) + (Y))]
-	#define FPN_T_PRI(X, Y)	model_data[PRIMARY_FPN_START + FPN_T_OFFSET + (((X) * 112) + (Y))]
-	#define FPN_SEC(X, Y)		model_data[SECONDARY_FPN_START + FPN_OFFSET + (((X) * 112) + (Y))]
-	#define FPN_T_SEC(X, Y)	model_data[SECONDARY_FPN_START + FPN_T_OFFSET + (((X) * 112) + (Y))]
+	#define FPN_T_PRI(X, Y)	((uint16_t*)(model_data))[PRIMARY_FPN_START + FPN_T_OFFSET + (((X) * 112) + (Y))]
+	#define FPN_SEC(X, Y)		((uint16_t*)(model_data))[SECONDARY_FPN_START + FPN_OFFSET + (((X) * 112) + (Y))]
+	#define FPN_T_SEC(X, Y)	((uint16_t*)(model_data))[SECONDARY_FPN_START + FPN_T_OFFSET + (((X) * 112) + (Y))]
 
 #else
 
@@ -298,6 +303,8 @@ void set_pointer(char ptr, uint8_t cam);
 void set_value(short val, uint8_t cam);
 void inc_value(short val, uint8_t cam);
 void set_biases(short vref, short nbias, short aobias, uint8_t cam);
+
+void usb_finish_tx(uint8_t *param_packet, uint8_t packet_length);
 
 void stony_init_default(void);
 void stony_init(short vref, short nbias, short aobias, char gain, char selamp);

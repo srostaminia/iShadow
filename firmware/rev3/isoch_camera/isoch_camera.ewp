@@ -310,7 +310,7 @@
           <state>$PROJ_DIR$\..\..\lib\STM32_USB-FS-Device_Driver\inc</state>
           <state>$PROJ_DIR$\inc</state>
           <state>$PROJ_DIR$\..\..\lib\SDIO_Driver</state>
-          <state>C:\Users\Addison\GitHub\iShadow\firmware\lib\stonyman</state>
+          <state>$PROJ_DIR$\..\..\lib\stonyman</state>
         </option>
         <option>
           <name>CCStdIncCheck</name>
@@ -670,7 +670,7 @@
         </option>
         <option>
           <name>IlinkRawBinaryFile</name>
-          <state>Z:\ammayber On My Mac\eye_exper\model_blank.raw</state>
+          <state>Z:\ammayber On My Mac\eye_exper\model_test.raw</state>
         </option>
         <option>
           <name>IlinkRawBinarySymbol</name>
@@ -2048,12 +2048,6 @@
     <file>
       <name>$PROJ_DIR$\predict_gaze.h</name>
     </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\lib\stonyman\stonyman.c</name>
-    </file>
-    <file>
-      <name>$PROJ_DIR$\..\..\lib\stonyman\stonyman.h</name>
-    </file>
   </group>
   <group>
     <name>USB</name>
@@ -2084,6 +2078,12 @@
   </file>
   <file>
     <name>$PROJ_DIR$\main.h</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\..\..\lib\stonyman\stonyman.c</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\..\..\lib\stonyman\stonyman.h</name>
   </file>
 </project>
 
