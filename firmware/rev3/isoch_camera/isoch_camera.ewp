@@ -670,7 +670,7 @@
         </option>
         <option>
           <name>IlinkRawBinaryFile</name>
-          <state>Z:\ammayber On My Mac\eye_exper\model_test.raw</state>
+          <state>Z:\ammayber On My Mac\eye_exper\model_test_2273p.raw</state>
         </option>
         <option>
           <name>IlinkRawBinarySymbol</name>
@@ -2043,10 +2043,16 @@
   <group>
     <name>Stonyman</name>
     <file>
-      <name>$PROJ_DIR$\predict_gaze.c</name>
+      <name>$PROJ_DIR$\..\..\lib\stonyman\eye_models.c</name>
     </file>
     <file>
-      <name>$PROJ_DIR$\predict_gaze.h</name>
+      <name>$PROJ_DIR$\..\..\lib\stonyman\eye_models.h</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\lib\stonyman\stonyman.c</name>
+    </file>
+    <file>
+      <name>$PROJ_DIR$\..\..\lib\stonyman\stonyman.h</name>
     </file>
   </group>
   <group>
@@ -2078,12 +2084,6 @@
   </file>
   <file>
     <name>$PROJ_DIR$\main.h</name>
-  </file>
-  <file>
-    <name>$PROJ_DIR$\..\..\lib\stonyman\stonyman.c</name>
-  </file>
-  <file>
-    <name>$PROJ_DIR$\..\..\lib\stonyman\stonyman.h</name>
   </file>
 </project>
 

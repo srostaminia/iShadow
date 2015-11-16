@@ -57,9 +57,9 @@ void sd_test()
 {
   assert (disk_initialize(0) == SD_OK);
   
-  while (1) {
-    stony_dual();
-  }
+//  while (1) {
+    stony_single();
+//  }
 }
 
 void usb_test()
@@ -74,7 +74,7 @@ void usb_test()
     clear_ENDP1_packet_buffers();
     while (packet_sending == 1);
     
-    stony_dual();
+    stony_single();
     while (packet_sending == 1);
   }
 

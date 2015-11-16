@@ -43,7 +43,6 @@ ErrorStatus HSEStartUpStatus;
 EXTI_InitTypeDef EXTI_InitStructure;
 
 uint8_t empty[PACKET_SIZE];
-uint8_t param_packet[PACKET_SIZE];
 
 /* Extern variables ----------------------------------------------------------*/
 extern volatile uint8_t packet_sending;
@@ -306,7 +305,6 @@ void Speaker_Config(void)
 {  
   for (int i = 0; i < PACKET_SIZE; i++) {
     empty[i] = 0;
-    param_packet[i] = 0;        // First few bytes of param_packet will be filled in during image reads
   }
 }
 
