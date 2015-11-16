@@ -9,6 +9,7 @@ import struct
 import pickle
 import os
 import shutil
+from utils import keyboard
 
 def main():
     parser = argparse.ArgumentParser()
@@ -20,6 +21,7 @@ def main():
     parser.add_argument("--columnwise", action="store_true", help="images recorded columnwise on hardware instead of rowwise")
     parser.add_argument("--disknum", help="/dev/disk[N] to open (default = 2)", type=int)
     parser.add_argument("--overwrite", action="store_true", help="overwrite data folder if it already exists")
+    parser.add_argument("--model-results", action="store_true", help="each frame / frame pair includes eye model output data (needed for proper read alignment)")
     
     groupA = parser.add_mutually_exclusive_group()
     groupA.add_argument("-o", "--offset", help="Number of images / pairs to skip on SD card", type=int)
@@ -40,6 +42,14 @@ def main():
     overwrite = args.overwrite
     num_skip = args.offset if args.offset != None else 0
     outdoor_masks = args.outdoor_switch
+    model_results = args.model_results
+
+    unit_size = 25088
+
+    if interleaved:
+        unit_size *= 2
+    if model_results:
+        unit_size += 512
 
     if (args.disknum == None):
         input_filename = "/dev/disk2"
@@ -79,9 +89,9 @@ def main():
             sys.exit()
 
         if interleaved:
-            input_file.seek(num_skip * 50176)
+            input_file.seek(num_skip * unit_size)
         else:
-            input_file.seek(num_skip * 25088)
+            input_file.seek(num_skip * unit_size)
 
         if not os.path.exists(file_prefix):
             os.makedirs(file_prefix)
@@ -107,6 +117,13 @@ def main():
                 print "Input file", file_prefix + "\\" + file_prefix + "_b.raw", "could not be opened."
                 sys.exit()
 
+        if model_results:
+            try:
+                results_out = open(file_prefix + "_model_results.txt", "w")
+            except IOError:
+                print "Input file", file_prefix + "\\" + file_prefix + "_model_results.txt", "could not be opened."
+                sys.exit()
+
         print "Reading image data..."
         if (num_images > 0):
             for i in range(num_images):
@@ -124,40 +141,47 @@ def main():
                 data = input_file.read(3584)
                 output_a.write(data)
 
+                if (model_results):
+                    data = input_file.read(512)
+                    parse_write_results(data, results_out)
+
                 if (interleaved):
                     data = input_file.read(3584)
                     output_b.write(data)
+
         else:
-            end = False
-            i = 0
-            while (True):
-                for j in range(2):
-                    data = input_file.read(10752)
-                    if (ord(data[0]) < 0) and (ord(data[1700]) < 0) and (ord(data[3583]) < 0):
-                        end = True
-                        break
+            print "ERROR: Datastream end detection not working for the moment. Please specify a nonzero number of images to collect."
+            return
+            # end = False
+            # i = 0
+            # while (True):
+            #     for j in range(2):
+            #         data = input_file.read(10752)
+            #         if (ord(data[0]) < 0) and (ord(data[1700]) < 0) and (ord(data[3583]) < 0):
+            #             end = True
+            #             break
 
-                    output_a.write(data)
+            #         output_a.write(data)
 
-                    if (interleaved):
-                        data = input_file.read(10752)
-                        output_b.write(data)
+            #         if (interleaved):
+            #             data = input_file.read(10752)
+            #             output_b.write(data)
 
-                if (end):
-                    print "Found", i, "images total"
-                    num_images = i
-                    break
-                elif (i % 500 == 0):
-                    print i, "images so far"
+            #     if (end):
+            #         print "Found", i, "images total"
+            #         num_images = i
+            #         break
+            #     elif (i % 500 == 0):
+            #         print i, "images so far"
 
-                data = input_file.read(3584)
-                output_a.write(data)
+            #     data = input_file.read(3584)
+            #     output_a.write(data)
 
-                if (interleaved):
-                    data = input_file.read(3584)
-                    output_b.write(data)
+            #     if (interleaved):
+            #         data = input_file.read(3584)
+            #         output_b.write(data)
 
-                i += 1
+            #     i += 1
 
         num_images = i + 1
         print "Total:", num_images, "images\n"
@@ -190,6 +214,8 @@ def main():
 
     if (interleaved):
         output_b.close()
+    if model_results:
+        results_out.close()
 
     os.chdir("..")
 
@@ -211,6 +237,15 @@ def load_mask(mask_filename):
     mask_file.close()
 
     return mask_data
+
+
+def parse_write_results(result_data, out_file):
+    values = struct.unpack('b' * 512, result_data)
+
+    out_file.write(str(values[0]))
+    for i in range(1,6):
+        out_file.write(", " + str(values[i]))
+    out_file.write('\n')
 
 
 def disp_save_images(image_file, mask_data, out_filename, num_images, columnwise, outdoor_mask=None):
@@ -258,11 +293,11 @@ def read_packed_image(image_file, mask_data, out_filename, columnwise, index):
     
     figure = pylab.figure()
 
-    image -= mask_data
-    image = image[1:]
-
     if (columnwise):
         image = image.T
+
+    # image -= mask_data
+    image = image[1:]
 
     pylab.figimage(image, cmap = pylab.cm.Greys_r)
 
