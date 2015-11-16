@@ -93,7 +93,7 @@ def main():
 
     packet_size = 92 * 16 / TX_BITS
 
-    if norender:
+    if not norender:
         vline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
         hline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
         vline_cider,=ax.plot([-10, -9], [-10, -9], 'b-', linewidth=2)
@@ -206,7 +206,7 @@ def main():
             cider_row = -10
             cider_radius = 0
 
-        if norender:
+        if not norender:
             if model_type == 0:
                 vline.set_data([-10, -10], [-10, -10])
                 hline.set_data([-10, -10], [-10, -10])
@@ -224,10 +224,12 @@ def main():
 
         print "Pixels:", pixels
         print "Packets:", packets
-        print "Prediction (X, Y):", pred[0], pred[1]
+
+        if model_type != 0:
+            print "Prediction (X, Y):", pred[0], pred[1]
 
         if model_type == 1 or model_type == 2:
-            print "CIDER Point (X, Y):", cider_col, cider_row
+            print "CIDER Sample Point (X, Y):", cider_col, cider_row
             print "CIDER Radius:", cider_radius
             
         print
@@ -435,10 +437,3 @@ def read_all_packed_images(image_file):
     return images
 
 main()
-
-# root = Tkinter.Tk()
-# label_image = Tkinter.Label(root)
-# label_image.place(x=0,y=0,width=112,height=112)
-# root.geometry('+%d+%d' % (112,112))
-# root.after(0, main)
-# root.mainloop()
