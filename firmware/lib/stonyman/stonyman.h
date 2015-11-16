@@ -16,10 +16,10 @@
 
 // CIDER MODE CURRENTLY NOT IMPLEMENTED!!
 // Uncomment to use CIDER (overrides some other config options)
-//#define CIDER_MODE
+#define CIDER_MODE
 
 // Comment out to collect data row-wise instead of column-wise
-//#define COLUMN_COLLECT
+#define COLUMN_COLLECT
 
 // OUTMODE CURRENTLY NOT IMPLEMENTED!!
 // Uncomment to use outdoor settings
@@ -34,7 +34,7 @@
 //#define USB_16BIT
 #define USB_8BIT
 
-// PARAM / FPN FILE CURRENTLY NOT WORKING!!
+// Enables use of an uploaded binary file for FPN masks and eye model parameters
 #define USE_PARAM_FILE
 
 // OUTDOOR_SWITCH CURRENTLY NOT IMPLEMENTED!
@@ -66,16 +66,20 @@
 	#error ERROR: CANNOT USE EYE_CAM_PRIMARY AND OUT_CAM_PRIMARY SIMULTANEOUSLY (STONYMAN.H)
 #endif
 
-// TODO: Fix this now that SEND_EYE is outmoded
 // CIDER overrides (don't touch)
 #ifdef CIDER_MODE
 
-	#if !defined(SEND_EYE) 
-		#define SEND_EYE
+	#if !defined(EYE_CAM_PRIMARY) 
+		#define EYE_CAM_PRIMARY
+		#undef	OUT_CAM_PRIMARY
 	#endif
 
-	#if !defined(USE_FPN_EYE)
-		#define USE_FPN_EYE
+	#if !defined(COLUMN_COLLECT)
+		#define COLUMN_COLLECT
+	#endif
+
+	#if !defined(USE_PARAM_FILE)
+		#define USE_PARAM_FILE
 	#endif
 
 #endif  // CIDER_MODE
@@ -116,7 +120,7 @@
 
 #ifdef USB_SEND
 
-	#define PARAM_PACKET_LENGTH			6
+	#define MODEL_RESULTS_LENGTH			6
 
 	#if defined(USB_16BIT) && defined(USB_8BIT)
 		#error ERROR: CANNOT DEFINE BOTH USB_16BIT AND USB_8BIT (STONYMAN.H)
@@ -258,6 +262,7 @@
 
 	#define EYE_FPN_START		0
 	#define OUT_FPN_START		(112 * 112 * 2)  
+	#define PARAMS_START		(112 * 112 * 4)
 
 	#define FPN_PRI(X, Y)		((uint16_t*)(model_data))[PRIMARY_FPN_START + FPN_OFFSET + (((X) * 112) + (Y))]
 	#define FPN_T_PRI(X, Y)	((uint16_t*)(model_data))[PRIMARY_FPN_START + FPN_T_OFFSET + (((X) * 112) + (Y))]
@@ -291,6 +296,11 @@
 
 #endif  // CIDER_MODE
 
+#define PARAM_NOMODEL			0
+#define PARAM_CIDER_HIT		1
+#define PARAM_CIDER_MISS  2
+#define PARAM_ANN					3
+
 void pulse_resv(uint8_t cam);
 void pulse_incv(uint8_t cam);
 void pulse_resp(uint8_t cam);
@@ -304,7 +314,7 @@ void set_value(short val, uint8_t cam);
 void inc_value(short val, uint8_t cam);
 void set_biases(short vref, short nbias, short aobias, uint8_t cam);
 
-void usb_finish_tx(uint8_t *param_packet, uint8_t packet_length);
+void usb_finish_tx(uint8_t *model_results, uint8_t packet_length);
 
 void stony_init_default(void);
 void stony_init(short vref, short nbias, short aobias, char gain, char selamp);
@@ -314,5 +324,10 @@ void dac_init();
 
 int stony_single();
 int stony_dual();
+
+// Can't use eye models without an uploaded parameter file
+// #ifdef USE_PARAM_FILE
+// int stony_single_ann();
+// #endif
 
 #endif // __STONYMAN_H

@@ -1,22 +1,30 @@
 #include "stonyman.h"
 #include "stm32l1xx.h"
 #include "math.h"
-#include "predict_gaze.h"
+#include "stdlib.h"
 
 // TODO: FIXME! This is just to make the stupid delay_us warnings go away...
 #include "main.h"
+
+#ifdef CIDER_MODE
+#include "eye_models.h"
+
+extern int8_t pred[2];
+extern unsigned short num_subsample;
+#endif
 
 #ifdef SD_SEND
 #include "diskio.h"
 
 extern uint32_t sd_ptr;
+static uint8_t model_results[512];
 #endif // SD_SEND
 
 #ifdef USB_SEND
 #include "hw_config.h"
 
 extern volatile uint8_t packet_sending;
-static uint8_t param_packet[USB_PACKET_SIZE];
+static uint8_t model_results[USB_PACKET_SIZE];
 #endif // USB_SEND
 
 #ifdef USE_PARAM_FILE
@@ -186,13 +194,13 @@ inline static void set_biases(short vref,short nbias,short aobias, uint8_t cam)
 
 // ----------------Data TX helper functions------------------------------------
 #ifdef USB_SEND
-inline static void usb_finish_tx(uint8_t *param_packet, uint8_t packet_length)
+inline static void usb_finish_tx(uint8_t *model_results, uint8_t packet_length)
 {
-  for (int i = packet_length; i < PARAM_PACKET_LENGTH; i++)  
-    CAST_PIXEL_BUFFER(param_packet)[i] = 1;
+  for (int i = packet_length; i < MODEL_RESULTS_LENGTH; i++)  
+    CAST_PIXEL_BUFFER(model_results)[i] = 1;
 
   while(packet_sending == 1);
-  send_packet(param_packet, USB_PACKET_SIZE);
+  send_packet(model_results, USB_PACKET_SIZE);
   while(packet_sending == 1);
   
   send_empty_packet();
@@ -219,24 +227,19 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
   short config;
   char flagUseAmplifier;
 
-// TODO: move this to dedicated CIDER file    
-//#ifdef USE_PARAM_FILE
-//  num_subsample = model_data[0];
-//  num_hidden = model_data[1];
-//  
-//  bh_offset = 2;
-//  bo_offset = bh_offset + num_hidden * 2;
-//  mask_offset = bo_offset + 4;
-//  who_offset = mask_offset + num_subsample * 2;
-//  wih_offset = who_offset + num_hidden * 2 * 2;
-//  fpn_offset = wih_offset + (num_hidden * num_subsample * 2);
-//  col_fpn_offset = fpn_offset + 112 * 112;
-//#endif
+#ifdef CIDER_MODE
+  read_cider_params();
+#endif
 
 #ifdef USB_SEND
   for (int i = 0; i < USB_PACKET_SIZE; i++)
-    param_packet[i] = 0;
+    model_results[i] = 0;
 #endif // USB_SEND
+
+#ifdef SD_SEND
+  for (int i = 0; i < 512; i++)
+    model_results[i] = 0;
+#endif // SD_SEND
   
   // Set MCU pins
   stony_pin_config();
@@ -425,7 +428,15 @@ static void dac_init() {
   DAC_SetChannel1Data(DAC_Align_12b_R, LED_HIGH);
 }
 
-// ----------------Driver / image capture functions----------------------------
+
+
+
+// -----------------------------------------------------------------------------
+// ----------------Standard image capture functions-----------------------------
+// -----------------------------------------------------------------------------
+
+
+
 
 // stony_single()
 // Capture an image from one camera (selected by PRIMARY_CAM in stonyman.h)
@@ -438,6 +449,22 @@ int stony_single()
 
   volatile uint16_t start, total;
   uint8_t buf_idx = 0;
+  uint16_t this_pixel;
+
+#ifdef USB_SEND
+  #ifdef CIDER_MODE
+  uint8_t num_params = 3;
+  #else
+  uint8_t num_params = 1;
+  #endif // CIDER_MODE
+#endif // USB_SEND
+
+#ifdef CIDER_MODE
+  uint16_t *subsampled = (uint16_t*)malloc(num_subsample * sizeof(uint16_t));
+
+  StreamStats stream_stats;
+  init_streamstats(&stream_stats);
+#endif
 
 #ifdef DO_8BIT_CONV
     uint8_t *active_buffer = (uint8_t *)base_buffers[0];
@@ -481,7 +508,12 @@ int stony_single()
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
-      active_buffer[data_cycle] = RESIZE_PIXEL(adc_values[adc_idx] - FPN_PRI(i_outer, j_inner));
+      this_pixel = adc_values[adc_idx] - FPN_PRI(i_outer, j_inner);
+      active_buffer[data_cycle] = RESIZE_PIXEL(this_pixel);
+
+#ifdef CIDER_MODE
+      update_streamstats(&stream_stats, subsampled, this_pixel, i_outer, j_inner);
+#endif
 
 #ifdef USB_SEND
       if (data_cycle == USB_PIXELS - 1) {
@@ -523,6 +555,17 @@ int stony_single()
 #endif // SD_SEND
   } // for (i_outer)
 
+#ifdef CIDER_MODE
+  ann_predict(subsampled, &stream_stats);
+  free(subsampled);
+
+  model_results[0] = PARAM_ANN;
+  model_results[1] = pred[0];
+  model_results[2] = pred[1];
+#else
+  model_results[0] = PARAM_NOMODEL;
+#endif // CIDER_MODE
+
 #ifdef USB_SEND
 
   if (data_cycle != 0) {
@@ -536,9 +579,7 @@ int stony_single()
     send_packet(base_buffers[buf_idx], USB_PACKET_SIZE);
   }
 
-  param_packet[0] = 0;
-  usb_finish_tx(param_packet, 1);
-
+  usb_finish_tx(model_results, num_params);
 #endif // USB_SEND
 
 #ifdef SD_SEND
@@ -549,18 +590,18 @@ int stony_single()
   if (disk_write_fast(0, (uint8_t *)base_buffers[buf_idx], sd_ptr, SD_MOD_BLOCKS / 2) != RES_OK)      return -1;
   sd_ptr += SD_MOD_BLOCKS / 2;
 #endif // (112 % SD_ROWS != 0)
-  
+
+#ifdef CIDER_MODE
+  f_finish_write();
+  if (disk_write_fast(0, model_results, sd_ptr, 1) != RES_OK)      return -1;
+  sd_ptr += 1;
+#endif // CIDER_MODE
+
   f_finish_write();
 #endif // SD_SEND
-  
+
   return 0;
 }
-
-
-
-
-
-
 
 
 
@@ -579,6 +620,7 @@ int stony_dual()
   
   // TODO: LED code
 
+  // TODO: is this size any kind of correct?
   // Double-buffered (2-dim array), two bytes per pixel, two cameras
   uint8_t base_buffers[2][TX_PIXELS * 2 * 2];
 
@@ -726,8 +768,8 @@ for (int i_outer = 0; i_outer < 112; i_outer++) {
     send_packet(base_buffers[buf_idx], USB_PACKET_SIZE);
   }
 
-  param_packet[0] = 0;
-  usb_finish_tx(param_packet, 1);
+  model_results[0] = PARAM_NOMODEL;
+  usb_finish_tx(model_results, 1);
 
 #endif // USB_SEND
 
