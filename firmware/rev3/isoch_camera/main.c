@@ -35,7 +35,8 @@ int main()
 
   config_ms_timer();
   config_us_delay();
-  
+
+  // TODO: Switch to stony_init_default()
 #ifdef OUTMODE
   stony_init(39, 50, 41,
             2, SMH_SELAMP_3V3);
@@ -57,9 +58,9 @@ void sd_test()
 {
   assert (disk_initialize(0) == SD_OK);
   
-//  while (1) {
-    stony_single();
-//  }
+  while (1) {
+    stony_dual();
+  }
 }
 
 void usb_test()
@@ -74,7 +75,7 @@ void usb_test()
     clear_ENDP1_packet_buffers();
     while (packet_sending == 1);
     
-    stony_single();
+    stony_dual();
     while (packet_sending == 1);
   }
 

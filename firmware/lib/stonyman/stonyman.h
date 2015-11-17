@@ -7,7 +7,7 @@
 
 // Choose USB or SD transmission
 #define USB_SEND
-// #define SD_SEND
+//#define SD_SEND
 
 // Select primary camera, will be used for single-camera functions
 // (overriden by CIDER_MODE)
@@ -98,7 +98,7 @@
 
 #ifdef SD_SEND
 
-	#define SD_ROWS         48
+	#define SD_ROWS         32
 	#define TX_PIXELS				SD_ROWS * 112
 	#define BUFFER_HALF			SD_ROWS * 112
 
