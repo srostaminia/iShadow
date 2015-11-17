@@ -9,7 +9,7 @@ TriggerName=main
 LimitSize=0
 ByteLimit=50
 [DebugChecksum]
-Checksum=1224700790
+Checksum=-1804907697
 [Exceptions]
 StopOnUncaught=_ 0
 StopOnThrow=_ 0
@@ -106,9 +106,7 @@ ShowTiming=1
 mode=0
 [Breakpoints2]
 Bp0=_ 1 "EMUL_CODE" "{$PROJ_DIR$\stm32l1xx_it.c}.75.3" 0 0 1 "" 0 "" 0
-Bp1=_ 0 "EMUL_CODE" "{\\vmware-host\Shared Folders\Desktop\stonyman\stonyman.c}.604.2" 0 0 1 "" 0 "" 0
-Bp2=_ 1 "EMUL_CODE" "{$PROJ_DIR$\main.c}.53.3" 0 0 1 "" 0 "" 0
-Count=3
+Count=1
 [Aliases]
 Count=0
 SuppressDialog=0

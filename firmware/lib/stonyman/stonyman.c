@@ -626,6 +626,22 @@ int stony_dual()
 
   uint16_t secondary_offset = BUFFER_HALF;
   uint8_t buf_idx = 0;
+  uint16_t this_pixel;
+
+#ifdef USB_SEND
+  #ifdef CIDER_MODE
+  uint8_t num_params = 3;
+  #else
+  uint8_t num_params = 1;
+  #endif // CIDER_MODE
+#endif // USB_SEND
+
+#ifdef CIDER_MODE
+  uint16_t *subsampled = (uint16_t*)malloc(num_subsample * sizeof(uint16_t));
+
+  StreamStats stream_stats;
+  init_streamstats(&stream_stats);
+#endif
 
 #ifdef DO_8BIT_CONV
     uint8_t *active_buffer = (uint8_t *)base_buffers[0];
@@ -690,7 +706,12 @@ for (int i_outer = 0; i_outer < 112; i_outer++) {
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
-       active_buffer[data_cycle] = RESIZE_PIXEL(adc_values[0] - FPN_PRI(i_outer, j_inner));
+      this_pixel = adc_values[0] - FPN_PRI(i_outer, j_inner);
+      active_buffer[data_cycle] = RESIZE_PIXEL(this_pixel);
+
+#ifdef CIDER_MODE
+      update_streamstats(&stream_stats, subsampled, this_pixel, i_outer, j_inner);
+#endif
 
 #ifdef USB_SEND
       if (data_cycle == USB_PIXELS - 1) {
@@ -755,6 +776,17 @@ for (int i_outer = 0; i_outer < 112; i_outer++) {
 #endif // SD_SEND
   } // for (i_outer)
 
+#ifdef CIDER_MODE
+  ann_predict(subsampled, &stream_stats);
+  free(subsampled);
+
+  model_results[0] = PARAM_ANN;
+  model_results[1] = pred[0];
+  model_results[2] = pred[1];
+#else
+  model_results[0] = PARAM_NOMODEL;
+#endif // CIDER_MODE
+
 #ifdef USB_SEND
 
   if (data_cycle != 0) {
@@ -768,9 +800,7 @@ for (int i_outer = 0; i_outer < 112; i_outer++) {
     send_packet(base_buffers[buf_idx], USB_PACKET_SIZE);
   }
 
-  model_results[0] = PARAM_NOMODEL;
-  usb_finish_tx(model_results, 1);
-
+  usb_finish_tx(model_results, num_params);
 #endif // USB_SEND
 
 #ifdef SD_SEND
@@ -781,6 +811,12 @@ for (int i_outer = 0; i_outer < 112; i_outer++) {
   if (disk_write_fast(0, (uint8_t *)base_buffers[buf_idx], sd_ptr, SD_MOD_BLOCKS) != RES_OK)      return -1;
   sd_ptr += SD_MOD_BLOCKS;
 #endif // (112 % SD_ROWS != 0)
+
+#ifdef CIDER_MODE
+  f_finish_write();
+  if (disk_write_fast(0, model_results, sd_ptr, 1) != RES_OK)      return -1;
+  sd_ptr += 1;
+#endif // CIDER_MODE
   
   f_finish_write();
 #endif // SD_SEND
