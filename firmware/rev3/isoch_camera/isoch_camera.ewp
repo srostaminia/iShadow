@@ -2054,6 +2054,9 @@
     <file>
       <name>$PROJ_DIR$\..\..\lib\stonyman\stonyman.h</name>
     </file>
+    <file>
+      <name>$PROJ_DIR$\stonyman_conf.h</name>
+    </file>
   </group>
   <group>
     <name>USB</name>

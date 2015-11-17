@@ -8,6 +8,7 @@
 #include "usb_desc.h"
 #include "usb_pwr.h"
 #include "stonyman.h"
+#include "stonyman_conf.h"
 #include "assert.h"
 #include "stm32l152d_eval_sdio_sd.h"
 #include "diskio.h"
