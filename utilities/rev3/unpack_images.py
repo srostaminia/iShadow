@@ -127,12 +127,12 @@ def main():
         print "Reading image data..."
         if (num_images > 0):
             for i in range(num_images):
-                for j in range(2):
-                    data = input_file.read(10752)
+                for j in range(3):
+                    data = input_file.read(7168)
                     output_a.write(data)
 
                     if (interleaved):
-                        data = input_file.read(10752)
+                        data = input_file.read(7168)
                         output_b.write(data)
 
                 if (i % 500 == 0):
@@ -141,13 +141,13 @@ def main():
                 data = input_file.read(3584)
                 output_a.write(data)
 
-                if (model_results):
-                    data = input_file.read(512)
-                    parse_write_results(data, results_out)
-
                 if (interleaved):
                     data = input_file.read(3584)
                     output_b.write(data)
+
+                if (model_results):
+                    data = input_file.read(512)
+                    parse_write_results(data, results_out)
 
         else:
             print "ERROR: Datastream end detection not working for the moment. Please specify a nonzero number of images to collect."

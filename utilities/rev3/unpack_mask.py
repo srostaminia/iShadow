@@ -13,10 +13,15 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("name", help="mask name")
+    parser.add_argument("--disknum", help="/dev/disk[N] to open (default = 2)", type=int)
 
     args = parser.parse_args()
 
-    input_filename = "/dev/disk2"
+    if (args.disknum == None):
+        input_filename = "/dev/disk2"
+    else:
+        input_filename = "/dev/disk" + str(args.disknum)
+
     mask_filename = args.name + ".pi"
 
     try:
