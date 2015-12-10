@@ -17,14 +17,14 @@ extern unsigned short num_subsample;
 #include "diskio.h"
 
 extern uint32_t sd_ptr;
-static uint8_t model_results[512];
+static uint8_t frame_data[512];
 #endif // SD_SEND
 
 #ifdef USB_SEND
 #include "hw_config.h"
 
 extern volatile uint8_t packet_sending;
-static uint8_t model_results[USB_PACKET_SIZE];
+static uint8_t frame_data[USB_PACKET_SIZE];
 #endif // USB_SEND
 
 #ifdef USE_PARAM_FILE
@@ -32,6 +32,10 @@ static uint8_t model_results[USB_PACKET_SIZE];
 // that must be provided in the project settings (see readme)
 extern uint8_t model_data[];
 #endif
+
+uint8_t num_images = 0;
+extern uint32_t time_elapsed;
+uint32_t time_test;
 
 int adc_idx = 0;
 __IO uint16_t adc_values[2];
@@ -194,13 +198,13 @@ inline static void set_biases(short vref,short nbias,short aobias, uint8_t cam)
 
 // ----------------Data TX helper functions------------------------------------
 #ifdef USB_SEND
-inline static void usb_finish_tx(uint8_t *model_results, uint8_t packet_length)
+inline static void usb_finish_tx(uint8_t *frame_data, uint8_t packet_length)
 {
-  for (int i = packet_length; i < MODEL_RESULTS_LENGTH; i++)  
-    CAST_PIXEL_BUFFER(model_results)[i] = 1;
+  for (int i = packet_length; i < FRAME_DATA_LENGTH; i++)  
+    CAST_PIXEL_BUFFER(frame_data)[i] = 1;
 
   while(packet_sending == 1);
-  send_packet(model_results, USB_PACKET_SIZE);
+  send_packet(frame_data, USB_PACKET_SIZE);
   while(packet_sending == 1);
   
   send_empty_packet();
@@ -233,12 +237,12 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
 
 #ifdef USB_SEND
   for (int i = 0; i < USB_PACKET_SIZE; i++)
-    model_results[i] = 0;
+    frame_data[i] = 0;
 #endif // USB_SEND
 
 #ifdef SD_SEND
   for (int i = 0; i < 512; i++)
-    model_results[i] = 0;
+    frame_data[i] = 0;
 #endif // SD_SEND
   
   // Set MCU pins
@@ -453,9 +457,9 @@ int stony_single()
 
 #ifdef USB_SEND
   #ifdef CIDER_MODE
-  uint8_t num_params = 3;
+  uint8_t num_params = 7;
   #else
-  uint8_t num_params = 1;
+  uint8_t num_params = 4;
   #endif // CIDER_MODE
 #endif // USB_SEND
 
@@ -559,12 +563,16 @@ int stony_single()
   ann_predict(subsampled, &stream_stats);
   free(subsampled);
 
-  model_results[0] = PARAM_ANN;
-  model_results[1] = pred[0];
-  model_results[2] = pred[1];
+  frame_data[FD_MODEL_OFFSET] = PARAM_ANN;
+  frame_data[FD_PREDX_OFFSET] = pred[PRED_X];
+  frame_data[FD_PREDY_OFFSET] = pred[PRED_Y];
 #else
-  model_results[0] = PARAM_NOMODEL;
+  frame_data[FD_MODEL_OFFSET] = PARAM_NOMODEL;
 #endif // CIDER_MODE
+  
+  time_elapsed = TIM5->CNT;
+  TIM5->CNT = 0;
+  *((uint32_t*)(frame_data + FD_TIMER_OFFSET)) = time_elapsed;
 
 #ifdef USB_SEND
 
@@ -579,7 +587,7 @@ int stony_single()
     send_packet(base_buffers[buf_idx], USB_PACKET_SIZE);
   }
 
-  usb_finish_tx(model_results, num_params);
+  usb_finish_tx(frame_data, num_params);
 #endif // USB_SEND
 
 #ifdef SD_SEND
@@ -591,14 +599,14 @@ int stony_single()
   sd_ptr += SD_MOD_BLOCKS / 2;
 #endif // (112 % SD_ROWS != 0)
 
-#ifdef CIDER_MODE
   f_finish_write();
-  if (disk_write_fast(0, model_results, sd_ptr, 1) != RES_OK)      return -1;
+  if (disk_write_fast(0, frame_data, sd_ptr, 1) != RES_OK)      return -1;
   sd_ptr += 1;
-#endif // CIDER_MODE
 
   f_finish_write();
 #endif // SD_SEND
+  
+  num_images++;
 
   return 0;
 }
@@ -780,11 +788,11 @@ for (int i_outer = 0; i_outer < 112; i_outer++) {
   ann_predict(subsampled, &stream_stats);
   free(subsampled);
 
-  model_results[0] = PARAM_ANN;
-  model_results[1] = pred[0];
-  model_results[2] = pred[1];
+  frame_data[0] = PARAM_ANN;
+  frame_data[1] = pred[0];
+  frame_data[2] = pred[1];
 #else
-  model_results[0] = PARAM_NOMODEL;
+  frame_data[0] = PARAM_NOMODEL;
 #endif // CIDER_MODE
 
 #ifdef USB_SEND
@@ -800,7 +808,7 @@ for (int i_outer = 0; i_outer < 112; i_outer++) {
     send_packet(base_buffers[buf_idx], USB_PACKET_SIZE);
   }
 
-  usb_finish_tx(model_results, num_params);
+  usb_finish_tx(frame_data, num_params);
 #endif // USB_SEND
 
 #ifdef SD_SEND
@@ -814,7 +822,7 @@ for (int i_outer = 0; i_outer < 112; i_outer++) {
 
 #ifdef CIDER_MODE
   f_finish_write();
-  if (disk_write_fast(0, model_results, sd_ptr, 1) != RES_OK)      return -1;
+  if (disk_write_fast(0, frame_data, sd_ptr, 1) != RES_OK)      return -1;
   sd_ptr += 1;
 #endif // CIDER_MODE
   
@@ -823,3 +831,126 @@ for (int i_outer = 0; i_outer < 112; i_outer++) {
   
   return 0;
 }
+
+
+
+// // stony_single()
+// // Capture an image from one camera (selected by PRIMARY_CAM in stonyman.h)
+// int stony_ann()
+// {
+//   // Double-buffered (2-dim array), two bytes per pixel
+//   uint8_t base_buffers[2][TX_PIXELS * 2];
+
+//   volatile uint16_t start, total;
+//   uint8_t buf_idx = 0;
+//   uint16_t this_pixel;
+
+// #ifdef USB_SEND
+//   #ifdef CIDER_MODE
+//   uint8_t num_params = 3;
+//   #else
+//   uint8_t num_params = 1;
+//   #endif // CIDER_MODE
+// #endif // USB_SEND
+
+// #ifdef CIDER_MODE
+//   uint16_t *subsampled = (uint16_t*)malloc(num_subsample * sizeof(uint16_t));
+
+//   StreamStats stream_stats;
+//   init_streamstats(&stream_stats);
+// #endif
+
+// #ifdef DO_8BIT_CONV
+//     uint8_t *active_buffer = (uint8_t *)base_buffers[0];
+
+//     for (int i = 0; i < 2; i++) {
+//       for (int j = 0; j < USB_PIXELS * 2; j++) {
+//         base_buffers[i][j] = 0;
+//       }
+//     }
+// #else
+//     uint16_t *active_buffer = (uint16_t *)base_buffers[0];
+// #endif
+  
+//   ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
+//   ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
+  
+//   last_minor = 0;
+//   last_major = MASK(0, MASK_OUTER);
+
+//   for (int pixel = 0; pixel < NUM_SUBSAMPLE; pixel++) {   
+//       if (MASK(pixel, 1) != last_major)
+//       {
+//         // Set row to zero to avoid precharging any other rows
+//         set_pointer_value(REG_ROWSEL, 0, CAM2);
+        
+//         char diff = MASK(pixel, 1) - last_major;
+        
+//         inc_pointer_value(REG_COLSEL, diff, CAM2);
+        
+//         last_major = MASK(pixel, MASK_OUTER);
+
+//         set_pointer_value(REG_ROWSEL, MASK(pixel, 0), CAM2);
+        
+//         last_minor = MASK(pixel, MASK_INNER);
+        
+//         asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//         asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//       } else {
+//         inc_value(MASK(pixel, 0) - last_minor, CAM2);
+        
+//         last_minor = MASK(pixel, MASK_INNER);
+//       }
+      
+//       PRIMARY_PARAM(INPH_BANK)->ODR |= PRIMARY_PARAM(INPH_PIN);
+//       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//       PRIMARY_PARAM(INPH_BANK)->ODR &= ~PRIMARY_PARAM(INPH_PIN);
+//       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      
+//       /* Start ADC1 Software Conversion */
+//       ADC_SoftwareStartConv(ADC1);
+      
+//       if (pixel > 0) {
+//         pixel_sum += pix_value;
+        
+//         // Standard deviation computation
+//         value = (float)pix_value;
+//         tmpM = M;
+//         M += (value - tmpM) / k;
+//         S += (value - tmpM) * (value - M);
+//         k++;
+//         current_subsample++;
+//       }
+      
+//       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+//       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+
+//       pix_value = adc_values[adc_idx] - COL_FPN((MASK(pixel,0) * 112) + MASK(pixel,1));
+//       adc_idx = !adc_idx;
+//   }
+  
+//   pixel_sum += pix_value;
+  
+//   // Standard deviation computation
+//   value = (float)pix_value;
+//   tmpM = M;
+//   M += (value - tmpM) / k;
+//   S += (value - tmpM) * (value - M);
+//   k++;
+//   current_subsample++;
+  
+//   if (current_subsample != NUM_SUBSAMPLE)
+//     while(1);
+  
+//   float mean = (float)pixel_sum / (NUM_SUBSAMPLE);
+//   float std = sqrt(S / (k-1));
+  
+//   // Predict gaze, store results in global variable pred[]
+//   predict_gaze_mean(pred_pixels, mean, std);
+
+//   return 0;
+// }

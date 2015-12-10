@@ -5,6 +5,10 @@
 #define USB_SEND
 //#define SD_SEND
 
+// Select whether to use only primary camera or use both
+#define SINGLE_CAM
+//#define DUAL_CAM
+
 // Select primary camera, will be used for single-camera functions
 // (overriden by CIDER_MODE)
 #define EYE_CAM_PRIMARY

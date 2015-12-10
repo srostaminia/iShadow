@@ -23,6 +23,9 @@
 #define MASK_ROW				0
 #define MASK_COL				1
 
+#define PRED_X					0
+#define PRED_Y					1
+
 #ifdef COLUMN_COLLECT
  #define MASK_OUTER			MASK_COL
  #define MASK_INNER			MASK_ROW

@@ -55,8 +55,8 @@
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 /* Exported macro ------------------------------------------------------------*/
-#define US_TIME         TIM5->CNT
-#define MS_TIME         TIM4->CNT
+#define US_TIME         TIM4->CNT
+#define MS_TIME         TIM5->CNT
 
 /* Exported functions ------------------------------------------------------- */
 void TimingDelay_Decrement(void);
@@ -66,8 +66,8 @@ void set_mco();
 void delay_us(int delayTime);
 void config_ms_timer();
 void delay_ms(int DelayTime);
-void usb_test();
-void sd_test();
+void run_usb();
+void run_sd();
 
 #endif /* __MAIN_H */
 
