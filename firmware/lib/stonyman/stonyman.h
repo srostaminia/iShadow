@@ -2,44 +2,7 @@
 #define __STONYMAN_H
 
 #include "stm32l1xx.h"
-
-// TODO: Split these out into a project-specific config header or something
-
-// Choose USB or SD transmission
-#define USB_SEND
-//#define SD_SEND
-
-// Select primary camera, will be used for single-camera functions
-// (overriden by CIDER_MODE)
-#define EYE_CAM_PRIMARY
-//#define OUT_CAM_PRIMARY
-
-// CIDER MODE CURRENTLY NOT IMPLEMENTED!!
-// Uncomment to use CIDER (overrides some other config options)
-#define CIDER_MODE
-
-// Comment out to collect data row-wise instead of column-wise
-#define COLUMN_COLLECT
-
-// OUTMODE CURRENTLY NOT IMPLEMENTED!!
-// Uncomment to use outdoor settings
-//#define OUTMODE
-
-// LED FUNCTIONS NOT FULLY IMPLEMENTED!!
-// Comment out to leave LEDs on at all times
-//#define LED_DUTY_CYCLE
-
-// Uncomment one or the other for USB pixel transmission rate
-// (doesn't affect SD card)
-//#define USB_16BIT
-#define USB_8BIT
-
-// Enables use of an uploaded binary file for FPN masks and eye model parameters
-#define USE_PARAM_FILE
-
-// OUTDOOR_SWITCH CURRENTLY NOT IMPLEMENTED!
-// Uncomment to switch to outdoor mode based on photodiode
-//#define OUTDOOR_SWITCH
+#include "stonyman_conf.h"
 
 #if defined(CIDER_MODE) && defined(OUTDOOR_SWITCH)
 	#error ERROR: CANNOT USE CIDER_MODE AND OUTDOOR_SWITCH SIMULTANEOUSLY (STONYMAN.H)
@@ -120,7 +83,7 @@
 
 #ifdef USB_SEND
 
-	#define MODEL_RESULTS_LENGTH			6
+	#define FRAME_DATA_LENGTH			10
 
 	#if defined(USB_16BIT) && defined(USB_8BIT)
 		#error ERROR: CANNOT DEFINE BOTH USB_16BIT AND USB_8BIT (STONYMAN.H)
@@ -258,6 +221,12 @@
 
 #endif // COLUMN_COLLECT
 
+// Frame data (FD) packet offsets
+#define FD_TIMER_OFFSET		0
+#define FD_MODEL_OFFSET		4
+#define FD_PREDX_OFFSET		5
+#define FD_PREDY_OFFSET		6
+
 #ifdef USE_PARAM_FILE
 
 	#define EYE_FPN_START		0
@@ -286,13 +255,13 @@
 	// Percentile value for cross model pixel clamping
 	#define CIDER_PERCENTILE        10
 
-	#define BH(X)           *((float*)(model_data + bh_offset + ((X) * 2)))  
-	#define BO(X)           *((float*)(model_data + bo_offset + ((X) * 2)))
-	#define MASK(X, Y)      model_data[mask_offset + ((X) * 2) + (Y)]
-	#define WHO(X, Y)       *((float*)(model_data + who_offset + ((X) * 4) + ((Y) * 2)))
-	#define WIH(X, Y)       *((float*)(model_data + wih_offset + ((X) * num_hidden * 2) + ((Y) * 2)))
-	#define ROW_FPN(X)          model_data[fpn_offset + (X)]
-	#define COL_FPN(X)      model_data[col_fpn_offset + (X)]
+	// #define BH(X)           *((float*)(model_data + bh_offset + ((X) * 2)))  
+	// #define BO(X)           *((float*)(model_data + bo_offset + ((X) * 2)))
+	// #define MASK(X, Y)      model_data[mask_offset + ((X) * 2) + (Y)]
+	// #define WHO(X, Y)       *((float*)(model_data + who_offset + ((X) * 4) + ((Y) * 2)))
+	// #define WIH(X, Y)       *((float*)(model_data + wih_offset + ((X) * num_hidden * 2) + ((Y) * 2)))
+	// #define ROW_FPN(X)          model_data[fpn_offset + (X)]
+	// #define COL_FPN(X)      model_data[col_fpn_offset + (X)]
 
 #endif  // CIDER_MODE
 
@@ -314,7 +283,7 @@ void set_value(short val, uint8_t cam);
 void inc_value(short val, uint8_t cam);
 void set_biases(short vref, short nbias, short aobias, uint8_t cam);
 
-void usb_finish_tx(uint8_t *model_results, uint8_t packet_length);
+void usb_finish_tx(uint8_t *frame_data, uint8_t packet_length);
 
 void stony_init_default(void);
 void stony_init(short vref, short nbias, short aobias, char gain, char selamp);
@@ -324,10 +293,5 @@ void dac_init();
 
 int stony_single();
 int stony_dual();
-
-// Can't use eye models without an uploaded parameter file
-// #ifdef USE_PARAM_FILE
-// int stony_single_ann();
-// #endif
 
 #endif // __STONYMAN_H

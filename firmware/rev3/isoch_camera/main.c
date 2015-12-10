@@ -8,7 +8,6 @@
 #include "usb_desc.h"
 #include "usb_pwr.h"
 #include "stonyman.h"
-#include "stonyman_conf.h"
 #include "assert.h"
 #include "stm32l152d_eval_sdio_sd.h"
 #include "diskio.h"
@@ -28,6 +27,8 @@ static __IO uint32_t TimingDelay;
 extern uint8_t pred[2];
 extern uint16_t min, max;
 
+uint32_t time_elapsed = 0;
+
 int main()
 {   
   if (SysTick_Config(SystemCoreClock / 1000)) {
@@ -46,25 +47,42 @@ int main()
             SMH_GAIN_3V3, SMH_SELAMP_3V3);
 #endif
 
+//  uint32_t tim4_val, tim5_val;
+//  while(1) {
+//  TIM5->CNT = 0;
+//  TIM4->CNT = 0;
+//  
+//  while (TIM5->CNT < 5000);
+//  
+//  tim4_val = TIM4->CNT;
+//  tim5_val = TIM5->CNT;
+//  }
+  
 #ifdef SD_SEND
-  sd_test();
+  run_sd();
 #elif defined(USB_SEND)
-  usb_test();
+  run_usb();
 #endif
 
   return 0;
 }
 
-void sd_test()
+void run_sd()
 {
   assert (disk_initialize(0) == SD_OK);
   
+  time_elapsed += TIM4->CNT;
+  
   while (1) {
+#ifdef SINGLE_CAM
+    stony_single();
+#elif defined(DUAL_CAM)
     stony_dual();
+#endif
   }
 }
 
-void usb_test()
+void run_usb()
 {
   Set_System();
   Set_USBClock();
@@ -76,7 +94,11 @@ void usb_test()
     clear_ENDP1_packet_buffers();
     while (packet_sending == 1);
     
+#ifdef SINGLE_CAM
+    stony_single();
+#elif defined(DUAL_CAM)
     stony_dual();
+#endif
     while (packet_sending == 1);
   }
 
@@ -151,6 +173,7 @@ void config_ms_timer()
   TIM_TimeBaseInit(TIM4, &TIM_TimeBaseStructure);
   
   TIM_Cmd(TIM4, ENABLE);
+  TIM4->CNT = 0;
 }
 
 #pragma inline=never
@@ -168,12 +191,13 @@ void config_us_delay()
   
   TIM_TimeBaseStructInit(&TIM_TimeBaseStructure); 
   TIM_TimeBaseStructure.TIM_Prescaler = (SystemCoreClock / 1000000) - 1;
-  TIM_TimeBaseStructure.TIM_Period = UINT16_MAX; 
+  TIM_TimeBaseStructure.TIM_Period = UINT32_MAX; 
   TIM_TimeBaseStructure.TIM_ClockDivision = TIM_CKD_DIV1;
   TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
   TIM_TimeBaseInit(TIM5, &TIM_TimeBaseStructure);
   
   TIM_Cmd(TIM5, ENABLE);
+  TIM5->CNT = 0;
 }
 
 #pragma inline=never

@@ -269,8 +269,8 @@ void ann_predict(uint16_t *pixels, StreamStats *ss)
     }
 
     // pred = global for storing prediction values
-    pred[0] = (unsigned short)((x_val * 112) + 0.5);
-    pred[1] = (unsigned short)((y_val * 111) + 0.5);
+    pred[PRED_X] = (unsigned short)((x_val * 112) + 0.5);
+    pred[PRED_Y] = (unsigned short)((y_val * 111) + 0.5);
 
     return;
 }
