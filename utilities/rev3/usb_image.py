@@ -19,6 +19,17 @@ import utils
 
 CONTRAST_ADJUST = 0
 TX_BITS = 8
+PARAM_PACKET_SIZE = 10
+
+class ParamFields:
+    def __init__(self):
+        self.us_elapsed = float('NaN');
+        self.model_type = float('NaN');
+        self.pred_x = float('NaN');
+        self.pred_y = float('NaN');
+        self.cider_col = float('NaN');
+        self.cider_row = float('NaN');
+        self.cider_radius = float('NaN');
 
 plt.ion()
 
@@ -45,14 +56,6 @@ def main():
 
     if (debug_folder != None): 
         if os.path.isdir(debug_folder):
-            # erase = 'x'
-            # while (erase.lower() != 'y' and erase.lower() != 'n'):
-            #     erase = raw_input("Data folder " + debug_folder + " already exists. Erase old data and proceed (y/n)?")
-
-            # if erase == 'n':
-            #     print "\nHalting execution."
-            #     sys.exit()
-
             shutil.rmtree(debug_folder)
 
         os.mkdir(debug_folder)
@@ -75,8 +78,6 @@ def main():
         norender = True
 
     endp = get_usb_endp()
-
-    #imfig = pylab.figure()
 
     iters = 0
     save_filename = None
@@ -155,7 +156,7 @@ def main():
             # Parameter packet is the end of an image transmission
             if param_idx != None:
                 next_start = unpacked[(param_idx + 1) * packet_size:]
-                param_data = unpacked[param_idx * packet_size:(param_idx * packet_size) + 6]
+                param_data = unpacked[param_idx * packet_size:(param_idx * packet_size) + PARAM_PACKET_SIZE]
                 unpacked = unpacked[:param_idx * packet_size]
 
                 rx_complete = True
@@ -186,28 +187,10 @@ def main():
         frame=np.reshape(frame,(112,112))   
 
         # utils.keyboard()
-        model_type = struct.unpack('h', struct.pack('H', param_data[0]))[0]
-        pred[1] = struct.unpack('h', struct.pack('H', param_data[2]))[0]
-        if noflip:
-            pred[0] = struct.unpack('h', struct.pack('H', param_data[1]))[0]
-        else:
-            pred[0] = 112 - struct.unpack('h', struct.pack('H', param_data[1]))[0]
-
-        if model_type == 1 or model_type == 2:
-            cider_row = struct.unpack('h', struct.pack('H', param_data[4]))[0]
-            cider_radius = struct.unpack('h', struct.pack('H', param_data[5]))[0]
-
-            if noflip:
-                cider_col = struct.unpack('h', struct.pack('H', param_data[3]))[0]
-            else:
-                cider_col = 112 - struct.unpack('h', struct.pack('H', param_data[3]))[0]
-        else:
-            cider_col = -10
-            cider_row = -10
-            cider_radius = 0
+        param_fields = parse_param_fields(param_data, noflip)
 
         if not norender:
-            if model_type == 0:
+            if param_fields.model_type == 0:
                 vline.set_data([-10, -10], [-10, -10])
                 hline.set_data([-10, -10], [-10, -10])
                 vline_cider.set_data([-10, -10], [-10, -10])
@@ -215,22 +198,23 @@ def main():
                 circle.center = -10, -10
                 circle.set_radius(1)
             else:
-                vline.set_data([pred[0], pred[0]], [max(0, pred[1] - 10), min(111, pred[1] + 10)])
-                hline.set_data([max(0, pred[0] - 10), min(111, pred[0] + 10)], [pred[1], pred[1]])
-                vline_cider.set_data([cider_col, cider_col], [0, 112])
-                hline_cider.set_data([0, 112], [cider_row, cider_row])
-                circle.center = pred[0], pred[1]
-                circle.set_radius(cider_radius)
+                vline.set_data([param_fields.pred_x, param_fields.pred_x], [max(0, param_fields.pred_y - 10), min(111, param_fields.pred_y + 10)])
+                hline.set_data([max(0, param_fields.pred_x - 10), min(111, param_fields.pred_x + 10)], [param_fields.pred_y, param_fields.pred_y])
+                vline_cider.set_data([param_fields.cider_col, param_fields.cider_col], [0, 112])
+                hline_cider.set_data([0, 112], [param_fields.cider_row, param_fields.cider_row])
+                circle.center = param_fields.pred_x, param_fields.pred_y
+                circle.set_radius(param_fields.cider_radius)
 
         print "Pixels:", pixels
         print "Packets:", packets
 
-        if model_type != 0:
-            print "Prediction (X, Y):", pred[0], pred[1]
+        print "Frame collect time:", param_fields.us_elapsed / 1000, "ms"
+        if param_fields.model_type != 0:
+            print "Prediction (X, Y):", param_fields.pred_x, param_fields.pred_y
 
-        if model_type == 1 or model_type == 2:
-            print "CIDER Sample Point (X, Y):", cider_col, cider_row
-            print "CIDER Radius:", cider_radius
+        if param_fields.model_type == 1 or param_fields.model_type == 2:
+            print "CIDER Sample Point (X, Y):", param_fields.cider_col, param_fields.cider_row
+            print "CIDER Radius:", param_fields.cider_radius
             
         print
 
@@ -244,7 +228,7 @@ def main():
 
         if columnwise:
             frame = frame.T
-            # tmp = [pred[1], pred[0]]
+            # tmp = [param_fields.pred_y, param_fields.pred_x]
             # pred = tmp
 
         if not gen_mask and not noflip and not debug:
@@ -346,7 +330,7 @@ def check_param_packet(data, packet_size):
         # utils.keyboard()
         last_data_idx = get_last_idx(this_packet)
 
-        if last_data_idx != None and last_data_idx <= 5:
+        if last_data_idx != None and last_data_idx < PARAM_PACKET_SIZE:
             return i
 
     return None
@@ -408,6 +392,43 @@ def get_usb_endp():
         pass
 
     return endp
+
+def parse_param_fields(param_data, noflip):
+    param_fields = ParamFields()
+
+    if TX_BITS == 8:
+        data_type = 'B'
+    elif TX_BITS == 16:
+        data_type = 'H'
+
+    # utils.keyboard()
+    timer_data = ''
+    for i in range(4):
+        timer_data += (struct.pack(data_type,param_data[i]))
+
+    param_fields.us_elapsed = struct.unpack('I', timer_data)[0]
+
+    param_fields.model_type = struct.unpack('h', struct.pack('H', param_data[4]))[0]
+    param_fields.pred_y = struct.unpack('h', struct.pack('H', param_data[6]))[0]
+    if noflip:
+        param_fields.pred_x = struct.unpack('h', struct.pack('H', param_data[5]))[0]
+    else:
+        param_fields.pred_x = 112 - struct.unpack('h', struct.pack('H', param_data[5]))[0]
+
+    if param_fields.model_type == 1 or param_fields.model_type == 2:
+        param_fields.cider_row = struct.unpack('h', struct.pack('H', param_data[8]))[0]
+        param_fields.cider_radius = struct.unpack('h', struct.pack('H', param_data[9]))[0]
+
+        if noflip:
+            param_fields.cider_col = struct.unpack('h', struct.pack('H', param_data[7]))[0]
+        else:
+            param_fields.cider_col = 112 - struct.unpack('h', struct.pack('H', param_data[7]))[0]
+    else:
+        param_fields.cider_row = -10
+        param_fields.cider_col = -10
+        param_fields.cider_radius = 0
+
+    return param_fields
 
 def read_packed_image(image_file):
     image = []

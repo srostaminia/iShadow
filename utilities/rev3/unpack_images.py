@@ -16,12 +16,11 @@ def main():
 
     parser.add_argument("file_prefix", help="output file prefix")
     parser.add_argument("num_images", type = int, help="number of image pairs (or single images if --no-interleave) stored in the input file, set to 0 to run continuously")
-    parser.add_argument("out_mask", help="outward-facing camera mask")
-    parser.add_argument("eye_mask", nargs='?', help="eye-facing camera mask (only used for interleaved images)", default=None)
+    parser.add_argument("--out_mask", help="outward-facing camera mask to apply to data")
+    parser.add_argument("--eye_mask", help="eye-facing camera mask to apply to data")
     parser.add_argument("--columnwise", action="store_true", help="images recorded columnwise on hardware instead of rowwise")
     parser.add_argument("--disknum", help="/dev/disk[N] to open (default = 2)", type=int)
     parser.add_argument("--overwrite", action="store_true", help="overwrite data folder if it already exists")
-    parser.add_argument("--model-results", action="store_true", help="each frame / frame pair includes eye model output data (needed for proper read alignment)")
     
     groupA = parser.add_mutually_exclusive_group()
     groupA.add_argument("-o", "--offset", help="Number of images / pairs to skip on SD card", type=int)
@@ -42,14 +41,14 @@ def main():
     overwrite = args.overwrite
     num_skip = args.offset if args.offset != None else 0
     outdoor_masks = args.outdoor_switch
-    model_results = args.model_results
 
     unit_size = 25088
 
     if interleaved:
         unit_size *= 2
-    if model_results:
-        unit_size += 512
+    
+    # For parameter data tacked on to each frame
+    unit_size += 512
 
     if (args.disknum == None):
         input_filename = "/dev/disk2"
@@ -60,10 +59,15 @@ def main():
         print "Invalid Input: Parameter eye_mask must be provided if using interleaved images"
         sys.exit()
 
-    if interleaved:
+    if eye_mask_filename != None:
         eye_mask = load_mask(args.eye_mask)
+    else:
+        eye_mask = np.zeros((112,112))
 
-    out_mask = load_mask(args.out_mask)
+    if out_mask_filename != None:
+        out_mask = load_mask(args.out_mask)
+    else:
+        out_mask = np.zeros((112,112))
 
     if outdoor_masks != None:
         outdoor_out_mask = load_mask(outdoor_masks[0])
@@ -72,9 +76,12 @@ def main():
         outdoor_out_mask = None
         outdoor_eye_mask = None
 
+
     if args.reuse_raw:
         os.chdir(file_prefix)
         num_images = num_images
+
+        results_out = make_results_file(file_prefix)
     else:
         try:
             input_file = open(input_filename, "rb")
@@ -102,6 +109,8 @@ def main():
             print "Error: data folder " + file_prefix + " already exists."
             sys.exit()
 
+        results_out = make_results_file(file_prefix)
+
         os.chdir(file_prefix)
 
         try:
@@ -115,13 +124,6 @@ def main():
                 output_b = open(file_prefix + "_b.raw", "wb")
             except IOError:
                 print "Input file", file_prefix + "\\" + file_prefix + "_b.raw", "could not be opened."
-                sys.exit()
-
-        if model_results:
-            try:
-                results_out = open(file_prefix + "_model_results.txt", "w")
-            except IOError:
-                print "Input file", file_prefix + "\\" + file_prefix + "_model_results.txt", "could not be opened."
                 sys.exit()
 
         print "Reading image data..."
@@ -145,9 +147,8 @@ def main():
                     data = input_file.read(3584)
                     output_b.write(data)
 
-                if (model_results):
-                    data = input_file.read(512)
-                    parse_write_results(data, results_out)
+                data = input_file.read(512)
+                parse_write_results(data, results_out)
 
         else:
             print "ERROR: Datastream end detection not working for the moment. Please specify a nonzero number of images to collect."
@@ -186,6 +187,7 @@ def main():
         num_images = i + 1
         print "Total:", num_images, "images\n"
 
+        input_file.close()
         output_a.close()
 
         if (interleaved):
@@ -214,10 +216,19 @@ def main():
 
     if (interleaved):
         output_b.close()
-    if model_results:
-        results_out.close()
+        
+    results_out.close()
 
     os.chdir("..")
+
+def make_results_file(file_prefix):
+    try:
+        results_out = open(file_prefix + "/" + file_prefix + "_model_results.csv", "w")
+    except IOError:
+        print "Output file", file_prefix + "\\" + file_prefix + "_model_results.csv", "could not be opened."
+        sys.exit()
+
+    return results_out
 
 def load_mask(mask_filename):
     try:
@@ -240,11 +251,13 @@ def load_mask(mask_filename):
 
 
 def parse_write_results(result_data, out_file):
-    values = struct.unpack('b' * 512, result_data)
+    values1 = struct.unpack('I', result_data[0:4])
+    values2 = struct.unpack('b' * 6, result_data[4:10])
 
-    out_file.write(str(values[0]))
+    out_file.write(str(values1[0]) + ", ")
+    out_file.write(str(values2[0]))
     for i in range(1,6):
-        out_file.write(", " + str(values[i]))
+        out_file.write(", " + str(values2[i]))
     out_file.write('\n')
 
 
