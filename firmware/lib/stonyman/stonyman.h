@@ -8,6 +8,10 @@
 	#error ERROR: CANNOT USE CIDER_MODE AND OUTDOOR_SWITCH SIMULTANEOUSLY (STONYMAN.H)
 #endif
 
+#if defined(CIDER_MODE) && defined(ANN_MODE)
+	#error ERROR: CANNOT USE CIDER_MODE AND ANN_MODE SIMULTANEOUSLY (STONYMAN.H)
+#endif
+
 #if defined(USB_SEND) && defined(SD_SEND)
 	#error ERROR: CANNOT USE USB_SEND AND SD_SEND SIMULTANEOUSLY (STONYMAN.H)
 #endif
@@ -29,8 +33,12 @@
 	#error ERROR: CANNOT USE EYE_CAM_PRIMARY AND OUT_CAM_PRIMARY SIMULTANEOUSLY (STONYMAN.H)
 #endif
 
+#if defined(CIDER_MODE) || defined(ANN_MODE)
+	#define EYE_TRACKING_ON
+#endif
+
 // CIDER overrides (don't touch)
-#ifdef CIDER_MODE
+#ifdef EYE_TRACKING_ON
 
 	#if !defined(EYE_CAM_PRIMARY) 
 		#define EYE_CAM_PRIMARY
@@ -45,7 +53,7 @@
 		#define USE_PARAM_FILE
 	#endif
 
-#endif  // CIDER_MODE
+#endif  // EYE_TRACKING_ON
 
 #ifdef OUTDOOR_SWITCH
 	#define OUTDOOR_THRESH          300
@@ -201,8 +209,8 @@
 // TODO: Switch this to ROW_COLLECT, column should be default from now on.
 #ifdef COLUMN_COLLECT
 
-	#define OUTER_REG			REG_COLSEL
-	#define INNER_REG			REG_ROWSEL
+	#define MAJOR_REG			REG_COLSEL
+	#define MINOR_REG			REG_ROWSEL
 
 	#ifdef USE_PARAM_FILE
 		#define FPN_OFFSET 		0
@@ -211,8 +219,8 @@
 
 #else
 
-	#define OUTER_REG			REG_ROWSEL
-	#define INNER_REG			REG_COLSEL
+	#define MAJOR_REG			REG_ROWSEL
+	#define MINOR_REG			REG_COLSEL
 
 	#ifdef USE_PARAM_FILE
 		#define FPN_OFFSET 		(112 * 112)
@@ -287,11 +295,16 @@ void usb_finish_tx(uint8_t *frame_data, uint8_t packet_length);
 
 void stony_init_default(void);
 void stony_init(short vref, short nbias, short aobias, char gain, char selamp);
+void stony_reset(uint16_t wait_time, char gain, char selamp);
 void stony_pin_config();
 void adc_dma_init();
 void dac_init();
 
 int stony_single();
 int stony_dual();
+
+#if defined(EYE_TRACKING_ON) && defined(SD_SEND)
+int stony_ann();
+#endif
 
 #endif // __STONYMAN_H
