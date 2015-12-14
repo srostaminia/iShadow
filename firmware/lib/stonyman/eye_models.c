@@ -18,8 +18,11 @@ unsigned int wih_offset = 0;
 unsigned int fpn_offset = 0;
 unsigned int col_fpn_offset = 0;
 
-extern unsigned short model_data[];
+extern uint16_t model_data[];
 extern uint32_t sd_ptr;
+
+// FIXME: REMOVE THIS!!
+extern uint16_t subsampled[2273];
 
 //uint16_t test_data[] = { 358 , 392 , 338 , 426 , 349 , 329 , 330 , 435 , 483 , 376 , 362 , 488 , 463 , 318 , 481 , 434 , 482 , 441 , 345 , 422 , 374 , 469 , 400 , 383 , 433 , 435 , 462 , 319 , 433 , 370 , 346 , 432 , 341 , 334 , 347 , 340 , 383 , 369 , 493 , 484 , 322 , 477 , 333 , 429 , 495 , 306 , 327 , 487 , 387 , 313 , 405 , 379 , 300 , 428 , 470 , 463 , 441 , 419 , 327 , 406 , 494 , 475 , 434 , 437 , 327 , 418 , 449 , 303 , 389 , 421 , 470 , 495 , 482 , 477 , 332 , 411 , 448 , 328 , 405 , 316 , 445 , 385 , 306 , 374 , 370 , 436 , 334 , 338 , 488 , 353 , 441 , 330 , 481 , 471 , 421 , 394 , 396 , 432 , 467 , 373 , 486 , 363 , 445 , 400 , 339 , 463 , 498 , 312 , 367 , 376 , 366 , 359 , 314 , 428 , 383 , 369 , 473 , 482 , 425 , 308 , 479 , 392 , 427 , 312 , 392 , 323 , 498 , 404 , 428 , 494 , 494 , 489 , 307 , 494 , 366 , 472 , 326 , 422 , 355 , 307 , 310 , 378 , 486 , 321 , 471 , 418 , 438 , 332 , 395 , 483 , 387 , 405 , 436 , 333 , 376 , 428 , 355 , 427 , 424 , 497 , 484 , 433 , 366 , 494 , 474 , 333 , 493 , 411 , 306 , 332 , 382 , 475 , 390 , 468 , 329 , 306 , 489 , 483 , 374 , 369 , 460 , 383 , 421 , 413 , 465 , 371 , 474 , 398 , 343 , 307 , 451 , 366 , 430 , 410 , 451 , 403 , 364 , 391 , 451 , 479 , 447 , 369 , 419 , 383 , 349 , 438 , 453 , 300 , 352 , 374 , 414 , 493 , 407 , 354 , 457 , 359 , 336 , 439 , 412 , 444 , 311 , 309 , 328 , 305 , 413 , 339 , 486 , 451 , 459 , 467 , 451 , 488 , 493 , 336 , 336 , 428 , 346 , 389 , 413 , 491 , 335 , 326 , 335 , 408 , 453 , 371 , 378 , 498 , 484 , 458 , 496 , 473 , 461 , 303 , 429 , 378 , 382 , 419 , 422 , 457 , 374 , 385 , 431 , 307 , 391 , 445 , 317 , 333 , 413 , 474 , 304 , 383 , 395 , 451 , 438 , 346 , 450 , 403 , 448 , 387 , 384 , 423 , 405 , 372 , 372 , 356 , 441 , 426 , 378 , 410 , 481 , 358 , 500 , 320 , 416 , 364 , 392 , 405 , 362 , 363 };
 
@@ -203,20 +206,18 @@ inline void init_streamstats(StreamStats *ss)
     ss->current_subsample = 0;
 }
 
-inline void update_streamstats(StreamStats *ss, uint16_t *pixels, uint16_t this_pixel, int i_outer, int j_inner)
+inline void update_streamstats(StreamStats *ss, uint16_t *pixels, uint16_t this_pixel, int i_major, int j_minor)
 {
-//    if (ss->current_subsample == 300)       return;
-
     float value, tmpM;
 
-    // TODO FIXME: Remove this!
-//    this_pixel = test_data[ss->current_subsample];
-
     // Streaming mean / stdev computation on subsampled pixels
-    if (MASK(ss->current_subsample, MASK_OUTER) == i_outer && 
-        MASK(ss->current_subsample, MASK_INNER) == j_inner)
+    if (MASK(ss->current_subsample, MASK_MAJOR) == i_major && 
+        MASK(ss->current_subsample, MASK_MINOR) == j_minor)
     {
         pixels[ss->current_subsample] = this_pixel;
+        
+        if (ss->current_subsample == 0)
+          tmpM = 0;
 
         ss->pixel_sum += this_pixel;
 
@@ -228,6 +229,24 @@ inline void update_streamstats(StreamStats *ss, uint16_t *pixels, uint16_t this_
         ss->k++;
         ss->current_subsample++;
     }
+}
+
+inline void update_streamstats2(StreamStats *ss, uint16_t *pixels, uint16_t this_pixel)
+{
+    float value, tmpM;
+
+    // Streaming mean / stdev computation on subsampled pixels
+    pixels[ss->current_subsample] = this_pixel;
+
+    ss->pixel_sum += this_pixel;
+
+    // Standard deviation computation
+    value = (float)this_pixel;
+    tmpM = ss->M;
+    ss->M += (value - tmpM) / ss->k;
+    ss->S += (value - tmpM) * (value - ss->M);
+    ss->k++;
+    ss->current_subsample++;
 }
 
 void ann_predict(uint16_t *pixels, StreamStats *ss)

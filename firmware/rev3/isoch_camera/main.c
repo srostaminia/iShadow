@@ -29,6 +29,8 @@ extern uint16_t min, max;
 
 uint32_t time_elapsed = 0;
 
+extern __IO uint16_t adc_values[2];
+
 int main()
 {   
   if (SysTick_Config(SystemCoreClock / 1000)) {
@@ -46,17 +48,6 @@ int main()
   stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3,
             SMH_GAIN_3V3, SMH_SELAMP_3V3);
 #endif
-
-//  uint32_t tim4_val, tim5_val;
-//  while(1) {
-//  TIM5->CNT = 0;
-//  TIM4->CNT = 0;
-//  
-//  while (TIM5->CNT < 5000);
-//  
-//  tim4_val = TIM4->CNT;
-//  tim5_val = TIM5->CNT;
-//  }
   
 #ifdef SD_SEND
   run_sd();
@@ -67,6 +58,7 @@ int main()
   return 0;
 }
 
+#ifdef SD_SEND
 void run_sd()
 {
   assert (disk_initialize(0) == SD_OK);
@@ -81,7 +73,9 @@ void run_sd()
 #endif
   }
 }
+#endif // SD_SEND
 
+#ifdef USB_SEND
 void run_usb()
 {
   Set_System();
@@ -133,6 +127,7 @@ void run_usb()
 //
 //  }
 }
+#endif // USB_SEND
 
 /**
   * @brief  Inserts a delay time.

@@ -27,11 +27,11 @@
 #define PRED_Y					1
 
 #ifdef COLUMN_COLLECT
- #define MASK_OUTER			MASK_COL
- #define MASK_INNER			MASK_ROW
+ #define MASK_MAJOR			MASK_COL
+ #define MASK_MINOR			MASK_ROW
 #else
- #define MASK_OUTER			MASK_ROW
- #define MASK_INNER			MASK_COL
+ #define MASK_MAJOR			MASK_ROW
+ #define MASK_MINOR			MASK_COL
 #endif // COLUMN_COLLECT
 
 typedef struct StreamStats {
@@ -47,6 +47,7 @@ float calc_std(uint16_t img[]);
 void read_cider_params();
 void init_streamstats(StreamStats *ss);
 void update_streamstats(StreamStats *ss, uint16_t *pixels, uint16_t this_pixel, int i_outer, int j_inner);
+void update_streamstats2(StreamStats *ss, uint16_t *pixels, uint16_t this_pixel);
 
 void ann_predict(uint16_t *pixels, StreamStats *ss);
 

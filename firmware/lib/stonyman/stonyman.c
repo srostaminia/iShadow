@@ -6,11 +6,12 @@
 // TODO: FIXME! This is just to make the stupid delay_us warnings go away...
 #include "main.h"
 
-#ifdef CIDER_MODE
+#ifdef EYE_TRACKING_ON
 #include "eye_models.h"
 
 extern int8_t pred[2];
 extern unsigned short num_subsample;
+extern unsigned int mask_offset;
 #endif
 
 #ifdef SD_SEND
@@ -30,12 +31,10 @@ static uint8_t frame_data[USB_PACKET_SIZE];
 #ifdef USE_PARAM_FILE
 // This is declared extern because it is referencing an external binary file
 // that must be provided in the project settings (see readme)
-extern uint8_t model_data[];
+extern uint16_t model_data[];
 #endif
 
-uint8_t num_images = 0;
 extern uint32_t time_elapsed;
-uint32_t time_test;
 
 int adc_idx = 0;
 __IO uint16_t adc_values[2];
@@ -231,7 +230,7 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
   short config;
   char flagUseAmplifier;
 
-#ifdef CIDER_MODE
+#ifdef EYE_TRACKING_ON
   read_cider_params();
 #endif
 
@@ -282,6 +281,28 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
   
   dac_init();
 }
+
+// TODO: Test this
+// void stony_reset(uint16_t wait_time, char gain, char selamp)
+// {
+//   short config;
+//   char flagUseAmplifier;
+
+//   //turn chip OFF
+//   set_pointer_value(REG_CONFIG,0,OUT_CAM);
+//   set_pointer_value(REG_CONFIG,0,EYE_CAM);
+
+//   delay_ms(wait_time);
+
+//   // sanitize this input before use
+//   flagUseAmplifier=selamp ? 1:0;
+
+//   config = gain + (flagUseAmplifier * 8) + 16;
+
+//   //turn chip ON with config value
+//   set_pointer_value(REG_CONFIG,config,OUT_CAM);
+//   set_pointer_value(REG_CONFIG,config,EYE_CAM);
+// }
 
 static void stony_pin_config()
 {  
@@ -456,14 +477,14 @@ int stony_single()
   uint16_t this_pixel;
 
 #ifdef USB_SEND
-  #ifdef CIDER_MODE
+  #ifdef EYE_TRACKING_ON
   uint8_t num_params = 7;
   #else
   uint8_t num_params = 4;
-  #endif // CIDER_MODE
+  #endif // EYE_TRACKING_ON
 #endif // USB_SEND
 
-#ifdef CIDER_MODE
+#ifdef EYE_TRACKING_ON
   uint16_t *subsampled = (uint16_t*)malloc(num_subsample * sizeof(uint16_t));
 
   StreamStats stream_stats;
@@ -485,38 +506,38 @@ int stony_single()
   ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
   ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
   
-  set_pointer_value(OUTER_REG, 0, PRIMARY_CAM);
+  set_pointer_value(MAJOR_REG, 0, PRIMARY_CAM);
 
   int data_cycle = 0;
-  for (int i_outer = 0; i_outer < 112; i_outer++) {
-    set_pointer_value(INNER_REG, 0, PRIMARY_CAM);
+  for (int i_major = 0; i_major < 112; i_major++) {
+    set_pointer_value(MINOR_REG, 0, PRIMARY_CAM);
 
     delay_us(1);
     
-    for (int j_inner = 0; j_inner < 112; j_inner++, data_cycle++) {      
+    for (int j_minor = 0; j_minor < 112; j_minor++, data_cycle++) {      
       PRIMARY_PARAM(INPH_BANK)->ODR |= PRIMARY_PARAM(INPH_PIN);
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       PRIMARY_PARAM(INPH_BANK)->ODR &= ~PRIMARY_PARAM(INPH_PIN);
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
       // Do ADC conversion
       ADC_SoftwareStartConv(ADC1);
       
+      // TODO: there has *got* to be a way to test for a flag or something to check for ADC completion
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
-      this_pixel = adc_values[adc_idx] - FPN_PRI(i_outer, j_inner);
+      this_pixel = adc_values[adc_idx] - FPN_PRI(i_major, j_minor);
       active_buffer[data_cycle] = RESIZE_PIXEL(this_pixel);
 
-#ifdef CIDER_MODE
-      update_streamstats(&stream_stats, subsampled, this_pixel, i_outer, j_inner);
+#ifdef EYE_TRACKING_ON
+      update_streamstats(&stream_stats, subsampled, this_pixel, i_major, j_minor);
 #endif
 
 #ifdef USB_SEND
@@ -535,15 +556,18 @@ int stony_single()
       
       adc_idx = !adc_idx;
 
-      PRIMARY_PARAM(INCV_BANK)->ODR |= PRIMARY_PARAM(INCV_PIN);
-      PRIMARY_PARAM(INCV_BANK)->ODR &= ~PRIMARY_PARAM(INCV_PIN);
-    } // for (j_inner)
-    
-    inc_pointer_value(OUTER_REG, 1, PRIMARY_CAM);
+      if (j_minor < 111) {
+        PRIMARY_PARAM(INCV_BANK)->ODR |= PRIMARY_PARAM(INCV_PIN);
+        PRIMARY_PARAM(INCV_BANK)->ODR &= ~PRIMARY_PARAM(INCV_PIN);
+      }
+    } // for (j_minor)
+
+    if (i_major < 111)
+      inc_pointer_value(MAJOR_REG, 1, PRIMARY_CAM);
 
 #ifdef SD_SEND
     if (data_cycle / 112 == SD_ROWS) {
-      if (i_outer > SD_ROWS - 1) {
+      if (i_major > SD_ROWS - 1) {
         f_finish_write();
       }
       
@@ -557,9 +581,9 @@ int stony_single()
       data_cycle = 0;
     }
 #endif // SD_SEND
-  } // for (i_outer)
+  } // for (i_major)
 
-#ifdef CIDER_MODE
+#ifdef EYE_TRACKING_ON
   ann_predict(subsampled, &stream_stats);
   free(subsampled);
 
@@ -568,7 +592,7 @@ int stony_single()
   frame_data[FD_PREDY_OFFSET] = pred[PRED_Y];
 #else
   frame_data[FD_MODEL_OFFSET] = PARAM_NOMODEL;
-#endif // CIDER_MODE
+#endif // EYE_TRACKING_ON
   
   time_elapsed = TIM5->CNT;
   TIM5->CNT = 0;
@@ -605,8 +629,6 @@ int stony_single()
 
   f_finish_write();
 #endif // SD_SEND
-  
-  num_images++;
 
   return 0;
 }
@@ -637,14 +659,14 @@ int stony_dual()
   uint16_t this_pixel;
 
 #ifdef USB_SEND
-  #ifdef CIDER_MODE
+  #ifdef EYE_TRACKING_ON
   uint8_t num_params = 3;
   #else
   uint8_t num_params = 1;
-  #endif // CIDER_MODE
+  #endif // EYE_TRACKING_ON
 #endif // USB_SEND
 
-#ifdef CIDER_MODE
+#ifdef EYE_TRACKING_ON
   uint16_t *subsampled = (uint16_t*)malloc(num_subsample * sizeof(uint16_t));
 
   StreamStats stream_stats;
@@ -666,18 +688,18 @@ int stony_dual()
   ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
   ADC_RegularChannelConfig(ADC1, SECONDARY_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
   
-  set_pointer_value(OUTER_REG, 0, OUT_CAM);
-  set_pointer_value(OUTER_REG, 0, EYE_CAM);
+  set_pointer_value(MAJOR_REG, 0, OUT_CAM);
+  set_pointer_value(MAJOR_REG, 0, EYE_CAM);
 
   int data_cycle = 0;
 
-for (int i_outer = 0; i_outer < 112; i_outer++) {    
-    set_pointer_value(INNER_REG, 0, OUT_CAM);
-    set_pointer_value(INNER_REG, 0, EYE_CAM);
+for (int i_major = 0; i_major < 112; i_major++) {    
+    set_pointer_value(MINOR_REG, 0, OUT_CAM);
+    set_pointer_value(MINOR_REG, 0, EYE_CAM);
     
     delay_us(1);
     
-    for (int j_inner = 0; j_inner < 112; j_inner++, data_cycle++) {        
+    for (int j_minor = 0; j_minor < 112; j_minor++, data_cycle++) {        
       PRIMARY_PARAM(INPH_BANK)->ODR |= PRIMARY_PARAM(INPH_PIN);
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
@@ -688,18 +710,18 @@ for (int i_outer = 0; i_outer < 112; i_outer++) {
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
-      if (j_inner != 0) {        
+      if (j_minor != 0) {        
         // DAC_SetChannel1Data(DAC_Align_12b_R, LED_LOW);      
         // *(__IO uint32_t *) led1 = LED_LOW;
         // *(__IO uint32_t *) led2 = LED_LOW;
 
-        active_buffer[(data_cycle - 1) + secondary_offset] = RESIZE_PIXEL(adc_values[1] - FPN_SEC(i_outer, (j_inner - 1)));
+        active_buffer[(data_cycle - 1) + secondary_offset] = RESIZE_PIXEL(adc_values[1] - FPN_SEC(i_major, (j_minor - 1)));
       }
       
       // Do conversion for PRIMARY_CAM
       ADC_SoftwareStartConv(ADC1);
       
-      if (j_inner != 0) {
+      if (j_minor != 0) {
         SECONDARY_PARAM(INCV_BANK)->ODR |= SECONDARY_PARAM(INCV_PIN);
         SECONDARY_PARAM(INCV_BANK)->ODR &= ~SECONDARY_PARAM(INCV_PIN);
       }
@@ -714,11 +736,11 @@ for (int i_outer = 0; i_outer < 112; i_outer++) {
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
-      this_pixel = adc_values[0] - FPN_PRI(i_outer, j_inner);
+      this_pixel = adc_values[0] - FPN_PRI(i_major, j_minor);
       active_buffer[data_cycle] = RESIZE_PIXEL(this_pixel);
 
-#ifdef CIDER_MODE
-      update_streamstats(&stream_stats, subsampled, this_pixel, i_outer, j_inner);
+#ifdef EYE_TRACKING_ON
+      update_streamstats(&stream_stats, subsampled, this_pixel, i_major, j_minor);
 #endif
 
 #ifdef USB_SEND
@@ -738,9 +760,11 @@ for (int i_outer = 0; i_outer < 112; i_outer++) {
       // Do conversion for SECONDARY_CAM
       ADC_SoftwareStartConv(ADC1);
 
-      PRIMARY_PARAM(INCV_BANK)->ODR |= PRIMARY_PARAM(INCV_PIN);
-      PRIMARY_PARAM(INCV_BANK)->ODR &= ~PRIMARY_PARAM(INCV_PIN);
-    } // for (j_inner)
+      if (j_minor < 111) {
+        PRIMARY_PARAM(INCV_BANK)->ODR |= PRIMARY_PARAM(INCV_PIN);
+        PRIMARY_PARAM(INCV_BANK)->ODR &= ~PRIMARY_PARAM(INCV_PIN);
+      }
+    } // for (j_minor)
     
     asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
     asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
@@ -751,14 +775,16 @@ for (int i_outer = 0; i_outer < 112; i_outer++) {
     // *(__IO uint32_t *) led1 = LED_LOW;
     // *(__IO uint32_t *) led2 = LED_LOW;
     
-    active_buffer[(data_cycle - 1) + secondary_offset] = RESIZE_PIXEL(adc_values[1] - FPN_SEC(i_outer, 111));
+    active_buffer[(data_cycle - 1) + secondary_offset] = RESIZE_PIXEL(adc_values[1] - FPN_SEC(i_major, 111));
     
-    inc_pointer_value(OUTER_REG, 1, OUT_CAM);
-    inc_pointer_value(OUTER_REG, 1, EYE_CAM);
+    if (i_major < 111) {
+      inc_pointer_value(MAJOR_REG, 1, OUT_CAM);
+      inc_pointer_value(MAJOR_REG, 1, EYE_CAM);
+    }
 
 #ifdef SD_SEND
     if (data_cycle / 112 == SD_ROWS) {
-      if (i_outer > SD_ROWS - 1) {
+      if (i_major > SD_ROWS - 1) {
         f_finish_write();
       }
       
@@ -772,7 +798,7 @@ for (int i_outer = 0; i_outer < 112; i_outer++) {
       data_cycle = 0;
 
 #if (112 % SD_ROWS != 0)
-      if (i_outer + SD_ROWS > 112) {
+      if (i_major + SD_ROWS > 112) {
         secondary_offset = SD_MOD_OFFSET;
 
         for (int i = 0; i < TX_PIXELS * 2; i++) {
@@ -782,9 +808,9 @@ for (int i_outer = 0; i_outer < 112; i_outer++) {
 #endif
     }
 #endif // SD_SEND
-  } // for (i_outer)
+  } // for (i_major)
 
-#ifdef CIDER_MODE
+#ifdef EYE_TRACKING_ON
   ann_predict(subsampled, &stream_stats);
   free(subsampled);
 
@@ -793,7 +819,7 @@ for (int i_outer = 0; i_outer < 112; i_outer++) {
   frame_data[2] = pred[1];
 #else
   frame_data[0] = PARAM_NOMODEL;
-#endif // CIDER_MODE
+#endif // EYE_TRACKING_ON
 
 #ifdef USB_SEND
 
@@ -820,11 +846,11 @@ for (int i_outer = 0; i_outer < 112; i_outer++) {
   sd_ptr += SD_MOD_BLOCKS;
 #endif // (112 % SD_ROWS != 0)
 
-#ifdef CIDER_MODE
+#ifdef EYE_TRACKING_ON
   f_finish_write();
   if (disk_write_fast(0, frame_data, sd_ptr, 1) != RES_OK)      return -1;
   sd_ptr += 1;
-#endif // CIDER_MODE
+#endif // EYE_TRACKING_ON
   
   f_finish_write();
 #endif // SD_SEND
@@ -834,123 +860,93 @@ for (int i_outer = 0; i_outer < 112; i_outer++) {
 
 
 
-// // stony_single()
-// // Capture an image from one camera (selected by PRIMARY_CAM in stonyman.h)
-// int stony_ann()
-// {
-//   // Double-buffered (2-dim array), two bytes per pixel
-//   uint8_t base_buffers[2][TX_PIXELS * 2];
+#if defined(EYE_TRACKING_ON) && defined(SD_SEND)
+// stony_ann()
+// Efficient ANN-based eye tracking - reads only the pixels needed for the ANN model
+// IMPORTANT: As of right now, this function is only included in SD mode, since USB is not implemented for it
+// SUPER IMPORTANT: Correct ANN predictions tested and confirmed, have not yet tested SD output code in this function
+int stony_ann()
+{
+  uint8_t last_major, last_minor;
+  uint16_t this_pixel;
 
-//   volatile uint16_t start, total;
-//   uint8_t buf_idx = 0;
-//   uint16_t this_pixel;
+  uint16_t *subsampled = (uint16_t*)malloc(num_subsample * sizeof(uint16_t));
 
-// #ifdef USB_SEND
-//   #ifdef CIDER_MODE
-//   uint8_t num_params = 3;
-//   #else
-//   uint8_t num_params = 1;
-//   #endif // CIDER_MODE
-// #endif // USB_SEND
-
-// #ifdef CIDER_MODE
-//   uint16_t *subsampled = (uint16_t*)malloc(num_subsample * sizeof(uint16_t));
-
-//   StreamStats stream_stats;
-//   init_streamstats(&stream_stats);
-// #endif
-
-// #ifdef DO_8BIT_CONV
-//     uint8_t *active_buffer = (uint8_t *)base_buffers[0];
-
-//     for (int i = 0; i < 2; i++) {
-//       for (int j = 0; j < USB_PIXELS * 2; j++) {
-//         base_buffers[i][j] = 0;
-//       }
-//     }
-// #else
-//     uint16_t *active_buffer = (uint16_t *)base_buffers[0];
-// #endif
+  StreamStats stream_stats;
+  init_streamstats(&stream_stats);
   
-//   ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
-//   ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
+  ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
+  ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
   
-//   last_minor = 0;
-//   last_major = MASK(0, MASK_OUTER);
+  last_minor = MASK(0, MASK_MINOR);
+  last_major = MASK(0, MASK_MAJOR);
 
-//   for (int pixel = 0; pixel < NUM_SUBSAMPLE; pixel++) {   
-//       if (MASK(pixel, 1) != last_major)
-//       {
-//         // Set row to zero to avoid precharging any other rows
-//         set_pointer_value(REG_ROWSEL, 0, CAM2);
-        
-//         char diff = MASK(pixel, 1) - last_major;
-        
-//         inc_pointer_value(REG_COLSEL, diff, CAM2);
-        
-//         last_major = MASK(pixel, MASK_OUTER);
+  set_pointer_value(MAJOR_REG, last_major, PRIMARY_CAM);
+  set_pointer_value(MINOR_REG, last_minor, PRIMARY_CAM);
 
-//         set_pointer_value(REG_ROWSEL, MASK(pixel, 0), CAM2);
-        
-//         last_minor = MASK(pixel, MASK_INNER);
-        
-//         asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//         asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//       } else {
-//         inc_value(MASK(pixel, 0) - last_minor, CAM2);
-        
-//         last_minor = MASK(pixel, MASK_INNER);
-//       }
+  asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+  asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+
+  for (int pixel = 0; pixel < num_subsample; pixel++) {   
+      if (MASK(pixel, MASK_MAJOR) != last_major)
+      {
+        char diff = MASK(pixel, MASK_MAJOR) - last_major;
+        inc_pointer_value(MAJOR_REG, diff, PRIMARY_CAM);
+        last_major = MASK(pixel, MASK_MAJOR);
+
+        set_pointer_value(MINOR_REG, MASK(pixel, MASK_MINOR), PRIMARY_CAM);
+        last_minor = MASK(pixel, MASK_MINOR);
+      } else {
+         inc_value(MASK(pixel, MASK_MINOR) - last_minor, PRIMARY_CAM);
+
+         last_minor = MASK(pixel, MASK_MINOR);
+      }
+
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
-//       PRIMARY_PARAM(INPH_BANK)->ODR |= PRIMARY_PARAM(INPH_PIN);
-//       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//       PRIMARY_PARAM(INPH_BANK)->ODR &= ~PRIMARY_PARAM(INPH_PIN);
-//       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      PRIMARY_PARAM(INPH_BANK)->ODR |= PRIMARY_PARAM(INPH_PIN);
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      PRIMARY_PARAM(INPH_BANK)->ODR &= ~PRIMARY_PARAM(INPH_PIN);
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
-//       /* Start ADC1 Software Conversion */
-//       ADC_SoftwareStartConv(ADC1);
+      /* Start ADC1 Software Conversion */
+      ADC_SoftwareStartConv(ADC1);
       
-//       if (pixel > 0) {
-//         pixel_sum += pix_value;
-        
-//         // Standard deviation computation
-//         value = (float)pix_value;
-//         tmpM = M;
-//         M += (value - tmpM) / k;
-//         S += (value - tmpM) * (value - M);
-//         k++;
-//         current_subsample++;
-//       }
+      if (pixel > 0)
+        update_streamstats2(&stream_stats, subsampled, this_pixel);
       
-//       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-//       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      
+      this_pixel = adc_values[adc_idx] - FPN_PRI(MASK(pixel, MASK_MAJOR), MASK(pixel, MASK_MINOR));
+      adc_idx = !adc_idx;
+  }
+  
+  update_streamstats2(&stream_stats, subsampled, this_pixel);
+  
+  ann_predict(subsampled, &stream_stats);
+  free(subsampled);
 
-//       pix_value = adc_values[adc_idx] - COL_FPN((MASK(pixel,0) * 112) + MASK(pixel,1));
-//       adc_idx = !adc_idx;
-//   }
+  frame_data[FD_MODEL_OFFSET] = PARAM_ANN;
+  frame_data[FD_PREDX_OFFSET] = pred[PRED_X];
+  frame_data[FD_PREDY_OFFSET] = pred[PRED_Y];
   
-//   pixel_sum += pix_value;
-  
-//   // Standard deviation computation
-//   value = (float)pix_value;
-//   tmpM = M;
-//   M += (value - tmpM) / k;
-//   S += (value - tmpM) * (value - M);
-//   k++;
-//   current_subsample++;
-  
-//   if (current_subsample != NUM_SUBSAMPLE)
-//     while(1);
-  
-//   float mean = (float)pixel_sum / (NUM_SUBSAMPLE);
-//   float std = sqrt(S / (k-1));
-  
-//   // Predict gaze, store results in global variable pred[]
-//   predict_gaze_mean(pred_pixels, mean, std);
+  time_elapsed = TIM5->CNT;
+  TIM5->CNT = 0;
+  *((uint32_t*)(frame_data + FD_TIMER_OFFSET)) = time_elapsed;
 
-//   return 0;
-// }
+  if (disk_write_fast(0, frame_data, sd_ptr, 1) != RES_OK)      return -1;
+  sd_ptr += 1;
+
+  f_finish_write();
+
+  return 0;
+}
+#endif // defined(EYE_TRACKING_ON) && defined(SD_SEND)
