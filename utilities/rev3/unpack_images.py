@@ -93,6 +93,7 @@ def main():
             input_file.read(512)
         except IOError:
             print "Input file", input_filename, "not available for reading."
+            input_file.close()
             sys.exit()
 
         if interleaved:
