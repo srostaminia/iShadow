@@ -50,51 +50,58 @@ int main()
 #endif
   
 #ifdef SD_SEND
-  run_sd();
+  init_sd();
 #elif defined(USB_SEND)
-  run_usb();
+  init_usb();
+#endif
+  
+  // FIXME: Adapt this to new stonyman_conf settings, generally clean it up
+  while (1) {
+#ifdef USB_SEND
+    clear_ENDP1_packet_buffers();
+    while (packet_sending == 1);
 #endif
 
+    // Record a video frame if configured
+#if defined(OUT_VIDEO_ON) && defined(EYE_VIDEO_ON)
+    stony_dual();
+#elif defined(OUT_VIDEO_ON) || defined(EYE_VIDEO_ON)
+//    stony_ann();
+    stony_single();
+#endif
+    
+    // Do one eye tracking iteration if it wasn't done implicitly in stony_*
+#ifdef EYE_VIDEO_OFF
+  #if defined(ANN_TRACKING)
+    stony_ann();
+  #elif defined(CIDER_TRACKING)
+    // stony_cider();
+  #endif
+#endif  // EYE_VIDEO_OFF
+    
+#ifdef USB_SEND
+    while (packet_sending == 1);
+#endif
+  }
+  
   return 0;
 }
 
 #ifdef SD_SEND
-void run_sd()
+void init_sd()
 {
   assert (disk_initialize(0) == SD_OK);
-  
-  time_elapsed += TIM4->CNT;
-  
-  while (1) {
-#ifdef SINGLE_CAM
-    stony_single();
-#elif defined(DUAL_CAM)
-    stony_dual();
-#endif
-  }
 }
 #endif // SD_SEND
 
 #ifdef USB_SEND
-void run_usb()
+void init_usb()
 {
   Set_System();
   Set_USBClock();
   USB_Interrupts_Config();
   USB_Init();
   Speaker_Config();
-  
-  while (1) {
-    clear_ENDP1_packet_buffers();
-    while (packet_sending == 1);
-    
-#ifdef SINGLE_CAM
-    stony_single();
-#elif defined(DUAL_CAM)
-    stony_dual();
-#endif
-    while (packet_sending == 1);
-  }
 
 //#ifdef CIDER_MODE
 //  uint8_t use_ann = 1;

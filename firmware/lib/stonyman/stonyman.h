@@ -4,12 +4,12 @@
 #include "stm32l1xx.h"
 #include "stonyman_conf.h"
 
-#if defined(CIDER_MODE) && defined(OUTDOOR_SWITCH)
-	#error ERROR: CANNOT USE CIDER_MODE AND OUTDOOR_SWITCH SIMULTANEOUSLY (STONYMAN.H)
-#endif
+// #if defined(CIDER_TRACKING) && defined(OUTDOOR_SWITCH)
+// 	#error ERROR: CANNOT USE CIDER_TRACKING AND OUTDOOR_SWITCH SIMULTANEOUSLY (STONYMAN.H)
+// #endif
 
-#if defined(CIDER_MODE) && defined(ANN_MODE)
-	#error ERROR: CANNOT USE CIDER_MODE AND ANN_MODE SIMULTANEOUSLY (STONYMAN.H)
+#if (defined(CIDER_TRACKING) && defined(ANN_TRACKING))
+	#error ERROR: CANNOT USE ANN_TRACKING AND CIDER_TRACKING SIMULTANEOUSLY (STONYMAN.H)
 #endif
 
 #if defined(USB_SEND) && defined(SD_SEND)
@@ -25,25 +25,36 @@
 	#error ERROR: USB PIXEL TX RATE NOT SELECTED - CHOOSE USB_8BIT OR USB_16BIT (STONYMAN.H)
 #endif
 
-#if !defined(EYE_CAM_PRIMARY) && !defined(OUT_CAM_PRIMARY)
-	#error ERROR: MUST SELECT A PRIMARY CAMERA - CHOOSE EYE_CAM_PRIMARY OR OUT_CAM_PRIMARY (STONYMAN.H)
+#if defined(EYE_VIDEO_ON) == defined(EYE_VIDEO_OFF)
+	#error ERROR: MUST SELECT EYE_VIDEO_ON OR EYE_VIDEO_OFF (STONYMAN.H)
 #endif
 
-#if defined(EYE_CAM_PRIMARY) && defined(OUT_CAM_PRIMARY)
-	#error ERROR: CANNOT USE EYE_CAM_PRIMARY AND OUT_CAM_PRIMARY SIMULTANEOUSLY (STONYMAN.H)
+#if defined(OUT_VIDEO_ON) == defined(OUT_VIDEO_OFF)
+	#error ERROR: MUST SELECT OUT_VIDEO_ON OR OUT_VIDEO_OFF (STONYMAN.H)
 #endif
 
-#if defined(CIDER_MODE) || defined(ANN_MODE)
+#if defined(CIDER_TRACKING) || defined(ANN_TRACKING)
 	#define EYE_TRACKING_ON
 #endif
 
+// If eye camera is being recorded at all, it is primary
+// FIXME: will this cause a problem with eye tracking when eye video is not being recorded?
+#if defined(OUT_VIDEO_ON) && !defined(EYE_VIDEO_ON)
+	#define OUT_CAM_PRIMARY
+#else
+	#define EYE_CAM_PRIMARY
+#endif
+
+#if defined(ANN_TRACKING) || defined(CIDER_TRACKING)
+	#define EYE_TRACKING_ON
+
+	#ifdef EYE_CAM_PRIMARY
+		#define IMPLICIT_EYE_TRACKING
+	#endif
+#endif // defined(ANN_TRACKING) || defined(CIDER_TRACKING)
+
 // CIDER overrides (don't touch)
 #ifdef EYE_TRACKING_ON
-
-	#if !defined(EYE_CAM_PRIMARY) 
-		#define EYE_CAM_PRIMARY
-		#undef	OUT_CAM_PRIMARY
-	#endif
 
 	#if !defined(COLUMN_COLLECT)
 		#define COLUMN_COLLECT
@@ -246,6 +257,11 @@
 	#define FPN_SEC(X, Y)		((uint16_t*)(model_data))[SECONDARY_FPN_START + FPN_OFFSET + (((X) * 112) + (Y))]
 	#define FPN_T_SEC(X, Y)	((uint16_t*)(model_data))[SECONDARY_FPN_START + FPN_T_OFFSET + (((X) * 112) + (Y))]
 
+	#define FPN_EYE(X, Y)		((uint16_t*)(model_data))[EYE_FPN_START + FPN_OFFSET + (((X) * 112) + (Y))]
+	#define FPN_T_EYE(X, Y)	((uint16_t*)(model_data))[EYE_FPN_START + FPN_T_OFFSET + (((X) * 112) + (Y))]
+	#define FPN_OUT(X, Y)		((uint16_t*)(model_data))[OUT_FPN_START + FPN_OFFSET + (((X) * 112) + (Y))]
+	#define FPN_T_OUT(X, Y)	((uint16_t*)(model_data))[OUT_FPN_START + FPN_T_OFFSET + (((X) * 112) + (Y))]
+
 #else
 
 	#define FPN_PRI(X, Y)		0
@@ -253,10 +269,15 @@
 	#define FPN_SEC(X, Y)		0
 	#define FPN_T_SEC(X, Y)	0
 
+	#define FPN_EYE(X, Y)		0
+	#define FPN_T_EYE(X, Y)	0
+	#define FPN_OUT(X, Y)		0
+	#define FPN_T_OUT(X, Y)	0
+
 #endif // USE_PARAM_FILE
 
 // CIDER parameters
-#ifdef CIDER_MODE
+#ifdef CIDER_TRACKING
 
 	#define SPEC_THRESH     150
 	#define CONV_OFFSET     4
@@ -271,7 +292,7 @@
 	// #define ROW_FPN(X)          model_data[fpn_offset + (X)]
 	// #define COL_FPN(X)      model_data[col_fpn_offset + (X)]
 
-#endif  // CIDER_MODE
+#endif  // CIDER_TRACKING
 
 #define PARAM_NOMODEL			0
 #define PARAM_CIDER_HIT		1
