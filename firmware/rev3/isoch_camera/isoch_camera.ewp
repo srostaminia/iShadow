@@ -311,6 +311,7 @@
           <state>$PROJ_DIR$\inc</state>
           <state>$PROJ_DIR$\..\..\lib\SDIO_Driver</state>
           <state>$PROJ_DIR$\..\..\lib\stonyman</state>
+          <state>\\vmware-host\Shared Folders\Desktop\stonyman</state>
         </option>
         <option>
           <name>CCStdIncCheck</name>

@@ -9,7 +9,7 @@ TriggerName=main
 LimitSize=0
 ByteLimit=50
 [DebugChecksum]
-Checksum=1164879983
+Checksum=-1852058778
 [Exceptions]
 StopOnUncaught=_ 0
 StopOnThrow=_ 0
@@ -50,8 +50,9 @@ Fmt0=int8_t[2]	3	0
 Fmt1=uint16_t[112]	3	0
 Fmt2=uint32_t[200]	4	0
 Fmt3=uint32_t[2]	4	0
-Fmt4=uint8_t[2]	3	0
-Fmt5=uint8_t[6]	3	0
+Fmt4=uint8_t[184]	3	0
+Fmt5=uint8_t[2]	3	0
+Fmt6=uint8_t[6]	3	0
 [watch_formats]
 Fmt0={W}0:col_start	3	0
 Fmt1={W}0:eResumeSetVal	3	0

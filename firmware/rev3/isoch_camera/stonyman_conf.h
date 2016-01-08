@@ -1,25 +1,26 @@
 #ifndef __STONYMAN_CONF_H
 #define __STONYMAN_CONF_H
 
+// Record video on eye camera or not
+//#define EYE_VIDEO_ON
+#define EYE_VIDEO_OFF
+
+// Record video on out camera or not
+#define OUT_VIDEO_ON
+//#define OUT_VIDEO_OFF
+
+// CIDER_TRACKING NOT IMPLEMENTED!!
+// Do eye tracking with ANN or CIDER model (mutually exclusive)
+ #define ANN_TRACKING
+// #define CIDER_TRACKING
+
+// FIXME: REMOVE THIS!!
+#define IMPLICIT_EYE_TRACKING
+
 // Choose USB or SD transmission
+// Note: USB can only handle one video stream, default is eye
 #define USB_SEND
 //#define SD_SEND
-
-// Select whether to use only primary camera or use both
-#define SINGLE_CAM
-//#define DUAL_CAM
-
-// Select primary camera, will be used for single-camera functions
-// (overriden by CIDER_MODE)
-#define EYE_CAM_PRIMARY
-//#define OUT_CAM_PRIMARY
-
-// CIDER MODE CURRENTLY NOT IMPLEMENTED!!
-// Uncomment *one* of these to use one of the built-in eye tracking models
-// Requires a parameter file, see readme for details
-// Selecting one of these overrides some other config settings
-#define ANN_MODE
-//#define CIDER_MODE
 
 // Comment out to collect data row-wise instead of column-wise
 #define COLUMN_COLLECT
