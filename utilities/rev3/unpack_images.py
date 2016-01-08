@@ -55,10 +55,6 @@ def main():
     else:
         input_filename = "/dev/disk" + str(args.disknum)
 
-    if interleaved == True and eye_mask_filename == None:
-        print "Invalid Input: Parameter eye_mask must be provided if using interleaved images"
-        sys.exit()
-
     if eye_mask_filename != None:
         eye_mask = load_mask(args.eye_mask)
     else:
