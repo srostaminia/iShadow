@@ -588,8 +588,8 @@ int stony_single()
   free(subsampled);
 
   frame_data[FD_MODEL_OFFSET] = PARAM_ANN;
-  // frame_data[FD_PREDX_OFFSET] = pred[PRED_X];
-  // frame_data[FD_PREDY_OFFSET] = pred[PRED_Y];
+  frame_data[FD_PREDX_OFFSET] = pred[PRED_X];
+  frame_data[FD_PREDY_OFFSET] = pred[PRED_Y];
 #else
   frame_data[FD_MODEL_OFFSET] = PARAM_NOMODEL;
 #endif // IMPLICIT_EYE_TRACKING
@@ -814,12 +814,16 @@ for (int i_major = 0; i_major < 112; i_major++) {
   ann_predict(subsampled, &stream_stats);
   free(subsampled);
 
-  frame_data[0] = PARAM_ANN;
-  frame_data[1] = pred[0];
-  frame_data[2] = pred[1];
+  frame_data[FD_MODEL_OFFSET] = PARAM_ANN;
+  frame_data[FD_PREDX_OFFSET] = pred[PRED_X];
+  frame_data[FD_PREDY_OFFSET] = pred[PRED_Y];
 #else
-  frame_data[0] = PARAM_NOMODEL;
+  frame_data[FD_MODEL_OFFSET] = PARAM_NOMODEL;
 #endif // IMPLICIT_EYE_TRACKING
+
+  time_elapsed = TIM5->CNT;
+  TIM5->CNT = 0;
+  *((uint32_t*)(frame_data + FD_TIMER_OFFSET)) = time_elapsed;
 
 #ifdef USB_SEND
 
@@ -846,11 +850,9 @@ for (int i_major = 0; i_major < 112; i_major++) {
   sd_ptr += SD_MOD_BLOCKS;
 #endif // (112 % SD_ROWS != 0)
 
-#ifdef IMPLICIT_EYE_TRACKING
   f_finish_write();
   if (disk_write_fast(0, frame_data, sd_ptr, 1) != RES_OK)      return -1;
   sd_ptr += 1;
-#endif // IMPLICIT_EYE_TRACKING
   
   f_finish_write();
 #endif // SD_SEND
@@ -860,7 +862,7 @@ for (int i_major = 0; i_major < 112; i_major++) {
 
 
 
-#if defined(EYE_TRACKING_ON)// && defined(SD_SEND)
+#if defined(EYE_TRACKING_ON) && defined(SD_SEND)
 // stony_ann()
 // Efficient ANN-based eye tracking - reads only the pixels needed for the ANN model
 // IMPORTANT: As of right now, this function is only included in SD mode, since USB is not implemented for it
@@ -942,11 +944,11 @@ int stony_ann()
   TIM5->CNT = 0;
   *((uint32_t*)(frame_data + FD_TIMER_OFFSET)) = time_elapsed;
 
-//  if (disk_write_fast(0, frame_data, sd_ptr, 1) != RES_OK)      return -1;
-//  sd_ptr += 1;
-//
-//  f_finish_write();
+ if (disk_write_fast(0, frame_data, sd_ptr, 1) != RES_OK)      return -1;
+ sd_ptr += 1;
+
+ f_finish_write();
 
   return 0;
 }
-#endif // defined(EYE_TRACKING_ON)// && defined(SD_SEND)
+#endif // defined(EYE_TRACKING_ON) && defined(SD_SEND)
