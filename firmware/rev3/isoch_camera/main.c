@@ -66,7 +66,6 @@ int main()
 #if defined(OUT_VIDEO_ON) && defined(EYE_VIDEO_ON)
     stony_dual();
 #elif defined(OUT_VIDEO_ON) || defined(EYE_VIDEO_ON)
-//    stony_ann();
     stony_single();
 #endif
     
