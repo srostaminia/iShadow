@@ -58,12 +58,12 @@ def main():
     if eye_mask_filename != None:
         eye_mask = load_mask(args.eye_mask)
     else:
-        eye_mask = np.zeros((112,112))
+        eye_mask = np.zeros((112,112)).astype('int64')
 
     if out_mask_filename != None:
         out_mask = load_mask(args.out_mask)
     else:
-        out_mask = np.zeros((112,112))
+        out_mask = np.zeros((112,112)).astype('int64')
 
     if outdoor_masks != None:
         outdoor_out_mask = load_mask(outdoor_masks[0])
@@ -204,8 +204,8 @@ def main():
             sys.exit()
 
     if (interleaved):
-        disp_save_images(output_b, eye_mask, file_prefix + "_eye", num_images, columnwise, outdoor_eye_mask)
-        disp_save_images(output_a, out_mask, file_prefix + "_out", num_images, columnwise, outdoor_out_mask)
+        disp_save_images(output_a, eye_mask, file_prefix + "_eye", num_images, columnwise, outdoor_eye_mask)
+        disp_save_images(output_b, out_mask, file_prefix + "_out", num_images, columnwise, outdoor_out_mask)
     else:
         disp_save_images(output_a, out_mask, file_prefix, num_images, columnwise)
 
@@ -306,7 +306,7 @@ def read_packed_image(image_file, mask_data, out_filename, columnwise, index):
     if (columnwise):
         image = image.T
 
-    # image -= mask_data
+    image -= mask_data
     image = image[1:]
 
     pylab.figimage(image, cmap = pylab.cm.Greys_r)

@@ -10,8 +10,8 @@ from utils import keyboard
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model-folder", help="model_folder containing model data files")
-    parser.add_argument("--fpn-folder", help="model_folder containing model data files")
+    parser.add_argument("--model-folder", help="model_folder containing ANN model data files")
+    parser.add_argument("--fpn-folder", help="fpn_folder containing FPN mask files")
     parser.add_argument("output_file", help="target file for array output")
     args = parser.parse_args()
 
