@@ -32,6 +32,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32l1xx.h"
 #include <stdio.h>
+#include "stonyman_conf.h"
 
 #if defined (USE_STM32L152_EVAL)
  #include "stm32l152_eval.h"
@@ -66,8 +67,18 @@ void set_mco();
 void delay_us(int delayTime);
 void config_ms_timer();
 void delay_ms(int DelayTime);
+
+#ifdef USB_SEND
 void init_usb();
+#endif
+
+#ifdef SD_SEND
 void init_sd();
+#endif
+
+#ifdef CIDER_TRACKING
+void cider_loop();
+#endif
 
 #endif /* __MAIN_H */
 

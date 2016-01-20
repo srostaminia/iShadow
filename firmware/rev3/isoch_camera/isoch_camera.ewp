@@ -393,7 +393,7 @@
         </option>
         <option>
           <name>IccCppInlineSemantics</name>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>IccCmsis</name>
@@ -670,19 +670,19 @@
         </option>
         <option>
           <name>IlinkRawBinaryFile</name>
-          <state>Z:\ammayber On My Mac\eye_exper\model_test_2273p.raw</state>
+          <state></state>
         </option>
         <option>
           <name>IlinkRawBinarySymbol</name>
-          <state>model_data</state>
+          <state></state>
         </option>
         <option>
           <name>IlinkRawBinarySegment</name>
-          <state>model_seg</state>
+          <state></state>
         </option>
         <option>
           <name>IlinkRawBinaryAlign</name>
-          <state>1</state>
+          <state></state>
         </option>
         <option>
           <name>IlinkDefines</name>

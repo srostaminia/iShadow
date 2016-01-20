@@ -6,24 +6,24 @@
 //#define EYE_VIDEO_OFF
 
 // Record video on out camera or not
-#define OUT_VIDEO_ON
-//#define OUT_VIDEO_OFF
+//#define OUT_VIDEO_ON
+#define OUT_VIDEO_OFF
 
-// CIDER_TRACKING NOT IMPLEMENTED!!
+// CIDER_TRACKING NOT FULLY IMPLEMENTED!!
 // Do eye tracking with ANN or CIDER model (mutually exclusive)
 // #define ANN_TRACKING
 // #define CIDER_TRACKING
 
 // Choose USB or SD transmission
 // Note: USB can only handle one video stream, default is eye
-//#define USB_SEND
-#define SD_SEND
+#define USB_SEND
+//#define SD_SEND
 
 // Comment out to collect data row-wise instead of column-wise
 #define COLUMN_COLLECT
 
 // Enables use of an uploaded binary file for FPN masks and eye model parameters
-#define USE_PARAM_FILE
+//#define USE_PARAM_FILE
 
 // OUTMODE CURRENTLY NOT IMPLEMENTED!!
 // Uncomment to use outdoor settings

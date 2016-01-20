@@ -8,9 +8,13 @@
 #include "usb_desc.h"
 #include "usb_pwr.h"
 #include "stonyman.h"
+#include "eye_models.h"
 #include "assert.h"
 #include "stm32l152d_eval_sdio_sd.h"
 #include "diskio.h"
+#include "stdbool.h"
+
+// TODO: Clean out these externs
 
 extern uint32_t MUTE_DATA;
 extern uint16_t In_Data_Offset;
@@ -18,18 +22,16 @@ extern uint16_t Out_Data_Offset;
 extern uint8_t Stream_Buff[24];
 extern uint8_t IT_Clock_Sent;
 
-volatile uint8_t packet_sending = 0;
-
-extern int fpn_offset;
+#ifdef CIDER_TRACKING
 extern float last_r;
+#endif
+
+volatile uint8_t packet_sending = 0;
 
 static __IO uint32_t TimingDelay;
 extern uint8_t pred[2];
-extern uint16_t min, max;
 
 uint32_t time_elapsed = 0;
-
-extern __IO uint16_t adc_values[2];
 
 int main()
 {   
@@ -55,7 +57,15 @@ int main()
   init_usb();
 #endif
   
-  // FIXME: Adapt this to new stonyman_conf settings, generally clean it up
+  // TODO: Adapt this to new stonyman_conf settings, generally clean it up
+#ifdef CIDER_TRACKING
+  
+  // CIDER uses a very different loop structure than other run modes
+  cider_loop();
+  
+#else
+  
+  // If CIDER is *off*, use the standard frame-collect loop
   while (1) {
 #ifdef USB_SEND
     clear_ENDP1_packet_buffers();
@@ -69,22 +79,70 @@ int main()
     stony_single();
 #endif
     
-    // Do one eye tracking iteration if it wasn't done implicitly in stony_*
-#ifdef EYE_VIDEO_OFF
-  #if defined(ANN_TRACKING)
+    // Do one ANN eye tracking iteration if it wasn't done implicitly in stony_*
+#if defined(EYE_VIDEO_OFF) && defined(ANN_TRACKING)
     stony_ann();
-  #elif defined(CIDER_TRACKING)
-    // stony_cider();
-  #endif
-#endif  // EYE_VIDEO_OFF
+#endif
     
 #ifdef USB_SEND
     while (packet_sending == 1);
 #endif
   }
   
+#endif // CIDER_TRACKING
+  
   return 0;
 }
+
+#ifdef CIDER_TRACKING
+void cider_loop()
+{  
+  bool use_ann = true;
+  
+  pred[0] = 255;
+  pred[1] = 255;
+  
+  while (1) {
+#ifdef USB_SEND
+    clear_ENDP1_packet_buffers();
+    while (packet_sending == 1);
+#endif
+
+    if (use_ann) {
+#if defined(EYE_VIDEO_ON) && defined(OUT_VIDEO_ON)
+      stony_dual();
+#elif defined(EYE_VIDEO_ON)
+      stony_single();
+#else
+      stony_ann();
+#endif
+
+      use_ann = false;
+      last_r = 0;
+    }
+    else {
+      if (run_cider() < 0)
+        use_ann = true;
+      
+#if defined(EYE_VIDEO_ON) && defined(OUT_VIDEO_ON)
+      mark_cider_packet(use_ann);
+      stony_dual2(false);
+#elif defined(EYE_VIDEO_ON)
+      mark_cider_packet(use_ann);
+      stony_single2(false);
+#else
+      // FIXME: write this function (split finish_tx?)
+//      send_cider_packet();
+#endif
+    }
+
+#ifdef USB_SEND
+    while (packet_sending == 1);
+#endif
+
+  }
+}
+#endif // CIDER_TRACKING
 
 #ifdef SD_SEND
 void init_sd()
@@ -101,37 +159,6 @@ void init_usb()
   USB_Interrupts_Config();
   USB_Init();
   Speaker_Config();
-
-//#ifdef CIDER_MODE
-//  uint8_t use_ann = 1;
-//  uint8_t cider_xy[2];
-//#endif
-//  
-//  pred[0] = 255;
-//  pred[1] = 255;
-//  while (1) {
-//    clear_ENDP1_packet_buffers();
-//    while (packet_sending == 1);
-//
-//#ifdef CIDER_MODE
-//    if (use_ann) {
-//      stony_image_dual_subsample();
-//      use_ann = 0;
-//      last_r = 0;
-//    }
-//    else {
-//      if (run_cider(cider_xy) < 0)
-//        use_ann = 1;
-//      
-//      stony_send_cider_image(cider_xy, use_ann);
-//    } 
-//#else
-//    stony_image_dual_subsample();
-//#endif // ifdef CIDER_MODE
-//    
-//    while (packet_sending == 1);
-//
-//  }
 }
 #endif // USB_SEND
 
@@ -209,46 +236,5 @@ void delay_us(int delayTime)
   
   for (int i = 0; i < delayTime; i++) {
     asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-  }
-}
-
-void pulse_led(void)
-{
-  GPIO_InitTypeDef GPIO_InitStructure;
-  DAC_InitTypeDef DAC_InitStructure;
-
-  /* DAC Periph clock enable */
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_DAC, ENABLE);
-
-  /* GPIOA clock enable */
-  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
-  /* Configure PA.04 (DAC_OUT1), PA.05 (DAC_OUT2) as analog */
-  GPIO_InitStructure.GPIO_Pin =  GPIO_Pin_4;
-  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
-  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(GPIOA, &GPIO_InitStructure);
-  
-  DAC_DeInit();
-  
-  DAC_InitStructure.DAC_Trigger = DAC_Trigger_None;
-  DAC_InitStructure.DAC_WaveGeneration = DAC_WaveGeneration_None;
-  DAC_InitStructure.DAC_OutputBuffer = DAC_OutputBuffer_Enable;
-  
-  /* DAC Channel2 Init */
-  DAC_Init(DAC_Channel_1, &DAC_InitStructure);
-
-  /* Enable DAC Channel2 */
-  DAC_Cmd(DAC_Channel_1, ENABLE);
-  
-  DAC_SetChannel1Data(DAC_Align_12b_R, 0x0); // 0x64D = 1.26V
-  
-  DAC_SetChannel1Data(DAC_Align_12b_R, 0x64D); // 0x64D = 1.26V
-//  DAC_DualSoftwareTriggerCmd(ENABLE);
-  
-  while (1) {
-    delay_ms(500);
-    DAC_SetChannel1Data(DAC_Align_12b_R, 0x0); // 0x64D = 1.26V
-    delay_ms(500);
-    DAC_SetChannel1Data(DAC_Align_12b_R, 0x64D); // 0x64D = 1.26V
   }
 }
