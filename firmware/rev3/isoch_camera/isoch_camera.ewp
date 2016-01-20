@@ -2054,9 +2054,6 @@
     <file>
       <name>$PROJ_DIR$\..\..\lib\stonyman\stonyman.h</name>
     </file>
-    <file>
-      <name>$PROJ_DIR$\stonyman_conf.h</name>
-    </file>
   </group>
   <group>
     <name>USB</name>
@@ -2081,6 +2078,9 @@
   </group>
   <file>
     <name>$EW_DIR$\arm\inc\ST\iostm32L151xx.h</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\ishadow_conf.h</name>
   </file>
   <file>
     <name>$PROJ_DIR$\main.c</name>

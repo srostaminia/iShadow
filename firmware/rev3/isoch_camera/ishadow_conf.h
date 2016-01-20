@@ -1,5 +1,5 @@
-#ifndef __STONYMAN_CONF_H
-#define __STONYMAN_CONF_H
+#ifndef __ISHADOW_CONF_H
+#define __ISHADOW_CONF_H
 
 // Record video on eye camera or not
 #define EYE_VIDEO_ON
@@ -9,15 +9,14 @@
 //#define OUT_VIDEO_ON
 #define OUT_VIDEO_OFF
 
-// CIDER_TRACKING NOT FULLY IMPLEMENTED!!
 // Do eye tracking with ANN or CIDER model (mutually exclusive)
 // #define ANN_TRACKING
 // #define CIDER_TRACKING
 
 // Choose USB or SD transmission
 // Note: USB can only handle one video stream, default is eye
-#define USB_SEND
-//#define SD_SEND
+//#define USB_SEND
+#define SD_SEND
 
 // Comment out to collect data row-wise instead of column-wise
 #define COLUMN_COLLECT
@@ -43,4 +42,4 @@
 // Uncomment to switch to outdoor mode based on photodiode
 //#define OUTDOOR_SWITCH
 
-#endif // __STONYMAN_CONF_H
+#endif // __ISHADOW_CONF_H

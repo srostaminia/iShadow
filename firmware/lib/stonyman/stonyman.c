@@ -253,7 +253,6 @@ static void finish_tx(uint8_t *pixel_buffer)
 #endif
 
 #if defined(CIDER_TRACKING)      
-    // FIXME: Split this into hit and miss
     case PARAM_CIDER_HIT:
     case PARAM_CIDER_MISS:
       frame_data[FD_PREDX_OFFSET] = pred[PRED_X];
@@ -300,15 +299,17 @@ static void finish_tx(uint8_t *pixel_buffer)
   #if (112 % SD_ROWS != 0)
     f_finish_write();
     
-    if (disk_write_fast(0, (uint8_t *)base_buffers[buf_idx], sd_ptr, SD_MOD_BLOCKS / 2) != RES_OK)      return -1;
+    if (disk_write_fast(0, (uint8_t *)pixel_buffer, sd_ptr, SD_MOD_BLOCKS / 2) != RES_OK)      return;
     sd_ptr += SD_MOD_BLOCKS / 2;
   #endif // (112 % SD_ROWS != 0)
 
   f_finish_write();
-  if (disk_write_fast(0, frame_data, sd_ptr, 1) != RES_OK)      return -1;
+  if (disk_write_fast(0, frame_data, sd_ptr, 1) != RES_OK)      return;
   sd_ptr += 1;
 
   f_finish_write();
+
+  disk_erase(0, sd_ptr + SD_EOF_OFFSET, 1);
   
 #endif // SD_SEND
 }

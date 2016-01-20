@@ -151,6 +151,22 @@ void f_finish_write()
   SD_WaitWriteOperation();
   while(SD_GetStatus() != SD_TRANSFER_OK);
 }
+
+DRESULT disk_erase (
+  BYTE drv,          /* Physical drive nmuber (0..) */
+  DWORD sector,      /* Sector address (LBA) */
+  BYTE count         /* Number of sectors to write (1..255) */
+)
+{
+  uint32_t sector_start, sector_end;
+  sector_start = (sector << 9) ;
+  sector_end = ((sector + (count - 1)) << 9);
+  
+  if (SD_Erase(sector_start, sector_end) == SD_OK)
+    return RES_OK;
+  else
+    return RES_ERROR;
+}
 #endif /* _READONLY */
 
 /*----------------------------------------------------------------------------*/

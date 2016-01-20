@@ -34,6 +34,7 @@ DRESULT disk_read (BYTE, BYTE*, DWORD, BYTE);
 DRESULT disk_write (BYTE, const BYTE*, DWORD, BYTE);
 DRESULT disk_write_fast (BYTE, const BYTE*, DWORD, BYTE);
 void f_finish_write();
+DRESULT disk_erase (BYTE, DWORD, BYTE);
 #endif
 DRESULT disk_ioctl (BYTE, BYTE, void*);
 
