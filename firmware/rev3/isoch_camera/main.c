@@ -22,6 +22,9 @@ extern uint16_t Out_Data_Offset;
 extern uint8_t Stream_Buff[24];
 extern uint8_t IT_Clock_Sent;
 
+// FIXME: Remove this
+extern uint32_t sd_ptr;
+
 #ifdef CIDER_TRACKING
 extern float last_r;
 #endif
@@ -148,6 +151,7 @@ void cider_loop()
 void init_sd()
 {
   assert (disk_initialize(0) == SD_OK);
+  disk_erase(0, SD_EOF_OFFSET, 1);
 }
 #endif // SD_SEND
 

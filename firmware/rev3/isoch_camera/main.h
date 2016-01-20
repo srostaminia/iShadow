@@ -32,7 +32,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32l1xx.h"
 #include <stdio.h>
-#include "stonyman_conf.h"
+#include "ishadow_conf.h"
 
 #if defined (USE_STM32L152_EVAL)
  #include "stm32l152_eval.h"

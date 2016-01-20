@@ -2,7 +2,7 @@
 #define __STONYMAN_H
 
 #include "stm32l1xx.h"
-#include "stonyman_conf.h"
+#include "ishadow_conf.h"
 #include "stdbool.h"
 
 // #if defined(CIDER_TRACKING) && defined(OUTDOOR_SWITCH)
@@ -93,6 +93,7 @@
 
 	//#define ECAM_OFFSET     5376
 	#define SD_BLOCKS       (SD_ROWS * 112 * 4) / 512
+	#define SD_EOF_OFFSET		(112 * 112 * 2) / 512
 
 	#if (112 % SD_ROWS != 0)
 
@@ -102,7 +103,6 @@
 		#if ((112 % SD_ROWS) * 112 * 4 ) % 512 != 0
 			#error ERROR: SD_ROWS INVALID, DOES NOT ALIGN TO 512B BOUNDARY
 		#endif
-
 	#endif // (112 % SD_ROWS != 0)
 
 #endif // SD_SEND
@@ -176,10 +176,6 @@
 
 #define OUT_CAM             0
 #define EYE_CAM             1
-
-// TODO: Figure out how to make primary / secondary camera switching play nicely with all the FPN options...
-// BINGO! Just have a fixed order and fill in unused masks with zeros! :D :D :D
-// We'll need to start storing metadata in the binary mask / param files so we can figure out what they contain after the fact, just FYI. Ugh.
 
 #ifdef OUT_CAM_PRIMARY
 	#define PRIMARY_CAM						 OUT_CAM
