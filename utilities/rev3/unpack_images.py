@@ -15,7 +15,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("file_prefix", help="output file prefix")
-    parser.add_argument("num_images", type = int, help="number of image pairs (or single images if --no-interleave) stored in the input file, set to 0 to run continuously")
+    parser.add_argument("--num_images", type = int, help="retrieve a set number of frames (ignoring end-of-data flag)")
     parser.add_argument("--out_mask", help="outward-facing camera mask to apply to data")
     parser.add_argument("--eye_mask", help="eye-facing camera mask to apply to data")
     parser.add_argument("--columnwise", action="store_true", help="images recorded columnwise on hardware instead of rowwise")
@@ -49,6 +49,10 @@ def main():
     
     # For parameter data tacked on to each frame
     unit_size += 512
+
+    if (num_images != None and num_images <= 0):
+        print "Error: Must specify positive nonzero value for num_images"
+        sys.exit()
 
     if (args.disknum == None):
         input_filename = "/dev/disk2"
@@ -124,7 +128,7 @@ def main():
                 sys.exit()
 
         print "Reading image data..."
-        if (num_images > 0):
+        if (num_images != None):
             for i in range(num_images):
                 for j in range(3):
                     data = input_file.read(7168)
@@ -134,7 +138,7 @@ def main():
                         data = input_file.read(7168)
                         output_b.write(data)
 
-                if (i % 500 == 0):
+                if (i % 500 == 0 and i != 0):
                     print i, "images so far"
 
                 data = input_file.read(3584)
@@ -147,41 +151,43 @@ def main():
                 data = input_file.read(512)
                 parse_write_results(data, results_out)
 
+            i += 1
+
         else:
-            print "ERROR: Datastream end detection not working for the moment. Please specify a nonzero number of images to collect."
-            return
-            # end = False
-            # i = 0
-            # while (True):
-            #     for j in range(2):
-            #         data = input_file.read(10752)
-            #         if (ord(data[0]) < 0) and (ord(data[1700]) < 0) and (ord(data[3583]) < 0):
-            #             end = True
-            #             break
+            i = 0
+            while True:
+                data_a = ''
+                data_b = ''
 
-            #         output_a.write(data)
+                for j in range(3):
+                    data_a += input_file.read(7168)
 
-            #         if (interleaved):
-            #             data = input_file.read(10752)
-            #             output_b.write(data)
+                    if (interleaved):
+                        data_b += input_file.read(7168)
 
-            #     if (end):
-            #         print "Found", i, "images total"
-            #         num_images = i
-            #         break
-            #     elif (i % 500 == 0):
-            #         print i, "images so far"
+                if (i % 500 == 0 and i != 0):
+                    print i, "images so far"
 
-            #     data = input_file.read(3584)
-            #     output_a.write(data)
+                data_a += input_file.read(3584)
 
-            #     if (interleaved):
-            #         data = input_file.read(3584)
-            #         output_b.write(data)
+                if (interleaved):
+                    data_b += input_file.read(3584)
 
-            #     i += 1
+                data_param = input_file.read(512)
 
-        num_images = i + 1
+                if (is_eof(data_param)):
+                    break
+
+                output_a.write(data_a)
+
+                if (interleaved):
+                    output_b.write(data_b)
+
+                parse_write_results(data_param, results_out)
+
+                i += 1
+
+        num_images = i
         print "Total:", num_images, "images\n"
 
         input_file.close()
@@ -256,6 +262,16 @@ def parse_write_results(result_data, out_file):
     for i in range(1,6):
         out_file.write(", " + str(values2[i]))
     out_file.write('\n')
+
+# Look for an all-zero param sector as EOF
+def is_eof(result_data):
+    values = struct.unpack('b' * 512, result_data)
+
+    for byte in values:
+        if byte != 0:
+            return False
+
+    return True
 
 
 def disp_save_images(image_file, mask_data, out_filename, num_images, columnwise, outdoor_mask=None):
