@@ -26,6 +26,9 @@
 #define PRED_X					0
 #define PRED_Y					1
 
+#define CIDER_COL               0
+#define CIDER_ROW               1
+
 #ifdef COLUMN_COLLECT
  #define MASK_MAJOR			MASK_COL
  #define MASK_MINOR			MASK_ROW
@@ -33,6 +36,11 @@
  #define MASK_MAJOR			MASK_ROW
  #define MASK_MINOR			MASK_COL
 #endif // COLUMN_COLLECT
+
+// CIDER parameters
+#define SPEC_THRESH     150
+#define CONV_OFFSET     4
+#define CIDER_PERCENTILE        10      // Percentile value for cross model pixel clamping
 
 typedef struct StreamStats {
   float M, S;
@@ -45,10 +53,68 @@ float tanh_approx(float input);
 float calc_std(uint16_t img[]);
 
 void read_cider_params();
-void init_streamstats(StreamStats *ss);
-void update_streamstats(StreamStats *ss, uint16_t *pixels, uint16_t this_pixel, int i_outer, int j_inner);
-void update_streamstats2(StreamStats *ss, uint16_t *pixels, uint16_t this_pixel);
 
-void ann_predict(uint16_t *pixels, StreamStats *ss);
+void ann_predict(uint16_t *pixels);
+void ann_predict2(uint16_t *pixels, StreamStats *ss);
+
+// TODO: Decide whether to remove functions from eye_models based on stonyman_conf flags
+void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels);
+int run_cider();
+uint16_t quick_percentile(uint16_t *base_row);
+
+#pragma inline=forced
+void init_streamstats(StreamStats *ss)
+{
+    ss->pixel_sum = 0;
+    ss->M = 0.0;
+    ss->S = 0.0;
+    ss->k = 1;
+    ss->current_subsample = 0;
+}
+
+// #pragma inline=forced
+// void update_streamstats(StreamStats *ss, uint16_t *pixels, uint16_t this_pixel, 
+//                         int i_major, int j_minor, uint16_t mask_major, uint16_t mask_minor)
+// {
+//     float value, tmpM;
+
+//     // Streaming mean / stdev computation on subsampled pixels
+//     if (mask_major == i_major && mask_minor == j_minor)
+//     {
+//         pixels[ss->current_subsample] = this_pixel;
+        
+//        if (ss->current_subsample == 0)
+//          tmpM = 0;
+
+//        ss->pixel_sum += this_pixel;
+
+//        // Standard deviation computation
+//        value = (float)this_pixel;
+//        tmpM = ss->M;
+//        ss->M += (value - tmpM) / ss->k;
+//        ss->S += (value - tmpM) * (value - ss->M);
+//        ss->k++;
+//        ss->current_subsample++;
+//     }
+// }
+
+#pragma inline=forced
+void update_streamstats(StreamStats *ss, uint16_t *pixels, uint16_t this_pixel)
+{
+    float value, tmpM;
+
+    // Streaming mean / stdev computation on subsampled pixels
+    pixels[ss->current_subsample] = this_pixel;
+
+    ss->pixel_sum += this_pixel;
+
+    // Standard deviation computation
+    value = (float)this_pixel;
+    tmpM = ss->M;
+    ss->M += (value - tmpM) / ss->k;
+    ss->S += (value - tmpM) * (value - ss->M);
+    ss->k++;
+    ss->current_subsample++;
+}
 
 #endif	/* EYE_MODEL_H */

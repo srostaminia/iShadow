@@ -3,6 +3,7 @@
 
 #include "stm32l1xx.h"
 #include "stonyman_conf.h"
+#include "stdbool.h"
 
 // #if defined(CIDER_TRACKING) && defined(OUTDOOR_SWITCH)
 // 	#error ERROR: CANNOT USE CIDER_TRACKING AND OUTDOOR_SWITCH SIMULTANEOUSLY (STONYMAN.H)
@@ -19,6 +20,9 @@
 #if !defined(USB_SEND) && !defined(SD_SEND)
 	#warning WARNING: NO STORAGE METHOD SELECTED, CAMERA DATA WILL NOT BE SAVED (STONYMAN.H)
   #define TX_PIXELS       112
+	#define BUFFER_HALF			TX_PIXELS
+#else
+	#define SEND_DATA
 #endif
 
 #if defined(USB_SEND) && !defined(USB_8BIT) && !defined(USB_16BIT)
@@ -38,7 +42,6 @@
 #endif
 
 // If eye camera is being recorded at all, it is primary
-// FIXME: will this cause a problem with eye tracking when eye video is not being recorded?
 #if defined(OUT_VIDEO_ON) && !defined(EYE_VIDEO_ON)
 	#define OUT_CAM_PRIMARY
 #else
@@ -46,6 +49,10 @@
 #endif
 
 #if defined(ANN_TRACKING) || defined(CIDER_TRACKING)
+	#ifndef USE_PARAM_FILE
+		#error ERROR: MUST ENABLE USE_PARAM_FILE IF DOING EYE TRACKING (STONYMAN.H)
+	#endif
+
 	#define EYE_TRACKING_ON
 
 	#ifdef EYE_CAM_PRIMARY
@@ -102,8 +109,6 @@
 
 #ifdef USB_SEND
 
-	#define FRAME_DATA_LENGTH			10
-
 	#if defined(USB_16BIT) && defined(USB_8BIT)
 		#error ERROR: CANNOT DEFINE BOTH USB_16BIT AND USB_8BIT (STONYMAN.H)
 	#elif !defined(USB_16BIT) && !defined(USB_8BIT)
@@ -113,6 +118,8 @@
 	#ifdef USB_16BIT
 		#define USB_PIXELS      			92
 		#define BUFFER_HALF						92
+
+		#define USB16_FINAL_PAD				(12544 % 92)
 	#else
 		#define USB_PIXELS      			112
 		#define BUFFER_HALF						224
@@ -128,10 +135,10 @@
 	#define DO_8BIT_CONV
 
 	#define RESIZE_PIXEL(X) 			(((X) >> 2) & 0xFF)
-	#define CAST_PIXEL_BUFFER(X)	((uint8_t *)(X))
+	#define CAST_TX_BUFFER(X)			((uint8_t *)(X))
 #else
 	#define RESIZE_PIXEL(X) 			(X)
-	#define CAST_PIXEL_BUFFER(X)	((uint16_t *)(X))
+	#define CAST_TX_BUFFER(X)			((uint16_t *)(X))
 #endif
 
 #define DHR12R1_OFFSET      ((uint32_t)0x00000008)
@@ -194,9 +201,6 @@
 	#define SECONDARY_FPN_START		 OUT_FPN_START	
 #endif
 
-#define SEL_ROW              1
-#define SEL_COL              0
-
 #define REG_COLSEL      0  //select column
 #define REG_ROWSEL      1  //select row
 #define REG_VSW         2  //vertical switching
@@ -216,12 +220,17 @@
 #define ADC1_DR_ADDRESS                 ((uint32_t)0x40012458)
 #define DMA_DIR_PeripheralToMemory      ((uint32_t)0x00000000)
 
+#define SEL_MAJOR_LINE	0					
+#define SEL_MINOR_LINE	1
 
 // TODO: Switch this to ROW_COLLECT, column should be default from now on.
 #ifdef COLUMN_COLLECT
 
 	#define MAJOR_REG			REG_COLSEL
 	#define MINOR_REG			REG_ROWSEL
+
+	#define SEL_COL				SEL_MAJOR_LINE
+	#define SEL_ROW				SEL_MINOR_LINE
 
 	#ifdef USE_PARAM_FILE
 		#define FPN_OFFSET 		0
@@ -232,6 +241,9 @@
 
 	#define MAJOR_REG			REG_ROWSEL
 	#define MINOR_REG			REG_COLSEL
+
+	#define SEL_COL				SEL_MINOR_LINE
+	#define SEL_ROW				SEL_MAJOR_LINE
 
 	#ifdef USE_PARAM_FILE
 		#define FPN_OFFSET 		(112 * 112)
@@ -245,6 +257,14 @@
 #define FD_MODEL_OFFSET		4
 #define FD_PREDX_OFFSET		5
 #define FD_PREDY_OFFSET		6
+#define FD_CIDCOL_OFFSET	7
+#define FD_CIDROW_OFFSET 	8
+#define FD_CIDRAD_OFFSET	9
+
+#define FD_NOMODEL_LENGTH 5
+#define FD_ANN_LENGTH			7
+#define FD_CIDER_LENGTH		10
+#define FD_MAX_LENGTH			10
 
 #ifdef USE_PARAM_FILE
 
@@ -276,56 +296,32 @@
 
 #endif // USE_PARAM_FILE
 
-// CIDER parameters
-#ifdef CIDER_TRACKING
-
-	#define SPEC_THRESH     150
-	#define CONV_OFFSET     4
-	// Percentile value for cross model pixel clamping
-	#define CIDER_PERCENTILE        10
-
-	// #define BH(X)           *((float*)(model_data + bh_offset + ((X) * 2)))  
-	// #define BO(X)           *((float*)(model_data + bo_offset + ((X) * 2)))
-	// #define MASK(X, Y)      model_data[mask_offset + ((X) * 2) + (Y)]
-	// #define WHO(X, Y)       *((float*)(model_data + who_offset + ((X) * 4) + ((Y) * 2)))
-	// #define WIH(X, Y)       *((float*)(model_data + wih_offset + ((X) * num_hidden * 2) + ((Y) * 2)))
-	// #define ROW_FPN(X)          model_data[fpn_offset + (X)]
-	// #define COL_FPN(X)      model_data[col_fpn_offset + (X)]
-
-#endif  // CIDER_TRACKING
-
 #define PARAM_NOMODEL			0
 #define PARAM_CIDER_HIT		1
 #define PARAM_CIDER_MISS  2
 #define PARAM_ANN					3
 
-void pulse_resv(uint8_t cam);
-void pulse_incv(uint8_t cam);
-void pulse_resp(uint8_t cam);
-void pulse_incp(uint8_t cam);
-void pulse_inph(unsigned short time, uint8_t cam);
-void clear_values(uint8_t cam);
-void set_pointer_value(char ptr, short val, uint8_t cam);
-void inc_pointer_value(char ptr, short val, uint8_t cam);
-void set_pointer(char ptr, uint8_t cam);
-void set_value(short val, uint8_t cam);
-void inc_value(short val, uint8_t cam);
-void set_biases(short vref, short nbias, short aobias, uint8_t cam);
-
-void usb_finish_tx(uint8_t *frame_data, uint8_t packet_length);
-
 void stony_init_default(void);
 void stony_init(short vref, short nbias, short aobias, char gain, char selamp);
-void stony_reset(uint16_t wait_time, char gain, char selamp);
-void stony_pin_config();
-void adc_dma_init();
-void dac_init();
+// void stony_reset(uint16_t wait_time, char gain, char selamp);
+
+void config_adc_select(uint8_t cam);
+void config_adc_default();
 
 int stony_single();
 int stony_dual();
 
+void mark_cider_packet(bool cider_failed);
+
+#ifdef IMPLICIT_EYE_TRACKING
+int stony_single2(bool do_tracking);
+int stony_dual2(bool do_tracking);
+#endif
+
 #if defined(EYE_TRACKING_ON) && defined(SD_SEND)
 int stony_ann();
 #endif
+
+int stony_cider_line(uint8_t rowcol_num, uint16_t *line_buf, uint8_t rowcol_sel);
 
 #endif // __STONYMAN_H

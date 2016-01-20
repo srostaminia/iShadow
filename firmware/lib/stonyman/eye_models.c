@@ -7,6 +7,8 @@
 extern unsigned short val[112*112];
 int8_t pred[2];
 float pred_radius;
+float last_r = 0;
+uint8_t cider_colrow[2];
 
 unsigned short num_subsample = 0;
 unsigned short num_hidden = 0;
@@ -19,20 +21,17 @@ unsigned int fpn_offset = 0;
 unsigned int col_fpn_offset = 0;
 
 extern uint16_t model_data[];
-extern uint32_t sd_ptr;
 
-// FIXME: REMOVE THIS!!
-extern uint16_t subsampled[2273];
+// NOTE: Because C inlining is weird, these functions are defined in eye_models.h
+extern inline void init_streamstats(StreamStats *ss);
+extern inline void update_streamstats(StreamStats *ss, uint16_t *pixels, uint16_t this_pixel);
+// extern inline void update_streamstats(StreamStats *ss, uint16_t *pixels, uint16_t this_pixel, 
+//                         int i_major, int j_minor, uint16_t mask_major, uint16_t mask_minor);
 
-//uint16_t test_data[] = { 358 , 392 , 338 , 426 , 349 , 329 , 330 , 435 , 483 , 376 , 362 , 488 , 463 , 318 , 481 , 434 , 482 , 441 , 345 , 422 , 374 , 469 , 400 , 383 , 433 , 435 , 462 , 319 , 433 , 370 , 346 , 432 , 341 , 334 , 347 , 340 , 383 , 369 , 493 , 484 , 322 , 477 , 333 , 429 , 495 , 306 , 327 , 487 , 387 , 313 , 405 , 379 , 300 , 428 , 470 , 463 , 441 , 419 , 327 , 406 , 494 , 475 , 434 , 437 , 327 , 418 , 449 , 303 , 389 , 421 , 470 , 495 , 482 , 477 , 332 , 411 , 448 , 328 , 405 , 316 , 445 , 385 , 306 , 374 , 370 , 436 , 334 , 338 , 488 , 353 , 441 , 330 , 481 , 471 , 421 , 394 , 396 , 432 , 467 , 373 , 486 , 363 , 445 , 400 , 339 , 463 , 498 , 312 , 367 , 376 , 366 , 359 , 314 , 428 , 383 , 369 , 473 , 482 , 425 , 308 , 479 , 392 , 427 , 312 , 392 , 323 , 498 , 404 , 428 , 494 , 494 , 489 , 307 , 494 , 366 , 472 , 326 , 422 , 355 , 307 , 310 , 378 , 486 , 321 , 471 , 418 , 438 , 332 , 395 , 483 , 387 , 405 , 436 , 333 , 376 , 428 , 355 , 427 , 424 , 497 , 484 , 433 , 366 , 494 , 474 , 333 , 493 , 411 , 306 , 332 , 382 , 475 , 390 , 468 , 329 , 306 , 489 , 483 , 374 , 369 , 460 , 383 , 421 , 413 , 465 , 371 , 474 , 398 , 343 , 307 , 451 , 366 , 430 , 410 , 451 , 403 , 364 , 391 , 451 , 479 , 447 , 369 , 419 , 383 , 349 , 438 , 453 , 300 , 352 , 374 , 414 , 493 , 407 , 354 , 457 , 359 , 336 , 439 , 412 , 444 , 311 , 309 , 328 , 305 , 413 , 339 , 486 , 451 , 459 , 467 , 451 , 488 , 493 , 336 , 336 , 428 , 346 , 389 , 413 , 491 , 335 , 326 , 335 , 408 , 453 , 371 , 378 , 498 , 484 , 458 , 496 , 473 , 461 , 303 , 429 , 378 , 382 , 419 , 422 , 457 , 374 , 385 , 431 , 307 , 391 , 445 , 317 , 333 , 413 , 474 , 304 , 383 , 395 , 451 , 438 , 346 , 450 , 403 , 448 , 387 , 384 , 423 , 405 , 372 , 372 , 356 , 441 , 426 , 378 , 410 , 481 , 358 , 500 , 320 , 416 , 364 , 392 , 405 , 362 , 363 };
+// Static keyword is not enforced in IAR. Please don't abuse this.
+static void ann_predict_meanstd(uint16_t *pixels, float mean, float std);
 
-//extern float bh[NUM_HIDDEN];
-//extern float bo[2];
-//extern unsigned short mask[NUM_SUBSAMPLE][2];
-//extern float who[NUM_HIDDEN][2];
-//extern float wih[NUM_SUBSAMPLE][NUM_HIDDEN];
-
-float tanh_values[] = {
+static float tanh_values[] = {
 -0.999909204263 ,
 -0.999889102951 ,
 -0.999864551701 ,
@@ -197,79 +196,43 @@ void read_cider_params()
 }
 #endif // USE_PARAM_FILE
 
-inline void init_streamstats(StreamStats *ss)
+void ann_predict(uint16_t *pixels)
 {
-    ss->pixel_sum = 0;
-    ss->M = 0.0;
-    ss->S = 0.0;
-    ss->k = 1;
-    ss->current_subsample = 0;
-}
-
-inline void update_streamstats(StreamStats *ss, uint16_t *pixels, uint16_t this_pixel, int i_major, int j_minor)
-{
-    float value, tmpM;
-
-    // Streaming mean / stdev computation on subsampled pixels
-    if (MASK(ss->current_subsample, MASK_MAJOR) == i_major && 
-        MASK(ss->current_subsample, MASK_MINOR) == j_minor)
-    {
-        pixels[ss->current_subsample] = this_pixel;
-        
-        if (ss->current_subsample == 0)
-          tmpM = 0;
-
-        ss->pixel_sum += this_pixel;
-
-        // Standard deviation computation
-        value = (float)this_pixel;
-        tmpM = ss->M;
-        ss->M += (value - tmpM) / ss->k;
-        ss->S += (value - tmpM) * (value - ss->M);
-        ss->k++;
-        ss->current_subsample++;
-    }
-}
-
-inline void update_streamstats2(StreamStats *ss, uint16_t *pixels, uint16_t this_pixel)
-{
-    float value, tmpM;
-
-    // Streaming mean / stdev computation on subsampled pixels
-    pixels[ss->current_subsample] = this_pixel;
-
-    ss->pixel_sum += this_pixel;
+        // Mean computation
+    uint32_t pixel_sum = 0;
+    for (int i = 0; i < num_subsample; i++)
+        pixel_sum += pixels[i];
+    float mean = (float)pixel_sum / num_subsample;
 
     // Standard deviation computation
-    value = (float)this_pixel;
-    tmpM = ss->M;
-    ss->M += (value - tmpM) / ss->k;
-    ss->S += (value - tmpM) * (value - ss->M);
-    ss->k++;
-    ss->current_subsample++;
+    float diff_sum = 0;
+    for (int i = 0; i < num_subsample; i++)
+        diff_sum += (pixels[i] - mean) * (pixels[i] - mean);
+    float std = sqrt(diff_sum / num_subsample);
+
+    ann_predict_meanstd(pixels, mean, std);
 }
 
-void ann_predict(uint16_t *pixels, StreamStats *ss)
+void ann_predict2(uint16_t* pixels, StreamStats *ss)
+{
+    float mean = (float)ss->pixel_sum / num_subsample;
+    float std = sqrt(ss->S / (ss->k-1));
+
+    ann_predict_meanstd(pixels, mean, std);
+}
+
+static void ann_predict_meanstd(uint16_t *pixels, float mean, float std)
 {
     int i, j;
     float ah[6];
     float x, x_val, y_val;
 
-    //TODO FIXME: UNCOMMENT!
-    float mean = (float)ss->pixel_sum / num_subsample;
-//    float mean = (float)ss->pixel_sum / 300;
-    float std = sqrt(ss->S / (ss->k-1));
-
     for (i = 0; i < num_hidden; i++)  {
         ah[i] = BH(i);
     }
 
-    //    float std2 = calc_std(img);
-    //    float mean = ((float)sum) / (112*112);
-
     uint16_t subsample;
     for (i = 0; i < num_subsample; i++) {
-//    for (i = 0; i < 300; i++) {
         subsample = pixels[i];
         x = (float)(subsample - mean) / std;
 
@@ -292,4 +255,284 @@ void ann_predict(uint16_t *pixels, StreamStats *ss)
     pred[PRED_Y] = (unsigned short)((y_val * 111) + 0.5);
 
     return;
+}
+
+int run_cider()
+{
+  uint8_t row_edges[6] = {0, 0, 0, 0, 0, 0}, col_edges[6] = {0, 0, 0, 0, 0, 0};
+  int8_t pupil_found = -1;
+  
+  cider_colrow[1] = (uint8_t)((pred[1] < 0 ? 0 : pred[1]) > 111 ? 111 : pred[1]);
+  cider_colrow[0] = (uint8_t)((pred[0] < 0 ? 0 : pred[0]) > 111 ? 111 : pred[0]);
+  
+  uint8_t col_start = cider_colrow[1], row_start = cider_colrow[0];
+  
+  float best_ratio = 0, best_r = 0;
+  uint8_t best_center[2] = {0, 0};
+
+  // Configure ADC to read only from eye camera
+  config_adc_select(EYE_CAM);
+  
+  uint16_t row[112], col[112];
+  stony_cider_line(col_start, row, SEL_ROW);
+  stony_cider_line(row_start, col, SEL_COL);
+
+  config_adc_default();
+  
+  find_pupil_edge(row_start, row_edges, row);
+  find_pupil_edge(col_start, col_edges, col);
+
+  for (uint8_t i = 0; (row_edges[i] != 0 || i==0) && i < 6; i += 2) {
+    // Pupil can't be smaller than 4 pixels across
+    if ((row_edges[i] - row_edges[i + 1]) < 4 && (row_edges[i] - row_edges[i + 1]) > -4)
+      continue;
+    
+    for (uint8_t j = 0; (col_edges[j] != 0 || j==0) && j < 6; j += 2) {
+      // Pupil can't be smaller than 4 pixels across
+      if ((col_edges[j] - col_edges[j + 1]) < 4 && (col_edges[j] - col_edges[j + 1]) > -4)
+        continue;
+      
+      float x_mid, y_mid;
+      x_mid = (row_edges[i] + row_edges[i + 1]) / (float)2;
+      y_mid = (col_edges[j] + col_edges[j + 1]) / (float)2;
+      
+      float r1, r2;
+      r1 = sqrt(((x_mid - row_edges[i]) * (x_mid - row_edges[i])) + ((y_mid - col_start) * (y_mid - col_start)));
+      r2 = sqrt(((x_mid - row_start) * (x_mid - row_start)) + ((y_mid - col_edges[j]) * (y_mid - col_edges[j])));
+      
+      float ratio = r1 / r2;
+      if ((ratio < 0.6) || (ratio > (1/0.6)) || fabs(ratio - 1) > fabs(best_ratio - 1))
+          continue;
+      
+      float r = (r1 + r2) / 2;
+      if (last_r != 0 && (r / last_r < 0.75 || r / last_r > 1/0.75))
+          continue;
+      
+      pupil_found = 1;
+      best_ratio = ratio; best_r = r;
+      best_center[0] = x_mid >= 0 ? (uint8_t)(x_mid+0.5) : (uint8_t)(x_mid-0.5);
+      best_center[1] = y_mid >= 0 ? (uint8_t)(y_mid+0.5) : (uint8_t)(y_mid-0.5);
+    }
+  }
+  
+  pred[0] = best_center[0];
+  pred[1] = best_center[1];
+  pred_radius = best_r;
+  last_r = best_r;
+
+  return pupil_found;
+}
+
+
+void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
+{
+  uint16_t med_buf[2], next_pixel;
+  uint8_t med_idx, small_val, reg_size, edge_idx;
+  uint8_t peak_after, local_regions[3], lr_idx, lr_min;
+  uint8_t peaks[53], peak_idx, spec_regions[53], spec_idx;
+  int16_t conv_sum, conv_abs, reg_sum, edge_mean, region_means[53];
+  int16_t edge_detect[106];
+  
+  uint8_t in_specular = 0, new_peak = 0; 
+  
+  // First do median filtering
+  med_buf[0] = pixels[0];
+  med_buf[1] = pixels[1];
+  med_idx = 0;
+  small_val = (pixels[0] < pixels[1]) ? 0 : 1;
+  
+  for (uint8_t i = 2; i < 112; i++) {
+    next_pixel = pixels[i];
+    
+    if (next_pixel < med_buf[small_val]) {
+      pixels[i - 1] = med_buf[small_val];
+      small_val = med_idx;
+    } else if (next_pixel > med_buf[!small_val]) {
+      pixels[i - 1] = med_buf[!small_val];
+      small_val = !med_idx;
+    } else {
+      pixels[i - 1] = next_pixel;
+    }
+    
+    med_buf[med_idx] = next_pixel;
+    med_idx = !med_idx;
+  }
+  
+  // Then percentile clamping
+  uint16_t perc_val = quick_percentile(pixels);
+  for (uint8_t i = 0; i < 112; i++) {
+    if (pixels[i] < perc_val)   pixels[i] = perc_val;
+  }
+  
+  // Next, do convolution
+  conv_sum = -pixels[0] - pixels[1] - pixels[2] + pixels[4] + pixels[5] + pixels[6];
+  conv_abs = (conv_sum < 0) ? (-conv_sum) : (conv_sum);
+  edge_detect[0] = conv_abs;
+  edge_mean = 0;
+  for (uint8_t i = 4; i < 108; i++) {
+    conv_sum += pixels[i - 4];
+    conv_sum -= pixels[i - 1];
+    conv_sum -= pixels[i];
+    conv_sum += pixels[i + 3];
+    
+    conv_abs = (conv_sum < 0) ? (-conv_sum) : (conv_sum);
+    
+    edge_detect[i - 3] = conv_abs;
+    edge_mean += conv_abs;
+  }
+  edge_mean /= 106;
+  
+  // Then peak identification (+ weeding out peaks resulting from specular reflection)
+  // and calculating region means (+ identifying specular regions)
+  peaks[0] = 0; reg_sum = pixels[1] + pixels[2] + pixels[3];
+  peak_idx = 1; in_specular = 0; new_peak = 0; peak_after = 0;
+  for (uint8_t i = 1; i < 105; i++) {
+    if (edge_detect[i] > SPEC_THRESH) {
+      if (in_specular == 0) {
+        in_specular = 1;
+        if (i > 1 && peaks[peak_idx - 1] != (i - 1)) {
+          peaks[peak_idx] = i - 1;
+          spec_regions[spec_idx] = peak_idx;
+          peak_idx++; new_peak = 1;
+        } else {
+          spec_regions[spec_idx] = peak_idx - 1;
+        }
+        spec_idx++;
+      } else if (in_specular == 2) {
+        in_specular++;
+      }
+    } else if (edge_detect[i] < SPEC_THRESH && in_specular != 0) {
+      if (in_specular == 1)
+        in_specular++;
+      else if (in_specular == 3) {
+        in_specular = 0;
+        peaks[peak_idx] = i;
+        peak_idx++; new_peak = 1;
+      }
+    } else {
+      if (edge_detect[i] >= edge_detect[i - 1] && edge_detect[i] > edge_detect[i + 1] && edge_detect[i] > edge_mean) {
+        peaks[peak_idx] = i;
+        peak_idx++; new_peak = 1;
+      }
+    }
+    
+    reg_sum += pixels[i + 3];
+    
+    if (new_peak == 1) {
+      reg_size = peaks[peak_idx - 1] - peaks[peak_idx - 2] + (peak_idx == 2 ? 3 : 0);
+      
+      // If we retroactively made the previous point a peak, need to adjust the mean calculation
+      if (in_specular == 1) {
+        region_means[peak_idx - 2] = (reg_sum - pixels[i + 3]) / reg_size;
+        reg_sum = pixels[i + 3];
+      } else {
+        region_means[peak_idx - 2] = reg_sum / reg_size;
+        reg_sum = 0;
+      }
+      
+      new_peak = 0;
+      if (peak_after == 0 && peaks[peak_idx - 1] > start_point)
+        peak_after = peak_idx - 1;
+    }
+  }
+  
+  // Set last peak as last pixel
+  peaks[peak_idx] = 111;
+  peak_idx++;
+  reg_sum += pixels[108] + pixels[109] + pixels[110] + pixels[111];
+  reg_size = peaks[peak_idx - 1] - peaks[peak_idx - 2];
+  region_means[peak_idx - 2] = reg_sum / reg_size;
+  
+  if (peak_after == 0)
+    peak_after = peak_idx - 1;
+  
+  // Identify the local regions around the start point
+  lr_idx = 0;
+  if (peak_after > 2) {
+    local_regions[lr_idx] = peak_after - 2;
+    lr_idx++;
+  }
+  
+  local_regions[lr_idx] = peak_after - 1;
+  lr_idx++;
+  
+  if (peak_after < peak_idx - 1) {
+    local_regions[lr_idx] = peak_after;
+    lr_idx++;
+  }
+  
+  // Select the local region with the lowest mean
+  lr_min = 0;
+  for (uint8_t i = 1; i < lr_idx; i++) {
+    if (region_means[local_regions[i]] < region_means[local_regions[lr_min]])
+      lr_min = i;
+  }
+  
+  edges[0] = peaks[local_regions[lr_min]];
+  edges[0] += (edges[0] == 0 ? 0 : CONV_OFFSET);
+  edges[1] = peaks[local_regions[lr_min]+1];
+  edges[1] += (edges[1] == 111 ? 0 : CONV_OFFSET);
+  edge_idx = 2;
+  
+//  // Check if the region has a specular point on either end
+//  for (uint8_t i = 0; i < spec_idx; i++) {
+//    if (spec_regions[i] == local_regions[lr_min] - 1) {
+//      edges[edge_idx] = peaks[local_regions[lr_min] - 1] + CONV_OFFSET;
+//      edges[edge_idx+1] = peaks[local_regions[lr_min] + 1] + CONV_OFFSET;
+//      edge_idx += 2;
+//    } else if (spec_regions[i] == local_regions[lr_min] + 1) {
+//      edges[edge_idx] = peaks[local_regions[lr_min]] + CONV_OFFSET;
+//      edges[edge_idx+1] = peaks[local_regions[lr_min] + 2] + CONV_OFFSET;
+//      edge_idx += 2;
+//    }
+//  }
+  
+  return;       // Edge data is stored in argument array
+}
+
+uint16_t quick_percentile(uint16_t *base_row)
+{
+  uint16_t row[112];
+  uint16_t r, w, mid;
+  
+  for (uint16_t i = 0; i < 112; i++) {
+    row[i] = base_row[i];
+  }
+  
+  uint8_t from = 0, to = 111;
+  
+  // Percentile value is hardcoded so it doesn't have to be computed at runtime
+  uint8_t k = (((112 * 100) * CIDER_PERCENTILE) / 10000);
+  
+  // if from == to we reached the kth element
+  while (from < to) {
+    r = from, w = to;
+    mid = row[(r + w) / 2];
+    
+    // stop if the reader and writer meets
+    while (r < w) {
+      
+      if (row[r] >= mid) { // put the large values at the end
+        uint16_t tmp = row[w];
+        row[w] = row[r];
+        row[r] = tmp;
+        w--;
+      } else { // the value is smaller than the pivot, skip
+        r++;
+      }
+    }
+    
+    // if we stepped up (r++) we need to step one down
+    if (row[r] > mid && r != 0)    
+      r--;
+    
+    // the r pointer is on the end of the first k elements
+    if (k <= r) {
+      to = r;
+    } else {
+      from = r + 1;
+    }
+  }
+  
+  return row[k];
 }
