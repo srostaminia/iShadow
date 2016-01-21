@@ -25,8 +25,12 @@
 	#define SEND_DATA
 #endif
 
-#if defined(USB_SEND) && !defined(USB_8BIT) && !defined(USB_16BIT)
-	#error ERROR: USB PIXEL TX RATE NOT SELECTED - CHOOSE USB_8BIT OR USB_16BIT (STONYMAN.H)
+#if defined(USB_SEND)
+	#if !defined(USB_8BIT) && !defined(USB_16BIT)
+		#error ERROR: USB PIXEL TX RATE NOT SELECTED - CHOOSE USB_8BIT OR USB_16BIT (STONYMAN.H)
+	#elif !defined(EYE_VIDEO_ON) && !defined(OUT_VIDEO_ON)
+		#error ERROR: MUST SELECT EYE_VIDEO AND / OR OUT_VIDEO FOR STREAMING VIA USB (STONYMAN.H)
+	#endif
 #endif
 
 #if defined(EYE_VIDEO_ON) == defined(EYE_VIDEO_OFF)
@@ -59,6 +63,14 @@
 		#define IMPLICIT_EYE_TRACKING
 	#endif
 #endif // defined(ANN_TRACKING) || defined(CIDER_TRACKING)
+
+#if defined(OUT_VIDEO_ON) && defined(EYE_VIDEO_ON)
+	#define N_IMG_FRAME		2
+#elif defined(OUT_VIDEO_ON) || defined(EYE_VIDEO_ON)
+	#define N_IMG_FRAME		1
+#else
+	#define N_IMG_FRAME 	0
+#endif
 
 // CIDER overrides (don't touch)
 #ifdef EYE_TRACKING_ON
@@ -93,7 +105,7 @@
 
 	//#define ECAM_OFFSET     5376
 	#define SD_BLOCKS       (SD_ROWS * 112 * 4) / 512
-	#define SD_EOF_OFFSET		(112 * 112 * 2) / 512
+	#define SD_EOF_OFFSET		((112 * 112 * 2) / 512) * N_IMG_FRAME
 
 	#if (112 % SD_ROWS != 0)
 
