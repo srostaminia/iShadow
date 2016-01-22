@@ -5,7 +5,6 @@ import sys
 import argparse
 import time
 import numpy as np
-import pylab
 import struct
 import pickle
 # from PIL import Image, ImageTk, ImageDraw, ImageColor
@@ -15,7 +14,7 @@ import matplotlib.image as mpimg
 import matplotlib
 import Tkinter
 import shutil
-import utils
+from utils import keyboard
 
 CONTRAST_ADJUST = 0
 TX_BITS = 8
@@ -152,7 +151,6 @@ def main():
 
             param_idx = check_param_packet(unpacked, packet_size)
 
-            # utils.keyboard()
             # Parameter packet is the end of an image transmission
             if param_idx != None:
                 next_start = unpacked[(param_idx + 1) * packet_size:]
@@ -168,25 +166,17 @@ def main():
             try:
                 frame[pixels:(pixels+new_pixels)] = valid_bytes
             except:
-                # utils.keyboard()
-                # sys.exit()
                 frame[pixels:] = valid_bytes[:(12544-pixels)]
 
             pixels += new_pixels
 
-            # print unpacked, "\n"
             if (debug):
                 print "Pixels in packet:", new_pixels
                 print "Total pixels:", pixels, "\n\n"
 
-            # print len(valid_bytes), "\n", valid_bytes, "\n"
-            #valid_packed = struct.pack('H' * len(valid_bytes), *valid_bytes)
-            #output.write(valid_packed)
-
         # TODO: Fix this so we're not copying the entire image every time...
         frame=np.reshape(frame,(112,112))   
 
-        # utils.keyboard()
         param_fields = parse_param_fields(param_data, noflip)
 
         if not norender:
@@ -218,9 +208,8 @@ def main():
             
         print
 
-        # if (debug == 0):
         if (not gen_mask and mask != None):
-            frame -= mask #************************UNCOMMENT ME ***************
+            frame -= mask
 
         if (CONTRAST_ADJUST == 1):
             frame -= np.mean(frame)
@@ -228,25 +217,17 @@ def main():
 
         if columnwise:
             frame = frame.T
-            # tmp = [param_fields.pred_y, param_fields.pred_x]
-            # pred = tmp
 
         if not gen_mask and not noflip and not debug:
             frame = np.fliplr(frame)
 
-        #plt.imshow(frame2, cmap = pylab.cm.Greys_r)
         image.set_data(frame)
         image.autoscale() 
 
-        plt.draw()
+        fig.canvas.draw()
+        fig.canvas.flush_events()
 
         iters += 1
-
-        # outfile = open("usb_frame.pi",'w')
-        # pickle.dump(frame, outfile)
-        # outfile.close()
-
-        # endp.read(1840)
 
         if (debug and iters < 2):        
             out_text = open(debug_folder + "/usb_frame.txt",'w')
@@ -260,7 +241,6 @@ def main():
             frame1.axes.get_xaxis().set_visible(False)
             frame1.axes.get_yaxis().set_visible(False)
             plt.savefig(debug_folder + "/" + debug_folder + ".png")
-            # sys.exit()
 
         if (gen_mask and iters == 2):
             mask_file = open(gen_mask_file + ".pi","wb")
@@ -327,7 +307,6 @@ def get_last_idx(data):
 def check_param_packet(data, packet_size):
     for i in range(len(data) / packet_size):
         this_packet = data[i * packet_size:(i+1) * packet_size]
-        # utils.keyboard()
         last_data_idx = get_last_idx(this_packet)
 
         if last_data_idx != None and last_data_idx < PARAM_PACKET_SIZE:
@@ -401,7 +380,6 @@ def parse_param_fields(param_data, noflip):
     elif TX_BITS == 16:
         data_type = 'H'
 
-    # utils.keyboard()
     timer_data = ''
     for i in range(4):
         timer_data += (struct.pack(data_type,param_data[i]))
