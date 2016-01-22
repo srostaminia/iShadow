@@ -32,16 +32,16 @@ class ParamFields:
         self.cider_row = float('NaN');
         self.cider_radius = float('NaN');
 
-    def __str__(self):
-        str_rep =  str(self.us_elapsed) + ", "
-        str_rep += str(self.model_type) + ", "
-        str_rep += str(self.pred_x) + ", "
-        str_rep += str(self.pred_y) + ", "
-        str_rep += str(self.cider_col) + ", "
-        str_rep += str(self.cider_row) + ", "
-        str_rep += str(self.cider_radius)
+    def toList(self):
+        list_rep =  [self.us_elapsed]
+        list_rep.append(self.model_type)
+        list_rep.append(self.pred_x) 
+        list_rep.append(self.pred_y) 
+        list_rep.append(self.cider_col) 
+        list_rep.append(self.cider_row) 
+        list_rep.append(self.cider_radius)
 
-        return str_rep
+        return list_rep
 
 def main():
     parser = argparse.ArgumentParser()
@@ -255,7 +255,7 @@ def main():
             print "Input file", file_prefix + "\\" + file_prefix + "_b.raw", "could not be opened."
             sys.exit()
 
-    save_data = {"frame_results" : [str(param_fields) for param_fields in frame_results]}
+    save_data = {"frame_results" : np.array([param_fields.toList() for param_fields in frame_results])}
     if (interleaved):
         save_data["images_eye"] = read_images(output_a, eye_mask, file_prefix + "_eye", num_images, columnwise, outdoor_eye_mask)
         save_data["images_out"] = read_images(output_b, out_mask, file_prefix + "_out", num_images, columnwise, outdoor_out_mask)
