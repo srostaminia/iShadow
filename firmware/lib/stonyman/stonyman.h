@@ -52,6 +52,10 @@
 	#define EYE_CAM_PRIMARY
 #endif
 
+#if defined(OUT_VIDEO_OFF) && defined(EYE_VIDEO_OFF)
+	#define NO_VIDEO
+#endif
+
 #if defined(ANN_TRACKING) || defined(CIDER_TRACKING)
 	#ifndef USE_PARAM_FILE
 		#error ERROR: MUST ENABLE USE_PARAM_FILE IF DOING EYE TRACKING (STONYMAN.H)
@@ -104,13 +108,18 @@
 	#define BUFFER_HALF			SD_ROWS * 112
 
 	//#define ECAM_OFFSET     5376
-	#define SD_BLOCKS       (SD_ROWS * 112 * 4) / 512
-	#define SD_EOF_OFFSET		((112 * 112 * 2) / 512) * N_IMG_FRAME
+	#define SD_EOF_OFFSET		(((112 * 112 * 2) / 512) * N_IMG_FRAME) + 1
+
+	#define SD_BLOCKS_DUAL  (SD_ROWS * 112 * 4) / 512
+	#define SD_BLOCKS_SING  (SD_ROWS * 112 * 2) / 512
 
 	#if (112 % SD_ROWS != 0)
 
+		// This is only used in stony_dual
 		#define SD_MOD_OFFSET (112 % SD_ROWS) * 112
-		#define SD_MOD_BLOCKS ((112 % SD_ROWS) * 112 * 4 ) / 512
+
+		#define SD_MOD_BLOCKS_DUAL ((112 % SD_ROWS) * 112 * 4 ) / 512
+		#define SD_MOD_BLOCKS_SING ((112 % SD_ROWS) * 112 * 2 ) / 512
 
 		#if ((112 % SD_ROWS) * 112 * 4 ) % 512 != 0
 			#error ERROR: SD_ROWS INVALID, DOES NOT ALIGN TO 512B BOUNDARY
@@ -312,6 +321,7 @@
 void stony_init_default(void);
 void stony_init(short vref, short nbias, short aobias, char gain, char selamp);
 // void stony_reset(uint16_t wait_time, char gain, char selamp);
+void save_fd_packet();
 
 void config_adc_select(uint8_t cam);
 void config_adc_default();
@@ -321,12 +331,12 @@ int stony_dual();
 
 void mark_cider_packet(bool cider_failed);
 
-#ifdef IMPLICIT_EYE_TRACKING
+#ifdef EYE_TRACKING_ON
 int stony_single2(bool do_tracking);
 int stony_dual2(bool do_tracking);
 #endif
 
-#if defined(EYE_TRACKING_ON) && defined(SD_SEND)
+#if defined(EYE_TRACKING_ON)
 int stony_ann();
 #endif
 

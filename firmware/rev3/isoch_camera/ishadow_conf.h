@@ -6,15 +6,15 @@
 //#define EYE_VIDEO_OFF
 
 // Record video on out camera or not
-//#define OUT_VIDEO_ON
-#define OUT_VIDEO_OFF
+#define OUT_VIDEO_ON
+//#define OUT_VIDEO_OFF
 
 // Do eye tracking with ANN or CIDER model (mutually exclusive)
-// #define ANN_TRACKING
-// #define CIDER_TRACKING
+//#define ANN_TRACKING
+//#define CIDER_TRACKING
 
 // Choose USB or SD transmission
-// Note: USB can only handle one video stream, default is eye
+// Note: USB can only handle one video stream, defaults to eye if both are on
 //#define USB_SEND
 #define SD_SEND
 
