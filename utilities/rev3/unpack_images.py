@@ -21,6 +21,10 @@ class SaveOptions:
         self.do_render  = do_render
         self.do_text    = do_text
         self.save_needed= do_images or do_text
+        self.render_name= None
+
+    def setRenderName(self, render_name):
+        self.render_name = render_name
 
 class ParamFields:
     def __init__(self):
@@ -232,7 +236,11 @@ def main():
                 i += 1
 
         num_images = i
-        print "Total:", num_images, "images\n"
+        print "\nTotal:", num_images, "images\n"
+
+        if i == 0:
+            print "ERROR: No valid data found on disk (EOF at first sector)"
+            sys.exit()
 
         frame_results = np.array(frame_results)
 
@@ -259,8 +267,10 @@ def main():
     if (interleaved):
         save_data["images_eye"] = read_images(output_a, eye_mask, file_prefix + "_eye", num_images, columnwise, outdoor_eye_mask)
         save_data["images_out"] = read_images(output_b, out_mask, file_prefix + "_out", num_images, columnwise, outdoor_out_mask)
+        save_options.setRenderName("images_eye")
     else:
         save_data["images"] = read_images(output_a, out_mask, file_prefix, num_images, columnwise)
+        save_options.setRenderName("images")
 
     output_a.close()
 
@@ -337,8 +347,6 @@ def is_eof(result_data):
 def read_images(image_file, mask_data, out_filename, num_images, columnwise, outdoor_mask=None):
     success = True
 
-    print "Saving", out_filename + ":"
-
     images = np.zeros((num_images, 112 * 111))
 
     i = 0
@@ -355,8 +363,6 @@ def read_images(image_file, mask_data, out_filename, num_images, columnwise, out
             # success = read_packed_switching_image(image_file, mask_data, outdoor_mask, out_filename, columnwise, i)
 
         i += 1
-
-    print
 
     return images
 
@@ -443,20 +449,28 @@ def save_frames(filename, data, save_options, all_param_fields):
         if data_pair[0] == "frame_results":
             continue
 
+        data_name = data_pair[0]
+
+        save_name = filename
+        if "_" in data_name:
+            save_name += "_" + data_name.split("_")[1]
+
+        print "Saving", save_name
+
         images = data_pair[1]
+
         for (i, image_orig), param_fields in itertools.izip(enumerate(images), all_param_fields):
             image = image_orig.reshape((111,112))
 
             if save_options.do_images:
                 fig = plt.figure() 
                 im_display=plt.imshow(image, cmap = plt.cm.Greys_r, interpolation='nearest')
-                # plt.figimage(image, cmap = plt.cm.Greys_r)
 
                 ax=fig.add_subplot(111)
                 ax.set_xlim([0, 112])
                 ax.set_ylim([112, 0])
                 
-                if save_options.do_render:
+                if save_options.do_render and save_options.render_name == data_name:
                     if param_fields.model_type != 0:
                         ax.plot([param_fields.pred_x, param_fields.pred_x], [max(0, param_fields.pred_y - 10), min(111, param_fields.pred_y + 10)], 'r-', linewidth=1)
                         ax.plot([max(0, param_fields.pred_x - 10), min(111, param_fields.pred_x + 10)], [param_fields.pred_y, param_fields.pred_y], 'r-', linewidth=1)
@@ -472,16 +486,18 @@ def save_frames(filename, data, save_options, all_param_fields):
                 frame1.axes.get_xaxis().set_visible(False)
                 frame1.axes.get_yaxis().set_visible(False)
                 plt.axis('off')
-                plt.savefig(filename + "_" + ("%06d" % i) + ".png", dpi=112,bbox_inches='tight',pad_inches=0)
+                plt.savefig(save_name + "_" + ("%06d" % i) + ".png", dpi=112,bbox_inches='tight',pad_inches=0)
 
                 plt.close()
 
             if save_options.do_text:
-                text_file = open(filename + "_" + ("%06d" % i) + ".txt", 'w')
+                text_file = open(save_name + "_" + ("%06d" % i) + ".txt", 'w')
                 for line in image:
                     for item in line:
-                        text_file.write(str(item) + ' ')
+                        text_file.write(str(int(item)) + ' ')
                     text_file.write('\n')
                 text_file.close()
+
+        print
 
 main()
