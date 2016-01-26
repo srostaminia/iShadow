@@ -257,10 +257,10 @@ static void ann_predict_meanstd(uint16_t *pixels, float mean, float std)
     return;
 }
 
-int run_cider()
+bool run_cider()
 {
   uint8_t row_edges[6] = {0, 0, 0, 0, 0, 0}, col_edges[6] = {0, 0, 0, 0, 0, 0};
-  int8_t pupil_found = -1;
+  bool pupil_found = false;
   
   cider_colrow[1] = (uint8_t)((pred[1] < 0 ? 0 : pred[1]) > 111 ? 111 : pred[1]);
   cider_colrow[0] = (uint8_t)((pred[0] < 0 ? 0 : pred[0]) > 111 ? 111 : pred[0]);
@@ -308,7 +308,7 @@ int run_cider()
       if (last_r != 0 && (r / last_r < 0.75 || r / last_r > 1/0.75))
           continue;
       
-      pupil_found = 1;
+      pupil_found = true;
       best_ratio = ratio; best_r = r;
       best_center[0] = x_mid >= 0 ? (uint8_t)(x_mid+0.5) : (uint8_t)(x_mid-0.5);
       best_center[1] = y_mid >= 0 ? (uint8_t)(y_mid+0.5) : (uint8_t)(y_mid-0.5);
@@ -319,6 +319,8 @@ int run_cider()
   pred[1] = best_center[1];
   pred_radius = best_r;
   last_r = best_r;
+  
+  mark_cider_packet(!pupil_found);
 
   return pupil_found;
 }

@@ -58,7 +58,7 @@ static void set_value(short val, uint8_t cam);
 static void inc_value(short val, uint8_t cam);
 static void set_biases(short vref, short nbias, short aobias, uint8_t cam);
 
-static void finish_tx(uint8_t *pixel_buffer);
+static void finish_tx(uint8_t *pixel_buffer, bool save_pixels, bool is_dual);
 
 static void stony_pin_config();
 static void adc_dma_init();
@@ -231,7 +231,12 @@ void mark_cider_packet(bool cider_failed)
     fd_type = PARAM_CIDER_HIT;
 }
 
-static void finish_tx(uint8_t *pixel_buffer)
+void save_fd_packet()
+{
+  finish_tx(0, false, false);
+}
+
+static void finish_tx(uint8_t *pixel_buffer, bool save_pixels, bool is_dual)
 {
   uint8_t fd_packet_length;
 
@@ -277,11 +282,13 @@ static void finish_tx(uint8_t *pixel_buffer)
 #ifdef USB_SEND
 
   #ifdef USB_16BIT
+    if (save_pixels) {
       for (int i = USB_PIXELS - USB16_FINAL_PAD; i < USB_PIXELS; i++)
         CAST_TX_BUFFER(pixel_buffer)[i] = 0;
 
       while (packet_sending == 1);
       send_packet(pixel_buffer, USB_PACKET_SIZE);
+    }
   #endif // USB_16BIT
 
   while(packet_sending == 1);
@@ -295,21 +302,26 @@ static void finish_tx(uint8_t *pixel_buffer)
   while(packet_sending == 1);
 
 #elif defined(SD_SEND)
-
+    if (save_pixels) {
+      
   #if (112 % SD_ROWS != 0)
-    f_finish_write();
-    
-    if (disk_write_fast(0, (uint8_t *)pixel_buffer, sd_ptr, SD_MOD_BLOCKS / 2) != RES_OK)      return;
-    sd_ptr += SD_MOD_BLOCKS / 2;
+      f_finish_write();
+      
+      uint16_t mod_blocks = (is_dual) ? (SD_MOD_BLOCKS_DUAL) : (SD_MOD_BLOCKS_SING);
+
+      if (disk_write_fast(0, (uint8_t *)pixel_buffer, sd_ptr, mod_blocks) != RES_OK)      return;
+      sd_ptr += mod_blocks;
   #endif // (112 % SD_ROWS != 0)
 
-  f_finish_write();
+    f_finish_write();
+  }
+  
+  disk_erase(0, sd_ptr + SD_EOF_OFFSET, 1);
+  
   if (disk_write_fast(0, frame_data, sd_ptr, 1) != RES_OK)      return;
   sd_ptr += 1;
-
+  
   f_finish_write();
-
-  disk_erase(0, sd_ptr + SD_EOF_OFFSET, 1);
   
 #endif // SD_SEND
 }
@@ -330,7 +342,7 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
   short config;
   char flagUseAmplifier;
 
-#ifdef IMPLICIT_EYE_TRACKING
+#ifdef EYE_TRACKING_ON
   read_cider_params();
 #endif
 
@@ -587,7 +599,7 @@ void config_adc_default()
 
 // stony_single()
 // Capture an image from one camera (selected by PRIMARY_CAM in stonyman.h)
-#ifdef IMPLICIT_EYE_TRACKING
+#ifdef EYE_TRACKING_ON
 int stony_single() {
   return stony_single2(true);
 }
@@ -702,13 +714,13 @@ int stony_single()
         f_finish_write();
       }
       
-      if (disk_write_fast(0, (uint8_t *)base_buffers[buf_idx], sd_ptr, SD_BLOCKS / 2) != RES_OK)      return -1;
+      if (disk_write_fast(0, (uint8_t *)base_buffers[buf_idx], sd_ptr, SD_BLOCKS_SING) != RES_OK)      return -1;
       
       buf_idx = !buf_idx;
 
       active_buffer = CAST_TX_BUFFER(base_buffers[buf_idx]);
       
-      sd_ptr += SD_BLOCKS / 2;
+      sd_ptr += SD_BLOCKS_SING;
       data_cycle = 0;
     }
 #endif // SD_SEND
@@ -727,7 +739,7 @@ int stony_single()
 #endif
 
 #ifdef SEND_DATA
-  finish_tx(base_buffers[buf_idx]);
+  finish_tx(base_buffers[buf_idx], true, false);
 #endif
 
   return 0;
@@ -739,7 +751,7 @@ int stony_single()
 // Capture images simultaneously from both cameras
 // (note: only one camera can be streamed when in USB mode - selected by
 // PRIMARY_CAM in stonyman.h - though both cameras will still be read from)
-#ifdef IMPLICIT_EYE_TRACKING
+#ifdef EYE_TRACKING_ON
 int stony_dual() {
   return stony_dual2(true);
 }
@@ -767,11 +779,16 @@ int stony_dual()
   uint16_t this_pixel;
 
 #ifdef IMPLICIT_EYE_TRACKING
-  uint16_t *subsampled = (uint16_t*)malloc(num_subsample * sizeof(uint16_t));
+  uint16_t *subsampled;
+  uint16_t current_subsample;
 
-  StreamStats stream_stats;
-  init_streamstats(&stream_stats);
-#endif
+  if (do_tracking)
+  {
+    subsampled = (uint16_t*)malloc(num_subsample * sizeof(uint16_t));
+
+    current_subsample = 0;
+  }
+#endif // IMPLICIT_EYE_TRACKING
 
 #ifdef DO_8BIT_CONV
     uint8_t *active_buffer = (uint8_t *)base_buffers[0];
@@ -788,14 +805,14 @@ int stony_dual()
   ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
   ADC_RegularChannelConfig(ADC1, SECONDARY_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
   
-  set_pointer_value(MAJOR_REG, 0, OUT_CAM);
-  set_pointer_value(MAJOR_REG, 0, EYE_CAM);
+  set_pointer_value(MAJOR_REG, 0, PRIMARY_CAM);
+  set_pointer_value(MAJOR_REG, 0, SECONDARY_CAM);
 
   int data_cycle = 0;
 
 for (int i_major = 0; i_major < 112; i_major++) {    
-    set_pointer_value(MINOR_REG, 0, OUT_CAM);
-    set_pointer_value(MINOR_REG, 0, EYE_CAM);
+    set_pointer_value(MINOR_REG, 0, PRIMARY_CAM);
+    set_pointer_value(MINOR_REG, 0, SECONDARY_CAM);
     
     delay_us(1);
     
@@ -806,7 +823,6 @@ for (int i_major = 0; i_major < 112; i_major++) {
       PRIMARY_PARAM(INPH_BANK)->ODR &= ~PRIMARY_PARAM(INPH_PIN);
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
@@ -832,7 +848,6 @@ for (int i_major = 0; i_major < 112; i_major++) {
       SECONDARY_PARAM(INPH_BANK)->ODR &= ~SECONDARY_PARAM(INPH_PIN);
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       
@@ -840,7 +855,13 @@ for (int i_major = 0; i_major < 112; i_major++) {
       active_buffer[data_cycle] = RESIZE_PIXEL(this_pixel);
 
 #ifdef IMPLICIT_EYE_TRACKING
-//      update_streamstats(&stream_stats, subsampled, this_pixel, i_major, j_minor);
+      if (do_tracking &&
+          MASK(current_subsample, MASK_MAJOR) == i_major &&
+          MASK(current_subsample, MASK_MINOR) == j_minor)
+      {
+        subsampled[current_subsample] = this_pixel;
+        current_subsample++;
+      }
 #endif
 
 #ifdef USB_SEND
@@ -878,8 +899,8 @@ for (int i_major = 0; i_major < 112; i_major++) {
     active_buffer[(data_cycle - 1) + secondary_offset] = RESIZE_PIXEL(adc_values[1] - FPN_SEC(i_major, 111));
     
     if (i_major < 111) {
-      inc_pointer_value(MAJOR_REG, 1, OUT_CAM);
-      inc_pointer_value(MAJOR_REG, 1, EYE_CAM);
+      inc_pointer_value(MAJOR_REG, 1, PRIMARY_CAM);
+      inc_pointer_value(MAJOR_REG, 1, SECONDARY_CAM);
     }
 
 #ifdef SD_SEND
@@ -888,13 +909,13 @@ for (int i_major = 0; i_major < 112; i_major++) {
         f_finish_write();
       }
       
-      if (disk_write_fast(0, (uint8_t *)base_buffers[buf_idx], sd_ptr, SD_BLOCKS) != RES_OK)      return -1;
+      if (disk_write_fast(0, (uint8_t *)base_buffers[buf_idx], sd_ptr, SD_BLOCKS_DUAL) != RES_OK)      return -1;
       
       buf_idx = !buf_idx;
 
       active_buffer = CAST_TX_BUFFER(base_buffers[buf_idx]);
       
-      sd_ptr += SD_BLOCKS;
+      sd_ptr += SD_BLOCKS_DUAL;
       data_cycle = 0;
 
 #if (112 % SD_ROWS != 0)
@@ -915,66 +936,22 @@ for (int i_major = 0; i_major < 112; i_major++) {
   } // for (i_major)
 
 #ifdef IMPLICIT_EYE_TRACKING
-  ann_predict(subsampled);
-  free(subsampled);
+  if (do_tracking) {
+    ann_predict(subsampled);
+    free(subsampled);
+    fd_type = PARAM_ANN;
+  }
 #endif
-
-  time_elapsed = TIM5->CNT;
-  TIM5->CNT = 0;
 
 #ifdef SEND_DATA
-
-  // Record the elapsed time in the frame_data packet
-  *((uint32_t*)(frame_data + FD_TIMER_OFFSET)) = time_elapsed;
-
-  #ifdef IMPLICIT_EYE_TRACKING
-    frame_data[FD_MODEL_OFFSET] = PARAM_ANN;
-    frame_data[FD_PREDX_OFFSET] = pred[PRED_X];
-    frame_data[FD_PREDY_OFFSET] = pred[PRED_Y];
-  #else
-    frame_data[FD_MODEL_OFFSET] = PARAM_NOMODEL;
-  #endif // IMPLICIT_EYE_TRACKING
-
-#endif // SEND_DATA
-
-#ifdef USB_SEND
-
-  if (data_cycle != 0) {
-
-#ifdef USB_16BIT
-    for (int i = data_cycle; i < USB_PIXELS; i++)
-      active_buffer[i] = 0;
+  finish_tx(base_buffers[buf_idx], true, true);
 #endif
-    
-    while (packet_sending == 1);
-    send_packet(base_buffers[buf_idx], USB_PACKET_SIZE);
-  }
-
-//  usb_finish_tx(frame_data, num_params);
-#endif // USB_SEND
-
-#ifdef SD_SEND
-
-#if (112 % SD_ROWS != 0)
-  f_finish_write();
-  
-  if (disk_write_fast(0, (uint8_t *)base_buffers[buf_idx], sd_ptr, SD_MOD_BLOCKS) != RES_OK)      return -1;
-  sd_ptr += SD_MOD_BLOCKS;
-#endif // (112 % SD_ROWS != 0)
-
-  f_finish_write();
-  if (disk_write_fast(0, frame_data, sd_ptr, 1) != RES_OK)      return -1;
-  sd_ptr += 1;
-  
-  f_finish_write();
-#endif // SD_SEND
   
   return 0;
 }
 
 
-
-#if defined(EYE_TRACKING_ON) && defined(SD_SEND)
+#if defined(EYE_TRACKING_ON)
 // stony_ann()
 // Efficient ANN-based eye tracking - reads only the pixels needed for the ANN model
 // IMPORTANT: As of right now, this function is only included in SD mode, since USB is not implemented for it
@@ -1032,7 +1009,7 @@ int stony_ann()
       ADC_SoftwareStartConv(ADC1);
       
       if (pixel > 0)
-        update_streamstats2(&stream_stats, subsampled, this_pixel);
+        update_streamstats(&stream_stats, subsampled, this_pixel);
       
       // TODO: See if the streaming computation takes long enough that we don't need this delay
       // TODO, after the above: See if it's still faster just to do all the stats at the end, as with stony_single / _dual
@@ -1045,27 +1022,16 @@ int stony_ann()
       adc_idx = !adc_idx;
   }
   
-  update_streamstats2(&stream_stats, subsampled, this_pixel);
+  update_streamstats(&stream_stats, subsampled, this_pixel);
   
-  ann_predict(subsampled, &stream_stats);
+  ann_predict2(subsampled, &stream_stats);
   free(subsampled);
-
-  frame_data[FD_MODEL_OFFSET] = PARAM_ANN;
-  frame_data[FD_PREDX_OFFSET] = pred[PRED_X];
-  frame_data[FD_PREDY_OFFSET] = pred[PRED_Y];
   
-  time_elapsed = TIM5->CNT;
-  TIM5->CNT = 0;
-  *((uint32_t*)(frame_data + FD_TIMER_OFFSET)) = time_elapsed;
-
- if (disk_write_fast(0, frame_data, sd_ptr, 1) != RES_OK)      return -1;
- sd_ptr += 1;
-
- f_finish_write();
+  fd_type = PARAM_ANN;
 
   return 0;
 }
-#endif // defined(EYE_TRACKING_ON) && defined(SD_SEND)
+#endif // defined(EYE_TRACKING_ON)
 
 
 #ifdef CIDER_TRACKING

@@ -10,6 +10,7 @@
 
 #include "stm32l1xx.h"
 #include "stonyman.h"
+#include "stdbool.h"
   
 // #define NUM_SUBSAMPLE 2273
 // #define NUM_HIDDEN 6
@@ -59,7 +60,7 @@ void ann_predict2(uint16_t *pixels, StreamStats *ss);
 
 // TODO: Decide whether to remove functions from eye_models based on stonyman_conf flags
 void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels);
-int run_cider();
+bool run_cider();
 uint16_t quick_percentile(uint16_t *base_row);
 
 #pragma inline=forced

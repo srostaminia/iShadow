@@ -22,9 +22,6 @@ extern uint16_t Out_Data_Offset;
 extern uint8_t Stream_Buff[24];
 extern uint8_t IT_Clock_Sent;
 
-// FIXME: Remove this
-extern uint32_t sd_ptr;
-
 #ifdef CIDER_TRACKING
 extern float last_r;
 #endif
@@ -75,16 +72,16 @@ int main()
     while (packet_sending == 1);
 #endif
 
+    // Do an ANN eye tracking iteration if it isn't done implicitly in stony_*
+#if defined(EYE_VIDEO_OFF) && defined(ANN_TRACKING)
+    stony_ann();
+#endif
+    
     // Record a video frame if configured
 #if defined(OUT_VIDEO_ON) && defined(EYE_VIDEO_ON)
     stony_dual();
 #elif defined(OUT_VIDEO_ON) || defined(EYE_VIDEO_ON)
     stony_single();
-#endif
-    
-    // Do one ANN eye tracking iteration if it wasn't done implicitly in stony_*
-#if defined(EYE_VIDEO_OFF) && defined(ANN_TRACKING)
-    stony_ann();
 #endif
     
 #ifdef USB_SEND
@@ -112,30 +109,32 @@ void cider_loop()
 #endif
 
     if (use_ann) {
-#if defined(EYE_VIDEO_ON) && defined(OUT_VIDEO_ON)
-      stony_dual();
-#elif defined(EYE_VIDEO_ON)
-      stony_single();
+      // Do an ANN eye tracking iteration if it isn't done implicitly in stony_*
+#if defined(EYE_VIDEO_OFF)
+    stony_ann();
+#endif
+      
+    // Record a video frame if configured
+#if defined(OUT_VIDEO_ON) && defined(EYE_VIDEO_ON)
+    stony_dual();
+#elif defined(EYE_VIDEO_ON) || defined(OUT_VIDEO_ON)
+    stony_single();
 #else
-      stony_ann();
+    save_fd_packet();
 #endif
 
       use_ann = false;
       last_r = 0;
     }
     else {
-      if (run_cider() < 0)
-        use_ann = true;
+      use_ann = !(run_cider());
       
 #if defined(EYE_VIDEO_ON) && defined(OUT_VIDEO_ON)
-      mark_cider_packet(use_ann);
       stony_dual2(false);
-#elif defined(EYE_VIDEO_ON)
-      mark_cider_packet(use_ann);
+#elif defined(EYE_VIDEO_ON) || defined(OUT_VIDEO_ON)
       stony_single2(false);
 #else
-      // FIXME: write this function (split finish_tx?)
-//      send_cider_packet();
+      save_fd_packet();
 #endif
     }
 
