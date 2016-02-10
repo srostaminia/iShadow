@@ -45,6 +45,10 @@
 	#define EYE_TRACKING_ON
 #endif
 
+#if defined(OUT_VIDEO_OFF) && defined(EYE_VIDEO_OFF) && !defined(EYE_TRACKING_ON)
+	#error ERROR: NO TASK CONFIGURED - ENABLE EYE TRACKING AND / OR VIDEO STREAMING (STONYMAN.H)
+#endif
+
 // If eye camera is being recorded at all, it is primary
 #if defined(OUT_VIDEO_ON) && !defined(EYE_VIDEO_ON)
 	#define OUT_CAM_PRIMARY
@@ -96,9 +100,9 @@
 #define LED_LOW         0
 
 //#define LED_HIGH        0        
-#define LED_HIGH          0x59E       // 1.15V
-//#define LED_HIGH        0x5D1         // 1.25V
-//#define LED_HIGH        0x64D
+// #define LED_HIGH          0x59E       // 1.15V
+// #define LED_HIGH        0x5D1         // 1.25V
+#define LED_HIGH        0x64D
 //#define LED_HIGH        0x746
 
 #ifdef SD_SEND
