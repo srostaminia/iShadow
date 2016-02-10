@@ -51,81 +51,82 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("file_prefix", help="output file prefix")
-    parser.add_argument("--num_images", type = int, help="retrieve a set number of frames (ignoring end-of-data flag)")
-    parser.add_argument("--out_mask", help="outward-facing camera mask to apply to data")
-    parser.add_argument("--eye_mask", help="eye-facing camera mask to apply to data")
+    parser.add_argument("--n-video", type=int, choices=[0,1,2], default=1, help="number of video streams stored in the data (default=1)")
+    parser.add_argument("--disknum", default=2, help="/dev/disk[N] to open (default = 2)", type=int)
     parser.add_argument("--columnwise", action="store_true", help="images recorded columnwise on hardware instead of rowwise")
-    parser.add_argument("--disknum", help="/dev/disk[N] to open (default = 2)", type=int)
+    parser.add_argument("--num-frames", type = int, help="retrieve a set number of frames (ignoring end-of-data flag)")
+    parser.add_argument("--pri-mask", help="FPN mask to apply to primary video stream")
+    parser.add_argument("--sec-mask", help="FPN mask to apply to secondary video stream (only used if --n-video=2)")
     parser.add_argument("--overwrite", action="store_true", help="overwrite data folder if it already exists")
     parser.add_argument("--save-txt", action="store_true", help="save all the image data as separate .txt files")
     parser.add_argument("--save-png", action="store_true", help="save all the images as separate .png image files")
     parser.add_argument("--render", action="store_true", help="render eye tracking results in saved image files (ignored if images are not being saved)")
 
     groupA = parser.add_mutually_exclusive_group()
-    groupA.add_argument("-o", "--offset", help="Number of images / pairs to skip on SD card", type=int)
-    groupA.add_argument("--reuse-raw", action="store_true", help="Reuse previously stored raw image data files")
+    groupA.add_argument("-o", "--offset", help="number of images / pairs to skip on SD card", type=int)
+    groupA.add_argument("--reuse-raw", action="store_true", help="reuse previously stored raw image data files")
 
-    groupB = parser.add_mutually_exclusive_group()
-    groupB.add_argument("--outdoor-switch", nargs=2, help="out and eye mask (in that order) for outdoor switching mode")
-    groupB.add_argument("--no-interleave", action="store_true", help="images are stored singly, not interleaved")
+    # groupB = parser.add_mutually_exclusive_group()
+    # groupB.add_argument("--outdoor-switch", nargs=2, help="out and eye mask (in that order) for outdoor switching mode")
 
     args = parser.parse_args()
 
     file_prefix = args.file_prefix
-    out_mask_filename = args.out_mask
-    eye_mask_filename = args.eye_mask
-    num_images = args.num_images
-    interleaved = not args.no_interleave
+    pri_mask_filename = args.pri_mask
+    sec_mask_filename = args.sec_mask
+    num_frames = args.num_frames
+    n_video = args.n_video
     columnwise = args.columnwise
     overwrite = args.overwrite
     num_skip = args.offset if args.offset != None else 0
-    outdoor_masks = args.outdoor_switch
+    # outdoor_masks = args.outdoor_switch
 
     save_options = SaveOptions(args.save_png, args.render, args.save_txt)
 
-    unit_size = 25088
-
-    if interleaved:
-        unit_size *= 2
+    unit_size = 25088 * n_video
     
     # For parameter data tacked on to each frame
     unit_size += 512
 
-    if (num_images != None and num_images <= 0):
-        print "Error: Must specify positive nonzero value for num_images"
+    if (num_frames != None and num_frames <= 0):
+        print "Error: Must specify positive nonzero value for num_frames"
         sys.exit()
 
-    if (args.disknum == None):
-        input_filename = "/dev/disk2"
-    else:
-        input_filename = "/dev/disk" + str(args.disknum)
+    # These options are separate in case we get around to saving video at some point
+    if args.render and not args.save_png:
+        print "Error: Cannot render without saving PNGs"
+        sys.exit()
 
-    if eye_mask_filename != None:
-        eye_mask = load_mask(args.eye_mask)
-    else:
-        eye_mask = np.zeros((112,112)).astype('int64')
+    if n_video == 0 and (args.save_png or args.save_txt):
+        print "Error: Cannot save PNG or text with no video streams"
+        sys.exit()
 
-    if out_mask_filename != None:
-        out_mask = load_mask(args.out_mask)
-    else:
-        out_mask = np.zeros((112,112)).astype('int64')
+    input_filename = "/dev/disk" + str(args.disknum)
 
-    if outdoor_masks != None:
-        outdoor_out_mask = load_mask(outdoor_masks[0])
-        outdoor_eye_mask = load_mask(outdoor_masks[1])
+    if sec_mask_filename != None:
+        sec_mask = load_mask(args.sec_mask)
     else:
-        outdoor_out_mask = None
-        outdoor_eye_mask = None
+        sec_mask = np.zeros((112,112)).astype('int64')
 
-    if interleaved:
+    if pri_mask_filename != None:
+        pri_mask = load_mask(args.pri_mask)
+    else:
+        pri_mask = np.zeros((112,112)).astype('int64')
+
+    # if outdoor_masks != None:
+    #     outdoor_pri_mask = load_mask(outdoor_masks[0])
+    #     outdoor_sec_mask = load_mask(outdoor_masks[1])
+    # else:
+    outdoor_pri_mask = None
+    outdoor_sec_mask = None
+
+    if n_video == 2:
         a_postfix = "_a.raw"
     else:
         a_postfix = ".raw"
 
     if args.reuse_raw:
         os.chdir(file_prefix)
-        num_images = num_images
-
         results_out = make_results_file(file_prefix)
     else:
         try:
@@ -141,10 +142,7 @@ def main():
             input_file.close()
             sys.exit()
 
-        if interleaved:
-            input_file.seek(num_skip * unit_size)
-        else:
-            input_file.seek(num_skip * unit_size)
+        input_file.seek(num_skip * unit_size)
 
         if not os.path.exists(file_prefix):
             os.makedirs(file_prefix)
@@ -159,40 +157,44 @@ def main():
 
         os.chdir(file_prefix)
 
-        try:
-            output_a = open(file_prefix + a_postfix, "wb")
-        except IOError:
-            print "Input file", file_prefix + "\\" + file_prefix + a_postfix, "could not be opened."
-            sys.exit()
-
-        if (interleaved):
+        if n_video != 0:
             try:
-                output_b = open(file_prefix + "_b.raw", "wb")
+                output_a = open(file_prefix + a_postfix, "wb")
             except IOError:
-                print "Input file", file_prefix + "\\" + file_prefix + "_b.raw", "could not be opened."
+                print "Input file", file_prefix + "\\" + file_prefix + a_postfix, "could not be opened."
                 sys.exit()
 
+            if (n_video == 2):
+                try:
+                    output_b = open(file_prefix + "_b.raw", "wb")
+                except IOError:
+                    print "Input file", file_prefix + "\\" + file_prefix + "_b.raw", "could not be opened."
+                    sys.exit()
+
         frame_results = []
+        # FIXME: unsure if --num-frames is currently working
         print "Reading image data..."
-        if (num_images != None):
-            for i in range(num_images):
-                for j in range(3):
-                    data = input_file.read(7168)
+        if (num_frames != None):
+            for i in range(num_frames):
+                if n_video != 0:
+                    for j in range(3):
+                        data = input_file.read(7168)
+                        output_a.write(data)
+
+                        if (n_video == 2):
+                            data = input_file.read(7168)
+                            output_b.write(data)
+
+                    data = input_file.read(3584)
                     output_a.write(data)
 
-                    if (interleaved):
-                        data = input_file.read(7168)
+                    if (n_video == 2):
+                        data = input_file.read(3584)
                         output_b.write(data)
+
 
                 if (i % 500 == 0 and i != 0):
                     print i, "images so far"
-
-                data = input_file.read(3584)
-                output_a.write(data)
-
-                if (interleaved):
-                    data = input_file.read(3584)
-                    output_b.write(data)
 
                 data = input_file.read(512)
 
@@ -207,36 +209,38 @@ def main():
                 data_a = ''
                 data_b = ''
 
-                for j in range(3):
-                    data_a += input_file.read(7168)
+                if n_video != 0:
+                    for j in range(3):
+                        data_a += input_file.read(7168)
 
-                    if (interleaved):
-                        data_b += input_file.read(7168)
+                        if (n_video == 2):
+                            data_b += input_file.read(7168)
 
-                if (i % 500 == 0 and i != 0):
-                    print i, "images so far"
+                    data_a += input_file.read(3584)
 
-                data_a += input_file.read(3584)
-
-                if (interleaved):
-                    data_b += input_file.read(3584)
+                    if (n_video == 2):
+                        data_b += input_file.read(3584)
 
                 data_param = input_file.read(512)
 
                 if (is_eof(data_param)):
                     break
 
-                output_a.write(data_a)
-
-                if (interleaved):
-                    output_b.write(data_b)
+                if (i % 500 == 0 and i != 0):
+                    print i, "images so far"
 
                 frame_results.append(parse_write_results(data_param, results_out))
 
+                if n_video != 0:
+                    output_a.write(data_a)
+
+                    if (n_video == 2):
+                        output_b.write(data_b)
+
                 i += 1
 
-        num_images = i
-        print "\nTotal:", num_images, "images\n"
+        num_frames = i
+        print "\nTotal:", num_frames, "images\n"
 
         if i == 0:
             print "ERROR: No valid data found on disk (EOF at first sector)"
@@ -245,37 +249,41 @@ def main():
         frame_results = np.array(frame_results)
 
         input_file.close()
-        output_a.close()
 
-        if (interleaved):
-            output_b.close()
+        if n_video != 0:
+            output_a.close()
 
-    try:
-        output_a = open(file_prefix + a_postfix, "rb")
-    except IOError:
-        print "Input file", file_prefix + "\\" + file_prefix + a_postfix, "could not be opened."
-        sys.exit()
+            if (n_video == 2):
+                output_b.close()
 
-    if (interleaved):
+    if n_video != 0:
         try:
-            output_b = open(file_prefix + "_b.raw", "rb")
+            output_a = open(file_prefix + a_postfix, "rb")
         except IOError:
-            print "Input file", file_prefix + "\\" + file_prefix + "_b.raw", "could not be opened."
+            print "Input file", file_prefix + "\\" + file_prefix + a_postfix, "could not be opened."
             sys.exit()
 
+        if (n_video == 2):
+            try:
+                output_b = open(file_prefix + "_b.raw", "rb")
+            except IOError:
+                print "Input file", file_prefix + "\\" + file_prefix + "_b.raw", "could not be opened."
+                sys.exit()
+
     save_data = {"frame_results" : np.array([param_fields.toList() for param_fields in frame_results])}
-    if (interleaved):
-        save_data["images_eye"] = read_images(output_a, eye_mask, file_prefix + "_eye", num_images, columnwise, outdoor_eye_mask)
-        save_data["images_out"] = read_images(output_b, out_mask, file_prefix + "_out", num_images, columnwise, outdoor_out_mask)
+    if (n_video == 2):
+        save_data["images_eye"] = read_images(output_a, pri_mask, file_prefix + "_eye", num_frames, columnwise, outdoor_pri_mask)
+        save_data["images_out"] = read_images(output_b, sec_mask, file_prefix + "_out", num_frames, columnwise, outdoor_sec_mask)
         save_options.setRenderName("images_eye")
-    else:
-        save_data["images"] = read_images(output_a, out_mask, file_prefix, num_images, columnwise)
+    elif (n_video == 1):
+        save_data["images"] = read_images(output_a, pri_mask, file_prefix, num_frames, columnwise)
         save_options.setRenderName("images")
 
-    output_a.close()
+    if n_video != 0:
+        output_a.close()
 
-    if (interleaved):
-        output_b.close()
+        if (n_video == 2):
+            output_b.close()
         
     results_out.close()
 
@@ -344,16 +352,16 @@ def is_eof(result_data):
     return True
 
 
-def read_images(image_file, mask_data, out_filename, num_images, columnwise, outdoor_mask=None):
+def read_images(image_file, mask_data, out_filename, num_frames, columnwise, outdoor_mask=None):
     success = True
 
-    images = np.zeros((num_images, 112 * 111))
+    images = np.zeros((num_frames, 112 * 111))
 
     i = 0
-    while success and ((num_images == 0) or (i < num_images)):
+    while success and ((num_frames == 0) or (i < num_frames)):
         if i % 500 == 0 and i != 0:
-            if num_images > 0:
-                print i, '/', num_images
+            if num_frames > 0:
+                print i, '/', num_frames
             else:
                 print i, '/', 
 

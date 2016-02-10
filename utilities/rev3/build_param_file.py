@@ -57,8 +57,6 @@ def main():
         ind = np.lexsort((mask[:,0], mask[:,1]))
 
         mask = np.array([[mask[i,0], mask[i,1]] for i in ind])
-
-        keyboard();
         
         wih = np.array([wih[i,:] for i in ind])
 
