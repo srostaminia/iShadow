@@ -2,7 +2,7 @@
 
 <workspace>
   <project>
-    <path>$WS_DIR$\isoch_camera.ewp</path>
+    <path>$WS_DIR$\ishadow_driver.ewp</path>
   </project>
   <batchBuild/>
 </workspace>

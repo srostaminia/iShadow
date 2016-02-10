@@ -603,7 +603,7 @@
         </option>
         <option>
           <name>OOCOutputFile</name>
-          <state>isoch_camera.srec</state>
+          <state>ishadow_driver.srec</state>
         </option>
         <option>
           <name>OOCCommandLineProducer</name>
