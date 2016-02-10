@@ -6,8 +6,8 @@
 //#define EYE_VIDEO_OFF
 
 // Record video on out camera or not
-#define OUT_VIDEO_ON
-//#define OUT_VIDEO_OFF
+//#define OUT_VIDEO_ON
+#define OUT_VIDEO_OFF
 
 // Do eye tracking with ANN or CIDER model (mutually exclusive)
 //#define ANN_TRACKING

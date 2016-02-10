@@ -82,6 +82,8 @@ int main()
     stony_dual();
 #elif defined(OUT_VIDEO_ON) || defined(EYE_VIDEO_ON)
     stony_single();
+#else
+    save_fd_packet();
 #endif
     
 #ifdef USB_SEND
