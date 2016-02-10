@@ -379,65 +379,65 @@ def read_packed_image(image_file, mask_data, out_filename, columnwise, index):
             
             image[i,j] = value
 
-    if (columnwise):
+    if columnwise:
         image = image.T
 
     image -= mask_data
     image = image[1:]
 
     # return flattened array
-    return image.ravel()
+    return image.ravel('F')
 
-def read_packed_switching_image(image_file, mask_data, outdoor_mask, out_filename, columnwise, index):
-    image = []
-    for i in range(112):
-        image.append([])
+# def read_packed_switching_image(image_file, mask_data, outdoor_mask, out_filename, columnwise, index):
+#     image = []
+#     for i in range(112):
+#         image.append([])
         
-        for j in range(112):
-            data = image_file.read(2)
+#         for j in range(112):
+#             data = image_file.read(2)
             
-            if data == "":
-                # return []
-                return False
+#             if data == "":
+#                 # return []
+#                 return False
             
-            value = struct.unpack('h', data)[0]
+#             value = struct.unpack('h', data)[0]
             
-            image[i].append(value)
+#             image[i].append(value)
     
-    figure = plt.figure()
+#     figure = plt.figure()
 
-    image = np.array(image)
+#     image = np.array(image)
 
-    outdoor_mode = image[0][0]
+#     outdoor_mode = image[0][0]
 
-    if outdoor_mode == 1:
-        switch_text = 'outdoors'
-        image -= outdoor_mask
-    else:
-        switch_text = 'indoors'
-        image -= mask_data
+#     if outdoor_mode == 1:
+#         switch_text = 'outdoors'
+#         image -= outdoor_mask
+#     else:
+#         switch_text = 'indoors'
+#         image -= mask_data
 
-    image = image[1:]
+#     if not columnwise:
+#         image = image.T
 
-    if (columnwise):
-        image = image.T
+#     image = image[1:]
 
-    plt.figimage(image, cmap = plt.cm.Greys_r)
+#     plt.figimage(image, cmap = plt.cm.Greys_r)
 
-    figure.set_size_inches(1, 1)
+#     figure.set_size_inches(1, 1)
 
-    plt.savefig(out_filename + "_" + ("%06d" % index) + "_" + switch_text + ".png", dpi=112)
+#     plt.savefig(out_filename + "_" + ("%06d" % index) + "_" + switch_text + ".png", dpi=112)
 
-    plt.close()
+#     plt.close()
 
-    text_file = open(out_filename + "_" + ("%06d" % index) + "_" + switch_text + ".txt", 'w')
-    for line in image:
-        for item in line:
-            text_file.write(str(item) + ' ')
-        text_file.write('\n')
-    text_file.close()
+#     text_file = open(out_filename + "_" + ("%06d" % index) + "_" + switch_text + ".txt", 'w')
+#     for line in image:
+#         for item in line:
+#             text_file.write(str(item) + ' ')
+#         text_file.write('\n')
+#     text_file.close()
 
-    return True
+#     return True
 
 def save_frames(filename, data, save_options, all_param_fields):
     savemat(filename + ".mat", data, format='7.3', store_python_metadata=True)
@@ -460,7 +460,7 @@ def save_frames(filename, data, save_options, all_param_fields):
         images = data_pair[1]
 
         for (i, image_orig), param_fields in itertools.izip(enumerate(images), all_param_fields):
-            image = image_orig.reshape((111,112))
+            image = image_orig.reshape((111,112),order='F')
 
             if save_options.do_images:
                 fig = plt.figure() 
