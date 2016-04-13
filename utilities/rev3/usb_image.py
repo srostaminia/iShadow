@@ -33,7 +33,7 @@ def main():
     group.add_argument("--noflip", help="don't flip image (debug option)", action='store_true')
     
     parser.add_argument("--columnwise", help="images being sent in column-major order", action="store_true")
-    parser.add_argument("--norender", help="don't render ANN / CIDER output", action="store_true")
+    parser.add_argument("--render", help="render ANN / CIDER output", action="store_true")
 
     args = parser.parse_args()
     debug_folder = args.debug_folder
@@ -41,7 +41,7 @@ def main():
     gen_mask_file = args.gen_mask
     columnwise = args.columnwise
     noflip = args.noflip
-    norender = args.norender
+    render = args.render
 
     if (debug_folder != None): 
         if os.path.isdir(debug_folder):
@@ -72,7 +72,7 @@ def main():
         gen_mask = True
 
     if debug == True or gen_mask == True:
-        norender = True
+        render = False
 
     endp = get_usb_endp()
 
@@ -93,7 +93,7 @@ def main():
 
     packet_size = 92 * 16 / TX_BITS
 
-    if norender:
+    if render:
         vline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
         hline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
         vline_cider,=ax.plot([-10, -9], [-10, -9], 'b-', linewidth=2)
@@ -206,7 +206,7 @@ def main():
             cider_row = -10
             cider_radius = 0
 
-        if norender:
+        if render:
             if model_type == 0:
                 vline.set_data([-10, -10], [-10, -10])
                 hline.set_data([-10, -10], [-10, -10])
@@ -252,7 +252,8 @@ def main():
         image.set_data(frame)
         image.autoscale() 
 
-        plt.draw()
+        fig.canvas.draw()
+        fig.canvas.flush_events()
 
         iters += 1
 
@@ -262,7 +263,7 @@ def main():
 
         # endp.read(1840)
 
-        if (debug and iters < 2):        
+        if (debug and iters == 2):        
             out_text = open(debug_folder + "/usb_frame.txt",'w')
             for line in frame:
                 for item in line:
