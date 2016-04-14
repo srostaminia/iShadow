@@ -44,6 +44,7 @@ def main():
     
     parser.add_argument("--columnwise", help="images being sent in column-major order", action="store_true")
     parser.add_argument("--norender", help="don't render ANN / CIDER output", action="store_true")
+    parser.add_argument("--invert", help="invert black / white", action="store_true")
 
     args = parser.parse_args()
     debug_folder = args.debug_folder
@@ -52,6 +53,7 @@ def main():
     columnwise = args.columnwise
     noflip = args.noflip
     norender = args.norender
+    invert = args.invert
 
     if (debug_folder != None): 
         if os.path.isdir(debug_folder):
@@ -221,6 +223,12 @@ def main():
         if not gen_mask and not noflip and not debug:
             frame = np.fliplr(frame)
 
+        if invert:
+            if TX_BITS == 8:
+                frame = 255 - frame
+            else:
+                frame = 4095 - frame
+
         image.set_data(frame)
         image.autoscale() 
 
@@ -229,7 +237,7 @@ def main():
 
         iters += 1
 
-        if (debug and iters < 2):        
+        if (debug and iters == 2):        
             out_text = open(debug_folder + "/usb_frame.txt",'w')
             for line in frame:
                 for item in line:
