@@ -15,11 +15,12 @@
 
 // Choose USB or SD transmission
 // Note: USB can only handle one video stream, defaults to eye if both are on
-//#define USB_SEND
-#define SD_SEND
+#define USB_SEND
+//#define SD_SEND
 
 // Comment out to collect data row-wise instead of column-wise
-#define COLUMN_COLLECT
+//#define ROW_MAJOR
+#define COLUMN_MAJOR
 
 // Enables use of an uploaded binary file for FPN masks and eye model parameters
 //#define USE_PARAM_FILE
