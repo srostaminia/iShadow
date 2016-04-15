@@ -34,14 +34,18 @@ def main():
         print "ERROR: FPN folder", fpn_folder, "does not exist or is a file"
         sys.exit()
 
-    for mask_name in mask_names:
-        mask_filename = fpn_folder + "/" + mask_name + ".pi"
+    fpn_masks = {}
+    if fpn_folder != None:
+        for mask_name in mask_names:
+            mask_filename = fpn_folder + "/" + mask_name + ".pi"
 
-        if fpn_folder != None and os.path.exists(mask_filename):
-            mask_file = open(mask_filename,'rb')
-            fpn_masks[mask_name] = pickle.load(mask_file)
-            mask_file.close()
-        else:
+            if fpn_folder != None and os.path.exists(mask_filename):
+                mask_file = open(mask_filename,'rb')
+                fpn_masks[mask_name] = pickle.load(mask_file)
+                mask_file.close()
+
+    for mask_name in mask_names:
+        if mask_name not in fpn_masks.keys():
             fpn_masks[mask_name] = np.zeros((112,112))
 
     if model_folder != None:

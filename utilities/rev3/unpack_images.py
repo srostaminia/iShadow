@@ -177,12 +177,12 @@ def main():
         if (num_frames != None):
             for i in range(num_frames):
                 if n_video != 0:
-                    for j in range(3):
-                        data = input_file.read(7168)
+                    for j in range(2):
+                        data = input_file.read(10752)
                         output_a.write(data)
 
                         if (n_video == 2):
-                            data = input_file.read(7168)
+                            data = input_file.read(10752)
                             output_b.write(data)
 
                     data = input_file.read(3584)
@@ -293,9 +293,9 @@ def main():
 
 def make_results_file(file_prefix):
     try:
-        results_out = open(file_prefix + "/" + file_prefix + "_model_results.csv", "w")
+        results_out = open(file_prefix + "_model_results.csv", "w")
     except IOError:
-        print "Output file", file_prefix + "\\" + file_prefix + "_model_results.csv", "could not be opened."
+        print "Output file", file_prefix + "/" + file_prefix + "_model_results.csv", "could not be opened."
         sys.exit()
 
     return results_out
