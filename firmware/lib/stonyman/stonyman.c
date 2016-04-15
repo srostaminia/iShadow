@@ -705,9 +705,6 @@ int stony_single()
       }
     } // for (j_minor)
 
-    if (i_major < 111)
-      inc_pointer_value(MAJOR_REG, 1, PRIMARY_CAM);
-
 #ifdef SD_SEND
     if (data_cycle / 112 == SD_ROWS) {
       if (i_major > SD_ROWS - 1) {
@@ -724,6 +721,9 @@ int stony_single()
       data_cycle = 0;
     }
 #endif // SD_SEND
+    
+    if (i_major < 111)
+      inc_pointer_value(MAJOR_REG, 1, PRIMARY_CAM);
 
 #ifndef SEND_DATA
     data_cycle = -1;
@@ -897,11 +897,6 @@ for (int i_major = 0; i_major < 112; i_major++) {
     // *(__IO uint32_t *) led2 = LED_LOW;
     
     active_buffer[(data_cycle - 1) + secondary_offset] = RESIZE_PIXEL(adc_values[1] - FPN_SEC(i_major, 111));
-    
-    if (i_major < 111) {
-      inc_pointer_value(MAJOR_REG, 1, PRIMARY_CAM);
-      inc_pointer_value(MAJOR_REG, 1, SECONDARY_CAM);
-    }
 
 #ifdef SD_SEND
     if (data_cycle / 112 == SD_ROWS) {
@@ -929,6 +924,11 @@ for (int i_major = 0; i_major < 112; i_major++) {
 #endif
     }
 #endif // SD_SEND
+    
+    if (i_major < 111) {
+      inc_pointer_value(MAJOR_REG, 1, PRIMARY_CAM);
+      inc_pointer_value(MAJOR_REG, 1, SECONDARY_CAM);
+    }
 
 #ifndef SEND_DATA
     data_cycle = -1;
