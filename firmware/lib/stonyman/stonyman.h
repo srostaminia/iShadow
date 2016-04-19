@@ -169,7 +169,7 @@
 #define DHR12R1_OFFSET      ((uint32_t)0x00000008)
 #define DHR12R2_OFFSET      ((uint32_t)0x00000014)
 
-#define CAM_AHB							RCC_AHBPeriph_GPIOA | RCC_AHBPeriph_GPIOB | RCC_AHBPeriph_GPIOC
+#define CAM_AHB							RCC_AHBPeriph_GPIOA | RCC_AHBPeriph_GPIOB | RCC_AHBPeriph_GPIOF
 
 #define OCAM_RESP_BANK      GPIOB
 #define OCAM_RESP_PIN       GPIO_Pin_0
@@ -185,19 +185,22 @@
 #define OCAM_AN_PIN         GPIO_Pin_2
 #define OCAM_ADC_CHAN       ADC_Channel_2
 
-#define ECAM_RESP_BANK      GPIOC
+#define ECAM_RESP_BANK      GPIOF
 #define ECAM_RESP_PIN       GPIO_Pin_0
-#define ECAM_INCP_BANK      GPIOC
+#define ECAM_INCP_BANK      GPIOF
 #define ECAM_INCP_PIN       GPIO_Pin_1
-#define ECAM_RESV_BANK      GPIOC
+#define ECAM_RESV_BANK      GPIOF
 #define ECAM_RESV_PIN       GPIO_Pin_2
-#define ECAM_INCV_BANK      GPIOC
+#define ECAM_INCV_BANK      GPIOF
 #define ECAM_INCV_PIN       GPIO_Pin_3
-#define ECAM_INPH_BANK      GPIOC
+#define ECAM_INPH_BANK      GPIOF
 #define ECAM_INPH_PIN       GPIO_Pin_4
-#define ECAM_AN_BANK        GPIOA
-#define ECAM_AN_PIN         GPIO_Pin_3
-#define ECAM_ADC_CHAN       ADC_Channel_3
+#define ECAM_AN_BANK        GPIOF
+#define ECAM_AN_PIN         GPIO_Pin_10
+#define ECAM_ADC_CHAN       ADC_Channel_31
+
+#define ECAM_OE_BANK		GPIOF
+#define ECAM_OE_PIN			GPIO_Pin_5
 
 #define OUT_CAM             0
 #define EYE_CAM             1
