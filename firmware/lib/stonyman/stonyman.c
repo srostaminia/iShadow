@@ -374,6 +374,9 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
   set_pin(ECAM_INCP_BANK, ECAM_INCP_PIN, 0);
   set_pin(ECAM_INPH_BANK, ECAM_INPH_PIN, 0);
 
+  // Set chip select
+  set_pin(ECAM_OE_BANK, ECAM_OE_PIN, 1);
+
   //clear all chip register values
   clear_values(OUT_CAM);
   clear_values(EYE_CAM);
@@ -464,6 +467,9 @@ static void stony_pin_config()
   
   GPIO_InitStructure.GPIO_Pin = ECAM_AN_PIN;
   GPIO_Init(ECAM_AN_BANK, &GPIO_InitStructure);
+
+  GPIO_InitStructure.GPIO_Pin = ECAM_OE_PIN;
+  GPIO_Init(ECAM_OE_BANK, &GPIO_InitStructure);
 }
 
 static void adc_dma_init() {
