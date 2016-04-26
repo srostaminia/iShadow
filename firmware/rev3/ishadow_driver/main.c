@@ -63,6 +63,14 @@ int main()
   // CIDER uses a very different loop structure than other run modes
   cider_loop();
   
+#elif defined(PERCLOS_TRACKING)
+    while(1) {
+  // Begin Soha's code
+  
+    perclos_sample();
+  
+  // End Soha's code
+    }
 #else
   
   // If CIDER is *off*, use the standard frame-collect loop

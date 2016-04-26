@@ -594,7 +594,125 @@ void config_adc_default()
 // ----------------Standard image capture functions-----------------------------
 // -----------------------------------------------------------------------------
 
+void perclos_sample()
+{
+  // TODO: LED code
 
+  // Double-buffered (2-dim array), two bytes per pixel
+  uint8_t base_buffers[2][TX_PIXELS * 2];
+
+  uint8_t buf_idx = 0;
+  uint8_t Col_Init = 49;
+  uint16_t this_pixel;
+
+#ifdef DO_8BIT_CONV
+    uint8_t *active_buffer = (uint8_t *)base_buffers[0];
+
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < USB_PIXELS * 2; j++) {
+        base_buffers[i][j] = 0;
+      }
+    }
+#else
+    uint16_t *active_buffer = (uint16_t *)base_buffers[0];
+#endif
+  
+  ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
+  ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
+  
+  set_pointer_value(MAJOR_REG, 0, PRIMARY_CAM);
+
+  int data_cycle = 0;
+  for (int i_major = 0; i_major < 112; i_major++) {
+    set_pointer_value(MINOR_REG, Col_Init, PRIMARY_CAM);
+
+    delay_us(1);
+    
+    for (int j_minor = 0; j_minor < 4; j_minor++, data_cycle++) {      
+      PRIMARY_PARAM(INPH_BANK)->ODR |= PRIMARY_PARAM(INPH_PIN);
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      PRIMARY_PARAM(INPH_BANK)->ODR &= ~PRIMARY_PARAM(INPH_PIN);
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      
+      // Do ADC conversion
+      ADC_SoftwareStartConv(ADC1);
+      
+      // TODO: there has *got* to be a way to test for a flag or something to check for ADC completion
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      this_pixel = adc_values[adc_idx] - FPN_PRI(i_major, j_minor);
+      
+      active_buffer[data_cycle] = RESIZE_PIXEL(this_pixel);
+      //active_buffer[data_cycle] = i_major;
+      
+
+#ifdef USB_SEND
+      // instead of 4, USB_PIXELS = 112
+      if (data_cycle == 4 - 1) {
+        while (packet_sending == 1);
+        
+        data_cycle = -1;
+        send_packet(base_buffers[buf_idx], USB_PACKET_SIZE);
+        packet_sending = 1;
+        
+        buf_idx = !buf_idx;
+
+        active_buffer = CAST_TX_BUFFER(base_buffers[buf_idx]);
+      }
+      
+      
+#endif // USB_SEND
+      
+      adc_idx = !adc_idx;
+
+      if (j_minor < 111) {
+        PRIMARY_PARAM(INCV_BANK)->ODR |= PRIMARY_PARAM(INCV_PIN);
+        PRIMARY_PARAM(INCV_BANK)->ODR &= ~PRIMARY_PARAM(INCV_PIN);
+      }
+    } // for (j_minor)
+
+    if (i_major < 111)
+      inc_pointer_value(MAJOR_REG, 1, PRIMARY_CAM);
+
+#ifdef SD_SEND
+    if (data_cycle / 112 == SD_ROWS) {
+      if (i_major > SD_ROWS - 1) {
+        f_finish_write();
+      }
+      
+      if (disk_write_fast(0, (uint8_t *)base_buffers[buf_idx], sd_ptr, SD_BLOCKS_SING) != RES_OK)      return -1;
+      
+      buf_idx = !buf_idx;
+
+      active_buffer = CAST_TX_BUFFER(base_buffers[buf_idx]);
+      
+      sd_ptr += SD_BLOCKS_SING;
+      data_cycle = 0;
+    }
+#endif // SD_SEND
+
+#ifndef SEND_DATA
+    data_cycle = -1;
+#endif
+  } // for (i_major)
+
+#ifdef SEND_DATA
+//  finish_tx(base_buffers[buf_idx], true, false);
+  uint8_t ones[184];
+  for (uint8_t index=0; index<184; index++){
+    ones[index] = 1;
+  }
+  send_packet(ones, USB_PACKET_SIZE);
+#endif
+
+  //return 0;
+}
 
 
 // stony_single()
