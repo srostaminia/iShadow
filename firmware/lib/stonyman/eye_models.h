@@ -30,13 +30,13 @@
 #define CIDER_COL               0
 #define CIDER_ROW               1
 
-#ifdef COLUMN_COLLECT
+#ifdef COLUMN_MAJOR
  #define MASK_MAJOR			MASK_COL
  #define MASK_MINOR			MASK_ROW
 #else
  #define MASK_MAJOR			MASK_ROW
  #define MASK_MINOR			MASK_COL
-#endif // COLUMN_COLLECT
+#endif // COLUMN_MAJOR
 
 // CIDER parameters
 #define SPEC_THRESH     150

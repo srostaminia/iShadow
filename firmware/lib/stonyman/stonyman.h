@@ -41,6 +41,10 @@
 	#error ERROR: MUST SELECT OUT_VIDEO_ON OR OUT_VIDEO_OFF (STONYMAN.H)
 #endif
 
+#if defined(ROW_MAJOR) == defined(COLUMN_MAJOR)
+	#error ERROR: MUST SELECT ROW_MAJOR OR COLUMN_MAJOR FOR PIXEL SAMPLING (STONYMAN.H)
+#endif
+
 #if defined(CIDER_TRACKING) || defined(ANN_TRACKING)
 	#define EYE_TRACKING_ON
 #endif
@@ -70,6 +74,14 @@
 	#ifdef EYE_CAM_PRIMARY
 		#define IMPLICIT_EYE_TRACKING
 	#endif
+
+	#if !defined(COLUMN_MAJOR)
+		#error ERROR: MUST USE COLUMN_MAJOR PIXEL SAMPLING WITH EYE TRACKING (STONYMAN.H)
+	#endif
+
+	#if !defined(USE_PARAM_FILE)
+		#error ERROR: MUST INCLUDE A PARAMETER FILE (USE_PARAM_FILE) WITH EYE TRACKING (STONYMAN.H)
+	#endif
 #endif // defined(ANN_TRACKING) || defined(CIDER_TRACKING)
 
 #if defined(OUT_VIDEO_ON) && defined(EYE_VIDEO_ON)
@@ -79,19 +91,6 @@
 #else
 	#define N_IMG_FRAME 	0
 #endif
-
-// CIDER overrides (don't touch)
-#ifdef EYE_TRACKING_ON
-
-	#if !defined(COLUMN_COLLECT)
-		#define COLUMN_COLLECT
-	#endif
-
-	#if !defined(USE_PARAM_FILE)
-		#define USE_PARAM_FILE
-	#endif
-
-#endif  // EYE_TRACKING_ON
 
 #ifdef OUTDOOR_SWITCH
 	#define OUTDOOR_THRESH          300
@@ -106,6 +105,9 @@
 //#define LED_HIGH        0x746
 
 #ifdef SD_SEND
+
+        // TODO: this should work, but for some reason causes a hard fault in dual cam mode
+        //#define SD_ROWS       48
 
 	#define SD_ROWS         32
 	#define TX_PIXELS				SD_ROWS * 112
@@ -244,8 +246,8 @@
 #define SEL_MAJOR_LINE	0					
 #define SEL_MINOR_LINE	1
 
-// TODO: Switch this to ROW_COLLECT, column should be default from now on.
-#ifdef COLUMN_COLLECT
+// TODO: Switch this to ROW_MAJOR, column should be default from now on.
+#ifdef COLUMN_MAJOR
 
 	#define MAJOR_REG			REG_COLSEL
 	#define MINOR_REG			REG_ROWSEL
@@ -271,7 +273,7 @@
 		#define FPN_T_OFFSET	0
 	#endif
 
-#endif // COLUMN_COLLECT
+#endif // COLUMN_MAJOR
 
 // Frame data (FD) packet offsets
 #define FD_TIMER_OFFSET		0
