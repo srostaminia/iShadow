@@ -41,15 +41,17 @@ int main()
 
   config_ms_timer();
   config_us_delay();
+  
+  uint8_t cam_no = 1;
 
   // TODO: Switch to stony_init_default()
 #ifdef OUTMODE
   stony_init(39, 50, 41,
             2, SMH_SELAMP_3V3);
 #else
-  stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3,
-            SMH_GAIN_3V3, SMH_SELAMP_3V3);
-//    stony_init(0, 50, 50, 0, 0);
+//  stony_init(SMH_VREF_3V3, SMH_NBIAS_3V3, SMH_AOBIAS_3V3,
+//            SMH_GAIN_3V3, SMH_SELAMP_3V3);
+    stony_init(0, 50, 50, 0, 0);
 #endif
   
 #ifdef SD_SEND
@@ -82,7 +84,7 @@ int main()
 #if defined(OUT_VIDEO_ON) && defined(EYE_VIDEO_ON)
     stony_dual();
 #elif defined(OUT_VIDEO_ON) || defined(EYE_VIDEO_ON)
-    stony_single();
+    stony_single(cam_no);
 #else
     save_fd_packet();
 #endif
