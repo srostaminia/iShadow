@@ -45,11 +45,11 @@
         </option>
         <option>
           <name>MemFile</name>
-          <state>$TOOLKIT_DIR$\CONFIG\debugger\ST\STM32L151RD.ddf</state>
+          <state>$TOOLKIT_DIR$\CONFIG\debugger\ST\STM32L151ZD.ddf</state>
         </option>
         <option>
           <name>RunToEnable</name>
-          <state>1</state>
+          <state>0</state>
         </option>
         <option>
           <name>RunToName</name>
@@ -1180,7 +1180,7 @@
         </option>
         <option>
           <name>CCSwoClockAuto</name>
-          <state>0</state>
+          <state>1</state>
         </option>
         <option>
           <name>CCSwoClockEdit</name>

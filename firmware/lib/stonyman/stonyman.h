@@ -201,8 +201,15 @@
 #define ECAM_AN_PIN         GPIO_Pin_10
 #define ECAM_ADC_CHAN       ADC_Channel_31
 
-#define ECAM_OE_BANK		GPIOF
-#define ECAM_OE_PIN			GPIO_Pin_5
+#define ECAM_OE1_BANK	    GPIOF
+#define ECAM_OE1_PIN        GPIO_Pin_15
+#define ECAM_OE2_BANK	    GPIOF
+#define ECAM_OE2_PIN        GPIO_Pin_14
+#define ECAM_OE3_BANK	    GPIOF
+#define ECAM_OE3_PIN        GPIO_Pin_13
+#define ECAM_OE4_BANK	    GPIOF
+#define ECAM_OE4_PIN        GPIO_Pin_12
+#define NUM_OE              4
 
 #define OUT_CAM             0
 #define EYE_CAM             1
@@ -335,7 +342,7 @@ void save_fd_packet();
 void config_adc_select(uint8_t cam);
 void config_adc_default();
 
-int stony_single();
+int stony_single(uint8_t ecam);
 int stony_dual();
 
 void mark_cider_packet(bool cider_failed);

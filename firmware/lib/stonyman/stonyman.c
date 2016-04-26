@@ -36,6 +36,9 @@ static uint8_t frame_data[USB_PACKET_SIZE];
 extern uint16_t model_data[];
 #endif
 
+GPIO_TypeDef *ECAM_OE_BANK[] = {ECAM_OE1_BANK, ECAM_OE2_BANK, ECAM_OE3_BANK, ECAM_OE4_BANK};
+uint16_t ECAM_OE_PIN[] = {ECAM_OE1_PIN, ECAM_OE2_PIN, ECAM_OE3_PIN, ECAM_OE4_PIN};
+
 extern uint32_t time_elapsed;
 
 // TODO: Make these static and make sure everything still works
@@ -374,8 +377,10 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
   set_pin(ECAM_INCP_BANK, ECAM_INCP_PIN, 0);
   set_pin(ECAM_INPH_BANK, ECAM_INPH_PIN, 0);
 
-  // Set chip select
-  set_pin(ECAM_OE_BANK, ECAM_OE_PIN, 1);
+  // Clear all chip selects
+  for (int i = 0; i < NUM_OE; i++) {
+    set_pin(ECAM_OE_BANK[i], ECAM_OE_PIN[i], 0);
+  }
 
   //clear all chip register values
   clear_values(OUT_CAM);
@@ -460,6 +465,11 @@ static void stony_pin_config()
   GPIO_InitStructure.GPIO_Pin = ECAM_INPH_PIN;
   GPIO_Init(ECAM_INPH_BANK, &GPIO_InitStructure);
   
+  for (int i = 0; i < NUM_OE; i++) {
+    GPIO_InitStructure.GPIO_Pin = ECAM_OE_PIN[i];
+    GPIO_Init(ECAM_OE_BANK[i], &GPIO_InitStructure);
+  }
+  
   GPIO_InitStructure.GPIO_Pin =  OCAM_AN_PIN;
   GPIO_InitStructure.GPIO_Mode  = GPIO_Mode_AN;
   GPIO_InitStructure.GPIO_PuPd  = GPIO_PuPd_NOPULL;
@@ -467,9 +477,6 @@ static void stony_pin_config()
   
   GPIO_InitStructure.GPIO_Pin = ECAM_AN_PIN;
   GPIO_Init(ECAM_AN_BANK, &GPIO_InitStructure);
-
-  GPIO_InitStructure.GPIO_Pin = ECAM_OE_PIN;
-  GPIO_Init(ECAM_OE_BANK, &GPIO_InitStructure);
 }
 
 static void adc_dma_init() {
@@ -606,13 +613,13 @@ void config_adc_default()
 // stony_single()
 // Capture an image from one camera (selected by PRIMARY_CAM in stonyman.h)
 #ifdef EYE_TRACKING_ON
-int stony_single() {
-  return stony_single2(true);
+int stony_single(uint8_t ecam) {
+  return stony_single2(ecam, true);
 }
 
-int stony_single2(bool do_tracking)
+int stony_single2(uint8_t ecam, bool do_tracking)
 #else
-int stony_single()
+int stony_single(uint8_t ecam)
 #endif
 {
   // TODO: LED code
@@ -645,6 +652,10 @@ int stony_single()
 #else
     uint16_t *active_buffer = (uint16_t *)base_buffers[0];
 #endif
+  
+  for (int i = 0; i < NUM_OE; i++) {
+    set_pin(ECAM_OE_BANK[i], ECAM_OE_PIN[i], ecam == i);
+  }
   
   ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
   ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
