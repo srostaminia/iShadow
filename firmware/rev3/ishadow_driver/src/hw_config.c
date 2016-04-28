@@ -28,7 +28,6 @@
 
 /* Includes ------------------------------------------------------------------*/
 #include "hw_config.h"
-#include "stm32_it.h"
 #include "usb_lib.h"
 #include "usb_desc.h"
 #include "usb_pwr.h"
