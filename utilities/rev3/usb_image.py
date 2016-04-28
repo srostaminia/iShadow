@@ -46,6 +46,8 @@ def main():
     parser.add_argument("--norender", help="don't render ANN / CIDER output", action="store_true")
     parser.add_argument("--invert", help="invert black / white", action="store_true")
 
+    parser.add_argument("--multicam", type=int, help="number of unique eye camera streams - 2, 3, or 4 (does *not* work for interleaved eye / out)")
+
     args = parser.parse_args()
     debug_folder = args.debug_folder
     mask_filename = args.mask
@@ -54,6 +56,16 @@ def main():
     noflip = args.noflip
     norender = args.norender
     invert = args.invert
+    multicam = args.multicam
+
+    if multicam != None and multicam not in [2,3,4]:
+        print "ERROR:", multicam, "invalid value for --multicam. Choose 2, 3, or 4 streams"
+        sys.exit()
+
+    if multicam == None:
+        num_eyecam = 1
+    else:
+        num_eyecam = multicam
 
     if (debug_folder != None): 
         if os.path.isdir(debug_folder):
@@ -86,22 +98,33 @@ def main():
     next_start = []
 
     frame = np.zeros((112*112,))
-    fig = plt.figure(999) 
-    image=plt.imshow(np.zeros((112,112)), cmap = matplotlib.cm.Greys_r, interpolation='nearest')
+    fig = plt.figure(999,dpi=150) 
 
-    ax=fig.add_subplot(111)
-    ax.set_xlim([0, 112])
-    ax.set_ylim([112, 0])
+    if num_eyecam == 1:
+        subplot_code = 110
+    elif num_eyecam == 2:
+        subplot_code = 210
+    else:
+        subplot_code = 220
 
-    packet_size = 92 * 16 / TX_BITS
+    im_list = []
+    for i in range(num_eyecam):
+        ax=fig.add_subplot(subplot_code + i + 1)
+        ax.set_xlim([0, 112])
+        ax.set_ylim([112, 0])
 
-    if not norender:
-        vline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
-        hline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
-        vline_cider,=ax.plot([-10, -9], [-10, -9], 'b-', linewidth=2)
-        hline_cider,=ax.plot([-10, -9], [-10, -9], 'b-', linewidth=2)
-        circle = plt.Circle((-10, -10), 0, fill=False, linewidth=2, color='g')
-        ax.add_artist(circle)
+        image = plt.imshow(np.zeros((112,112)), cmap = matplotlib.cm.Greys_r, interpolation='nearest')
+        im_list.append(image)
+
+        packet_size = 92 * 16 / TX_BITS
+
+        if not norender:
+            vline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
+            hline,=ax.plot([0, 1], [0, 1], 'r-', linewidth=2)
+            vline_cider,=ax.plot([-10, -9], [-10, -9], 'b-', linewidth=2)
+            hline_cider,=ax.plot([-10, -9], [-10, -9], 'b-', linewidth=2)
+            circle = plt.Circle((-10, -10), 0, fill=False, linewidth=2, color='g')
+            ax.add_artist(circle)
 
     while True:
         frame = np.reshape(frame, (112*112))
@@ -229,8 +252,10 @@ def main():
             else:
                 frame = 4095 - frame
 
+        image = im_list[iters % num_eyecam]
+
         image.set_data(frame)
-        image.autoscale() 
+        image.autoscale()
 
         fig.canvas.draw()
         fig.canvas.flush_events()
