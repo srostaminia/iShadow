@@ -28,8 +28,6 @@
 #if defined(USB_SEND)
 	#if !defined(USB_8BIT) && !defined(USB_16BIT)
 		#error ERROR: USB PIXEL TX RATE NOT SELECTED - CHOOSE USB_8BIT OR USB_16BIT (STONYMAN.H)
-	#elif !defined(EYE_VIDEO_ON) && !defined(OUT_VIDEO_ON)
-		#error ERROR: MUST SELECT EYE_VIDEO AND / OR OUT_VIDEO FOR STREAMING VIA USB (STONYMAN.H)
 	#endif
 #endif
 

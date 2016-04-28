@@ -295,9 +295,7 @@ static void finish_tx(uint8_t *pixel_buffer, bool save_pixels, bool is_dual)
   send_packet(frame_data, USB_PACKET_SIZE);
   while(packet_sending == 1);
   
-  send_empty_packet();
-  while(packet_sending == 1);
-  
+  // TODO: why does it crash when we remove this?
   send_empty_packet();
   while(packet_sending == 1);
 
