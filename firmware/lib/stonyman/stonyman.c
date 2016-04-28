@@ -548,6 +548,7 @@ static void dac_init() {
   
   DAC_DeInit();
   
+  DAC_StructInit(&DAC_InitStructure);
   DAC_InitStructure.DAC_Trigger = DAC_Trigger_None;
   DAC_InitStructure.DAC_WaveGeneration = DAC_WaveGeneration_None;
   DAC_InitStructure.DAC_OutputBuffer = DAC_OutputBuffer_Enable;
