@@ -43,7 +43,6 @@ int adc_idx = 0;
 __IO uint16_t adc_values[2];
 static uint8_t fd_type;
 
-// Static keyword is not enforced in IAR. Please don't abuse this.
 static void set_pin(GPIO_TypeDef *GPIOx, uint16_t GPIO_Pin, uint8_t val);
 static void pulse_resv(uint8_t cam);
 static void pulse_incv(uint8_t cam);
@@ -417,6 +416,7 @@ void stony_init(short vref, short nbias, short aobias, char gain, char selamp)
 static void stony_pin_config()
 {  
   GPIO_InitTypeDef GPIO_InitStructure;
+  GPIO_StructInit(&GPIO_InitStructure);
   
   RCC_AHBPeriphClockCmd(CAM_AHB, ENABLE);
   
@@ -466,7 +466,10 @@ static void stony_pin_config()
 
 static void adc_dma_init() {
   ADC_InitTypeDef ADC_InitStructure;
+  ADC_StructInit(&ADC_InitStructure);
+  
   DMA_InitTypeDef DMA_InitStructure;
+  DMA_StructInit(&DMA_InitStructure);
 
   // Enable HSI oscillator (required for ADC operation)
   RCC_HSICmd(ENABLE);
@@ -499,7 +502,6 @@ static void adc_dma_init() {
 
   ADC_BankSelection(ADC1, ADC_Bank_A);
   
-  ADC_StructInit(&ADC_InitStructure);
   ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
   ADC_InitStructure.ADC_ScanConvMode = ENABLE;
   ADC_InitStructure.ADC_ContinuousConvMode = DISABLE;
@@ -530,7 +532,10 @@ static void adc_dma_init() {
 
 static void dac_init() {
   GPIO_InitTypeDef GPIO_InitStructure;
+  GPIO_StructInit(&GPIO_InitStructure);
+  
   DAC_InitTypeDef DAC_InitStructure;
+  DAC_StructInit(&DAC_InitStructure);
 
   /* DAC Periph clock enable */
   RCC_APB1PeriphClockCmd(RCC_APB1Periph_DAC, ENABLE);
@@ -548,7 +553,6 @@ static void dac_init() {
   
   DAC_DeInit();
   
-  DAC_StructInit(&DAC_InitStructure);
   DAC_InitStructure.DAC_Trigger = DAC_Trigger_None;
   DAC_InitStructure.DAC_WaveGeneration = DAC_WaveGeneration_None;
   DAC_InitStructure.DAC_OutputBuffer = DAC_OutputBuffer_Enable;
