@@ -1,4 +1,4 @@
-function [X] = rescale_weights_mean(X,W_groupSparse,params)
+function [X] = rescale_weights_minmax(X,W_groupSparse,params)
 
 	nHidden = params.nHidden;
 	HiddenShape = params.hiddenShape;
