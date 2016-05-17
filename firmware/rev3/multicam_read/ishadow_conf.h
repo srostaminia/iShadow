@@ -9,6 +9,8 @@
 //#define OUT_VIDEO_ON
 #define OUT_VIDEO_OFF
 
+//#define SEND_ALL_EYE
+
 // Do eye tracking with ANN or CIDER model (mutually exclusive)
 //#define ANN_TRACKING
 //#define CIDER_TRACKING

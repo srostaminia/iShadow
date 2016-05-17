@@ -42,7 +42,7 @@ int main()
   config_ms_timer();
   config_us_delay();
   
-  uint8_t cam_no = 1;
+  uint8_t cam_no = 0;
 
   // TODO: Switch to stony_init_default()
 #ifdef OUTMODE
@@ -85,6 +85,11 @@ int main()
     stony_dual();
 #elif defined(OUT_VIDEO_ON) || defined(EYE_VIDEO_ON)
     stony_single(cam_no);
+    
+    #ifdef SEND_ALL_EYE
+        cam_no = (cam_no == 3) ? (0) : (cam_no + 1);
+    #endif
+    
 #else
     save_fd_packet();
 #endif
