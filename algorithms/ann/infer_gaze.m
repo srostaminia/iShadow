@@ -1,17 +1,17 @@
 % graphics_toolkit('fltk')
-pkg load signal
+% pkg load signal
 
 
-data_path = '~/eye_exper/shuo_calib'; %set path to directory of pngs
-save_name = 'eye_data_shuo_calib_auto.mat';% name of mat file for output
+data_file = '~/eye_exper/gaze_calib/gaze_calib.mat'; %set path to directory of pngs
+save_name = 'addison_gaze.mat';% name of mat file for output
 display_skip = 1; %Set to >0 to display output for display_skip frames
-data_name = 'shuo_calib'
+data_name = 'gaze_calib'
 
 start_index = 100;
-stop_index = 6299;
+stop_index = 3700;
 
 ask_reposition = false;
-reuse_template = false;
+reuse_template = true;
 
 res = [111,112];
 instances = start_index:stop_index;
@@ -21,10 +21,15 @@ j=0;
 
 w=4;
 
-seed = 136824521;
+% seed = 136824521;
 
-rand('seed',seed); %set rand seed
-randn('seed',seed); %set randn seed
+% rand('seed',seed); %set rand seed
+% randn('seed',seed); %set randn seed
+
+load(data_file);
+
+figure(1);drawnow;imagesc(zeros(res(2)+50,res(1)));
+figure(2);drawnow;
 
 if(reuse_template && exist(sprintf('%s_template.mat', data_name)))
   load(sprintf('%s_template.mat', data_name))
@@ -34,33 +39,36 @@ else
   j = 0;
   for t=template_instances
     i=instances(t);
-    name = sprintf('%s/%s_out_%06d.txt',data_path,data_name,i)
-    img = double(load(name))/1000.0;
+    % name = sprintf('%s/%s_out_%06d.txt',data_path,data_name,i)
+    % img = double(load(name))/1000.0;
+
+    img = reshape(images_out(i,:), [111 112]);
+
     img = img - quantile(img(:),0.01);
     img = img / quantile(img(:),0.97);
     img(img<0) = 0;
     img(img>1) = 1;
     disp_img = [img; (zeros(50, 112) + 255)];
     
-    figure(1);hold off;
-    imshow(disp_img);colormap gray;hold on;axis on;
+    figure(1);hold on;
+    imshow(disp_img);colormap gray;axis on;hold off;
     [x,y] = ginput(1);
 
     x=round(x)
     y=round(y)
-    if(x>w && x<res && y>w && y<res)
+    if(x>w && x<res(2) && y>w && y<res(1))
       figure(2);
 
-      if (x>res-w)
-        xrange = (res-2*w):res;
+      if (x>res(2)-w)
+        xrange = (res(2)-2*w):res(2);
       elseif (x<w)
         xrange = 0:2*w;
       else
         xrange = (x-w):(x+w);
       end
 
-      if (y>res-w)
-        yrange = (res-2*w):res;
+      if (y>res(1)-w)
+        yrange = (res(1)-2*w):res(1);
       else
         yrange = (y-w):(y+w);
       end
@@ -87,19 +95,22 @@ j=1;
 c=0;
 xold = 1;
 yold = 1;
-img_out_old = zeros(res(1),res(2));
+img_out_old = zeros(res(2),res(1));
 jumped = 0;
 for i=instances
-  name_out = sprintf('%s/%s_out_%06d.txt',data_path,data_name,i);
-  name_eye = sprintf('%s/%s_eye_%06d.txt',data_path,data_name,i);
+  name_out = sprintf('%s_out_%06d.txt',data_name,i);
+  name_eye = sprintf('%s_eye_%06d.txt',data_name,i);
   num_match = 1;
 
-  if(exist(name_out) && exist(name_eye))
+  % if(exist(name_out) && exist(name_eye))
     found_gaze = 0;
-    img_eye = double(load(name_eye))/1000.0;
-    img_out = double(load(name_out))/1000.0;
+    % img_eye = double(load(name_eye))/1000.0;
+    % img_out = double(load(name_out))/1000.0;
 
-    fprintf(name_out)
+    img_eye = reshape(images_eye(i,:), [111 112]);
+    img_out = reshape(images_out(i,:), [111 112]);
+
+    fprintf('%s\n',name_out);
     
     img = img_out;
     img = img - quantile(img(:),0.01);
@@ -122,13 +133,14 @@ for i=instances
 
     %Search over the whole image
     for t=1:size(template,3)
-      XC = xcorr2(img-0.5,template(:,:,t),'coeff') ;
+      % XC = xcorr2(img-0.5,template(:,:,t),'coeff') ;
+      XC = normxcorr2(template(:,:,t), img-0.5) ;
       maxXC = max(XC(:));
 
       best_x = -1;
       best_y = -1;
         
-      if(maxXC>0.95)
+      if(maxXC>0.70)
         [y,x]=find(XC==maxXC);
         x=x-w;
         y=y-w;
@@ -169,7 +181,7 @@ for i=instances
       ydiff = abs(yold - y);
 
       if( (((xdiff>3*w || ydiff>3*w))  || (jumped==1 && c>10)) && ask_reposition)
-        figure(1);imshow(img);colormap gray;
+        figure(1);imshow(img);colormap gray;drawnow
         title(sprintf('%d  %.4f  %d %f',i,diff, c, maxXC));
         hold on;
         plot([xrange(1),xrange(end),xrange(end),xrange(1), xrange(1)],[yrange(1),yrange(1),yrange(end),yrange(end),yrange(1)],'b-','linewidth',4);
@@ -180,23 +192,23 @@ for i=instances
         drawnow;
 
         % If the gaze point jumped, ask if it's invalid - if so, remove the template that caused it
-        cmd = yes_or_no('Gaze point jumped unexpectedly - is new position accurate (yes / no)?');
-        if (cmd == 0)
+        cmd = input('Gaze point jumped unexpectedly - is new position accurate (y / n)?','s');
+        if (cmd == 'y')
           template(:,:,best_template)=[];
           save(sprintf('%s_template.mat', data_name),'template');  
 
-          cmd2 = yes_or_no('Enter with mouse (yes) or skip (no)?>>');
-          if (cmd2 == 1)
+          cmd2 = input('Enter with mouse (y) or skip (n)?>>','s');
+          if (cmd2 == 'y')
             fprintf('Click to enter correct gaze point>>')
             [x,y] = ginput(1); 
             x=round(x);
             y=round(y);
             xold = x;
             yold = y;
-            if(x>w && x<res-w && y>w && y<res-w)
+            if(x>w && x<res(2)-w && y>w && y<res(1)-w)
               %If the gaze point is valid, update it
               template(:,:,end+1) = double(img((y-w):(y+w),(x-w):(x+w)))-0.5;
-              figure(2);
+              figure(2);drawnow
               imagesc(template(:,:,end));
               colormap(gray);
               found_gaze = 1;
@@ -228,32 +240,32 @@ for i=instances
     %known location. Wait max_skip steps for it to come back in.
     if(found_gaze == 0 && jumped == 0)
       % if((xold<2*w || xold>res-2*w || yold<2*w || yold>res-2*w) && c<100)
-      if((xold<2*w || xold>res-2*w || yold<2*w || yold>res-2*w) && c<200)
+      if((xold<2*w || xold>res(2)-2*w || yold<2*w || yold>res(1)-2*w) && c<200)
         %if the frame has changed, update the skip counter
         c=c+1;
       % elseif(xold>w && xold<res-w && yold>w && yold<res-w && c<25)  
-      elseif(xold>w && xold<res-w && yold>w && yold<res-w && c<200)  
+      elseif(xold>w && xold<res(2)-w && yold>w && yold<res(1)-w && c<200)  
         c=c+1;
       else
         %If more than max_skip steps have elapsed, get the gaze point from the user
-        figure(1);imshow(img);colormap gray;
+        figure(1);imshow(img);colormap gray;drawnow
         title(sprintf('%d  %.4f  %d %f',i,diff, c, maxXC));
         
         fprintf('Gaze point not found\n');
         % fprintf('Enter with mouse (yes) or skip (no)?>>');
         % cmd = kbhit()
-        cmd = yes_or_no('Enter with mouse (yes) or skip (no)?>>');
-        if (cmd==1) 
+        cmd = input('Enter with mouse (y) or skip (n)?>>','s');
+        if (cmd=='y') 
           fprintf('Click to enter gaze point>>')
           [x,y] = ginput(1); 
           x=round(x);
           y=round(y);
           xold = x;
           yold = y;
-          if(x>w && x<res-w && y>w && y<res-w)
+          if(x>w && x<res(2)-w && y>w && y<res(1)-w)
             %If the gaze point is valid, update it
             template(:,:,end+1) = double(img((y-w):(y+w),(x-w):(x+w)))-0.5;
-            figure(2);
+            figure(2);drawnow
             imagesc(template(:,:,end));
             colormap(gray);
             found_gaze = 1;
@@ -265,7 +277,7 @@ for i=instances
     
     %Display result of each step
     if(mod(j,display_skip)==0)
-      figure(1);imshow(img);colormap gray;
+      figure(1);imshow(img);colormap gray;drawnow
       title(sprintf('%d  %.4f  %d %f',i,diff, c, maxXC));
       hold on;
       plot([xrange(1),xrange(end),xrange(end),xrange(1), xrange(1)],[yrange(1),yrange(1),yrange(end),yrange(end),yrange(1)],'b-','linewidth',4);
@@ -285,7 +297,7 @@ for i=instances
     end 
     j
     
-  end
+  % end
 end
 
 Eye = Eye(1:j-1,:);
@@ -293,6 +305,6 @@ Out = Out(1:j-1,:);
 gaze_label_idx = gaze_label_idx(1:j-1,:);
 gaze = gaze(1:j-1,:);
 
-X=Eye*1000;
-% gout=gaze;
-save('-V7',save_name,'Out','X','gaze','gaze_label_idx','template');
+X=Eye;
+gout=gaze;
+save('-V7',save_name,'Out','X','gout','gaze_label_idx','template');
