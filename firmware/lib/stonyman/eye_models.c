@@ -262,6 +262,7 @@ bool run_cider()
   uint8_t row_edges[6] = {0, 0, 0, 0, 0, 0}, col_edges[6] = {0, 0, 0, 0, 0, 0};
   bool pupil_found = false;
   
+  // Make sure the selected row / col is in [0, 111]
   cider_colrow[1] = (uint8_t)((pred[1] < 0 ? 0 : pred[1]) > 111 ? 111 : pred[1]);
   cider_colrow[0] = (uint8_t)((pred[0] < 0 ? 0 : pred[0]) > 111 ? 111 : pred[0]);
   
@@ -273,15 +274,18 @@ bool run_cider()
   // Configure ADC to read only from eye camera
   config_adc_select(EYE_CAM);
   
+  // Read the selected row and column from the camera
   uint16_t row[112], col[112];
   stony_cider_line(col_start, row, SEL_ROW);
   stony_cider_line(row_start, col, SEL_COL);
 
   config_adc_default();
   
+  // Find the edges of the pupil in the selected row and column
   find_pupil_edge(row_start, row_edges, row);
   find_pupil_edge(col_start, col_edges, col);
 
+  // Evaluate all candidate edges found during the search
   for (uint8_t i = 0; (row_edges[i] != 0 || i==0) && i < 6; i += 2) {
     // Pupil can't be smaller than 4 pixels across
     if ((row_edges[i] - row_edges[i + 1]) < 4 && (row_edges[i] - row_edges[i + 1]) > -4)
@@ -292,22 +296,29 @@ bool run_cider()
       if ((col_edges[j] - col_edges[j + 1]) < 4 && (col_edges[j] - col_edges[j + 1]) > -4)
         continue;
       
+      // Calculate the midpoint between the two edges
       float x_mid, y_mid;
       x_mid = (row_edges[i] + row_edges[i + 1]) / (float)2;
       y_mid = (col_edges[j] + col_edges[j + 1]) / (float)2;
       
+      // Calculate the two radius values (for redundancy checking)
       float r1, r2;
       r1 = sqrt(((x_mid - row_edges[i]) * (x_mid - row_edges[i])) + ((y_mid - col_start) * (y_mid - col_start)));
       r2 = sqrt(((x_mid - row_start) * (x_mid - row_start)) + ((y_mid - col_edges[j]) * (y_mid - col_edges[j])));
       
+      // Test that the two radii are relatively close to each other
+      // (if not, we probably missed the pupil)
       float ratio = r1 / r2;
       if ((ratio < 0.6) || (ratio > (1/0.6)) || fabs(ratio - 1) > fabs(best_ratio - 1))
           continue;
       
+      // Average the two results and compare with previous frame
+      // (if there's a huge change, something probably went wrong)
       float r = (r1 + r2) / 2;
       if (last_r != 0 && (r / last_r < 0.75 || r / last_r > 1/0.75))
           continue;
       
+      // Check / update the best result so far
       pupil_found = true;
       best_ratio = ratio; best_r = r;
       best_center[0] = x_mid >= 0 ? (uint8_t)(x_mid+0.5) : (uint8_t)(x_mid-0.5);
@@ -320,6 +331,7 @@ bool run_cider()
   pred_radius = best_r;
   last_r = best_r;
   
+  // Mark the next data packet with whether we found the pupil or not
   mark_cider_packet(!pupil_found);
 
   return pupil_found;
@@ -476,6 +488,7 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
   edges[1] += (edges[1] == 111 ? 0 : CONV_OFFSET);
   edge_idx = 2;
   
+  // Commented out b/c I need to debug this... (AMM)
 //  // Check if the region has a specular point on either end
 //  for (uint8_t i = 0; i < spec_idx; i++) {
 //    if (spec_regions[i] == local_regions[lr_min] - 1) {
