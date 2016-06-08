@@ -5,7 +5,7 @@
 % Default values for pupil_diameter = 25, and up_eyelid_thresh = 20;
 
 function [ LEyelid, pupil_index ] = eyelid_detector( image, prev_eyelid, pupil_diameter, up_eyelid_thresh)
-    
+    pupil_index = 0;
     % Sums all 4 values of columns in each row for denoising
     intimage = sum(image);
     % Uses 1D median filter for smoothing
@@ -45,8 +45,6 @@ function [ LEyelid, pupil_index ] = eyelid_detector( image, prev_eyelid, pupil_d
         if (length(peaks) > MaxPeak(1))
             if (peaks(MaxPeak(1)+1) - peaks(MaxPeak(1)) < pupil_diameter)
                 pupil_index = 1;
-            else
-                pupil_index = 0;
             end
         end
     else   
