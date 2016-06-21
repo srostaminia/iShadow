@@ -77,7 +77,7 @@
         </option>
         <option>
           <name>OGLastSavedByProductVersion</name>
-          <state>7.60.1.11206</state>
+          <state>7.60.2.11347</state>
         </option>
         <option>
           <name>GeneralEnableMisra</name>
@@ -2043,6 +2043,9 @@
   </group>
   <file>
     <name>$PROJ_DIR$\main.c</name>
+  </file>
+  <file>
+    <name>$PROJ_DIR$\..\..\lib\SDIO_Driver\stm32l152d_eval.c</name>
   </file>
 </project>
 
