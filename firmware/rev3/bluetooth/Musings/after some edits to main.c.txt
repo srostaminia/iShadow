@@ -47,6 +47,7 @@ __IO uint32_t TimeOut = 0x00;
 
 /* Private function prototypes -----------------------------------------------*/
 static void USART_Config(void);
+static void SysTickConfig(void);
 
 
 /* Private functions ---------------------------------------------------------*/
@@ -63,7 +64,8 @@ int main(void)
   
   /* USART configuration -----------------------------------------------------*/
   USART_Config();
-   
+     SysTickConfig();
+      USART_ITConfig(USARTx, USART_IT_RXNE, ENABLE);
     
 /* Here I try to send the AT command to the module */
   debugIt = USART_GetITStatus(USARTx, USART_IT_TXE);
@@ -72,10 +74,11 @@ int main(void)
     while (TxIndex < TXBUFFERSIZE) {
         USART_SendData(USARTx, TxBuffer[TxIndex]);
         TxIndex++; 
+    }
+     TimeOut = USER_TIMEOUT;
         while ((USART_GetFlagStatus(USARTx, USART_FLAG_TC) == RESET)&&(TimeOut != 0x00))
         {
         }
-    }
         if (TxIndex == GetVar_NbrOfData())
         {
           /* Disable the USARTx transmit data register empty interrupt */
@@ -182,6 +185,18 @@ static void USART_Config(void)
 uint8_t GetVar_NbrOfData(void)
 {
   return CmdBuffer[0x01];
+}
+
+static void SysTickConfig(void)
+{
+  /* Setup SysTick Timer for 10ms interrupts  */
+  if (SysTick_Config(SystemCoreClock / 100))
+  {
+    /* Capture error */
+    while (1);
+  }
+  /* Configure the SysTick handler priority */
+  NVIC_SetPriority(SysTick_IRQn, 0x0);
 }
 
 
