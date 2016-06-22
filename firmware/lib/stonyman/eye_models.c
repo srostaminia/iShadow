@@ -3,6 +3,9 @@
 #include "diskio.h"
 #include "stm32l152d_eval_sdio_sd.h"
 #include "math.h"
+#include "stdlib.h"
+
+
 
 extern unsigned short val[112*112];
 int8_t pred[2];
@@ -21,6 +24,7 @@ unsigned int fpn_offset = 0;
 unsigned int col_fpn_offset = 0;
 
 extern uint16_t model_data[];
+extern uint16_t mask_4col[];
 
 // NOTE: Because C inlining is weird, these functions are defined in eye_models.h
 extern inline void init_streamstats(StreamStats *ss);
@@ -262,6 +266,7 @@ bool run_cider()
   uint8_t row_edges[6] = {0, 0, 0, 0, 0, 0}, col_edges[6] = {0, 0, 0, 0, 0, 0};
   bool pupil_found = false;
   
+  // Make sure the selected row / col is in [0, 111]
   cider_colrow[1] = (uint8_t)((pred[1] < 0 ? 0 : pred[1]) > 111 ? 111 : pred[1]);
   cider_colrow[0] = (uint8_t)((pred[0] < 0 ? 0 : pred[0]) > 111 ? 111 : pred[0]);
   
@@ -273,15 +278,18 @@ bool run_cider()
   // Configure ADC to read only from eye camera
   config_adc_select(EYE_CAM);
   
+  // Read the selected row and column from the camera
   uint16_t row[112], col[112];
   stony_cider_line(col_start, row, SEL_ROW);
   stony_cider_line(row_start, col, SEL_COL);
 
   config_adc_default();
   
+  // Find the edges of the pupil in the selected row and column
   find_pupil_edge(row_start, row_edges, row);
   find_pupil_edge(col_start, col_edges, col);
 
+  // Evaluate all candidate edges found during the search
   for (uint8_t i = 0; (row_edges[i] != 0 || i==0) && i < 6; i += 2) {
     // Pupil can't be smaller than 4 pixels across
     if ((row_edges[i] - row_edges[i + 1]) < 4 && (row_edges[i] - row_edges[i + 1]) > -4)
@@ -292,22 +300,29 @@ bool run_cider()
       if ((col_edges[j] - col_edges[j + 1]) < 4 && (col_edges[j] - col_edges[j + 1]) > -4)
         continue;
       
+      // Calculate the midpoint between the two edges
       float x_mid, y_mid;
       x_mid = (row_edges[i] + row_edges[i + 1]) / (float)2;
       y_mid = (col_edges[j] + col_edges[j + 1]) / (float)2;
       
+      // Calculate the two radius values (for redundancy checking)
       float r1, r2;
       r1 = sqrt(((x_mid - row_edges[i]) * (x_mid - row_edges[i])) + ((y_mid - col_start) * (y_mid - col_start)));
       r2 = sqrt(((x_mid - row_start) * (x_mid - row_start)) + ((y_mid - col_edges[j]) * (y_mid - col_edges[j])));
       
+      // Test that the two radii are relatively close to each other
+      // (if not, we probably missed the pupil)
       float ratio = r1 / r2;
       if ((ratio < 0.6) || (ratio > (1/0.6)) || fabs(ratio - 1) > fabs(best_ratio - 1))
           continue;
       
+      // Average the two results and compare with previous frame
+      // (if there's a huge change, something probably went wrong)
       float r = (r1 + r2) / 2;
       if (last_r != 0 && (r / last_r < 0.75 || r / last_r > 1/0.75))
           continue;
       
+      // Check / update the best result so far
       pupil_found = true;
       best_ratio = ratio; best_r = r;
       best_center[0] = x_mid >= 0 ? (uint8_t)(x_mid+0.5) : (uint8_t)(x_mid-0.5);
@@ -320,6 +335,7 @@ bool run_cider()
   pred_radius = best_r;
   last_r = best_r;
   
+  // Mark the next data packet with whether we found the pupil or not
   mark_cider_packet(!pupil_found);
 
   return pupil_found;
@@ -476,6 +492,7 @@ void find_pupil_edge(uint8_t start_point, uint8_t* edges, uint16_t* pixels)
   edges[1] += (edges[1] == 111 ? 0 : CONV_OFFSET);
   edge_idx = 2;
   
+  // Commented out b/c I need to debug this... (AMM)
 //  // Check if the region has a specular point on either end
 //  for (uint8_t i = 0; i < spec_idx; i++) {
 //    if (spec_regions[i] == local_regions[lr_min] - 1) {
@@ -538,3 +555,248 @@ uint16_t quick_percentile(uint16_t *base_row)
   
   return row[k];
 }
+
+
+/*** Begin Soha's Code ***/
+
+double mean(unsigned short vector[], int size)
+{
+  double mean = 0;
+  for (int i = 0; i < size; i++){
+    mean += vector[i];
+  }
+  mean /= size;
+  return mean;
+}
+
+uint16_t min(unsigned short vector[], int size)
+{
+  uint16_t minimum = vector[0];
+  for (int i = 1; i < size; i++){
+    if (vector[i] < minimum){
+      minimum = vector[i];
+    }     
+  }
+  return minimum;
+}
+
+uint16_t max(unsigned short vector[], int size)
+{
+  uint16_t maximum = vector[0];
+  for (int i = 1; i < size; i++){
+    if (vector[i] > maximum){
+      maximum = vector[i];
+    }     
+  }
+  return maximum;
+}
+
+
+
+int eyelid_detector(const BYTE *base_buffers, bool *pupil_index, uint8_t *LEyelid, int8_t *prev_eyelid)
+{
+  *pupil_index = false;
+  
+  //uint8_t y_eyelid = *LEyelid;
+  //int8_t p_eyelid = *prev_eyelid;
+  
+#ifdef SD_SEND
+  
+  uint16_t pixels[448];
+  uint16_t *buffer = (uint16_t *)base_buffers;
+  for (int i = 0; i < 448; i++){
+    pixels[i] = buffer[i];
+  }
+  
+#elif defined(USB_SEND)
+  
+  uint8_t pixels[448];
+  uint8_t *buffer = (uint8_t *)base_buffers;
+  for (int i = 0; i < 448; i++){
+    pixels[i] = buffer[i];
+  }
+ 
+#endif
+  
+  uint16_t denoised_column[112];
+
+//uint16_t denoised_column[112] = {996,1001,1001,1006,1018,1014,1020,1015,1014,1022,1022,1033,1026,1007,1002,1003,996,988,997,997,981,994,975,979,980,987,984,976,965,956,965,954,967,966,957,958,954,957,937,933,879,888,901,904,920,929,931,927,941,943,953,944,939,940,942,942,929,938,944,950,952,950,946,956,949,916,917,941,960,961,982,982,992,998,1006,1009,1007,1020,1004,1014,1017,1011,1023,1032,1037,1026,1022,1033,1048,1031,1034,1038,1041,1025,1050,1046,1043,1046,1052,1043,1054,1056,1051,1045,1051,1037,1045,1050,1040,1044,1030,1034};
+
+
+
+  //  Sums all 4 values of columns in each row for denoising
+  for (int i = 0; i <112; i++){
+    denoised_column[i] = (uint8_t)(pixels[i] + pixels[i + 112] + pixels[i + 224] + pixels[i + 336]);
+  }
+
+
+  uint16_t med_buf[2], peaks_value[53], peaks_value2[53], peaks_value3[53];
+  uint16_t next_pixel, Min, Mean, Max;
+  uint8_t med_idx, small_val;
+  uint8_t valid_peaks[53], valid_peaks2[53], new_peaks[53], peaks[53], max_peak[53], valid_peak_idx, valid_peak_idx2, new_peak_idx, max_peak_idx, peak_idx;
+  int16_t conv_sum, conv_abs, edge_mean, peak_thresh;
+  int16_t edge_detect[106];
+  
+
+  
+ // First do median filtering, window size = 3
+  med_buf[0] = denoised_column[0];
+  med_buf[1] = denoised_column[1];
+  med_idx = 0;
+  small_val = (denoised_column[0] < denoised_column[1]) ? 0 : 1;
+  
+  for (uint8_t i = 2; i < 112; i++) {
+    next_pixel = denoised_column[i];
+    
+    if (next_pixel < med_buf[small_val]) {
+      denoised_column[i - 1] = med_buf[small_val];
+      small_val = med_idx;
+    } else if (next_pixel > med_buf[!small_val]) {
+      denoised_column[i - 1] = med_buf[!small_val];
+      small_val = !med_idx;
+    } else {
+      denoised_column[i - 1] = next_pixel;
+    }
+    
+    med_buf[med_idx] = next_pixel;
+    med_idx = !med_idx;
+  } 
+
+  // Next, do convolution 
+  conv_sum = -denoised_column[0] - denoised_column[1] - denoised_column[2] + denoised_column[4] + denoised_column[5] + denoised_column[6];
+  conv_abs = (conv_sum > 0) ? (0) : (-conv_sum);
+  edge_detect[0] = conv_abs;
+  edge_mean = 0;
+  for (uint8_t i = 4; i < 108; i++) {
+    conv_sum += denoised_column[i - 4];
+    conv_sum -= denoised_column[i - 1];
+    conv_sum -= denoised_column[i];
+    conv_sum += denoised_column[i + 3];
+    
+    conv_abs = (conv_sum > 0) ? (0) : (-conv_sum);
+    
+    edge_detect[i - 3] = conv_abs;
+    edge_mean += conv_abs;
+  }
+  peak_thresh = edge_mean / 106;
+
+
+  peak_idx = 0;
+  for (uint8_t i = 0; i < 106; i++){
+    if (edge_detect[i] >= edge_detect[i - 1] && edge_detect[i] > edge_detect[i + 1] && edge_detect[i] > peak_thresh){
+      peaks[peak_idx] = i;
+      peak_idx++;
+    }
+  }
+
+  
+  // Weed out peaks resulting from specular reflections
+  new_peak_idx = 0;
+  for (uint8_t i = 0; i < peak_idx; i++){   
+    if (edge_detect[peaks[i]] < SPECULAR_THRESH){
+      new_peaks[new_peak_idx] = peaks[i];
+      new_peak_idx++;
+    }   
+  }
+
+  
+  // Weed out peaks above the upper eyelid
+  valid_peak_idx = 0;
+  for (uint8_t i = 0; i < new_peak_idx; i++){   
+    if (new_peaks[i] > UPPER_EYELID_THRESH){
+      valid_peaks[valid_peak_idx] = new_peaks[i];
+      peaks_value[valid_peak_idx] = edge_detect[valid_peaks[valid_peak_idx]];
+      valid_peak_idx++;
+    }   
+  }
+
+  Min = min(peaks_value, valid_peak_idx);
+  Mean = mean(peaks_value, valid_peak_idx);
+
+  if (valid_peak_idx > 1){
+    
+    if (valid_peak_idx > 2){
+      if(abs(Mean - Min) > 10){
+        valid_peak_idx2 = 0;
+        for(int i = 0; i < valid_peak_idx; i++){
+          if (peaks_value[i] > Mean){
+            valid_peaks2[valid_peak_idx2] = valid_peaks[i];
+            peaks_value2[valid_peak_idx2] = peaks_value[i];
+            valid_peak_idx2++;
+          }
+        }
+      }  
+    }
+        
+    Min = min(peaks_value2,valid_peak_idx2);
+    Max = max(peaks_value2,valid_peak_idx2);
+    Mean = mean(peaks_value2,valid_peak_idx2);
+    
+    double thresh = 0.7 * (Max - Min) + Min;
+    max_peak_idx = 0;
+    for (int i = 0; i < valid_peak_idx2; i++){
+      if(peaks_value2[i] > thresh){
+        max_peak[max_peak_idx] = i;
+        peaks_value3[max_peak_idx] = peaks_value2[i];
+        //valid_peaks3[max_peak_idx] = valid_peaks2[i];
+        max_peak_idx++;   
+      }
+    }
+    
+    
+    if (max_peak_idx == 0){
+       max_peak[0] = 0;
+       max_peak_idx = 1;
+    }
+    else{
+      int counter = 0;
+      for (int i = 0; i < max_peak_idx; i++){
+        if((peaks_value3[i] - Mean) < 20){
+          counter++;
+        }
+      }
+      if (counter == max_peak_idx){
+          max_peak[0] = 0;
+          max_peak_idx = 1;
+      }   
+    }
+
+    if(max_peak_idx > max_peak[0]){
+      if((valid_peaks2[ max_peak[0]+1] - valid_peaks2[ max_peak[0]])< pupil_diameter){
+         *pupil_index = true; 
+      }  
+    }
+    
+  }
+  else{
+    max_peak[0] = 0;
+    max_peak_idx = 1;
+  }
+  if ((*prev_eyelid) == -1){
+    *LEyelid = valid_peaks2[max_peak[0]] + 6;
+  }else{
+ 
+    uint16_t MIN = abs(valid_peaks2[max_peak[0]] - (*prev_eyelid));
+    *LEyelid = valid_peaks2[max_peak[0]] + 6;
+    for (int i = 1; i < max_peak_idx; i++){
+      if(abs(valid_peaks2[max_peak[i]] - (*prev_eyelid)) < MIN){
+        MIN = abs(valid_peaks2[max_peak[i]] - (*prev_eyelid));
+        *LEyelid = valid_peaks2[max_peak[i]] + 6;
+      }
+    }
+  }
+  
+  *LEyelid = 111 - *LEyelid;
+  //printf("%d", (*LEyelid));
+
+  return 0;
+}
+
+
+void run_perclos()
+{
+  Eyelid_Location(); 
+  
+}
+
+

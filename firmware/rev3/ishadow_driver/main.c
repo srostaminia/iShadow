@@ -33,6 +33,8 @@ extern uint8_t pred[2];
 
 uint32_t time_elapsed = 0;
 
+
+
 int main()
 {   
   if (SysTick_Config(SystemCoreClock / 1000)) {
@@ -63,13 +65,14 @@ int main()
   // CIDER uses a very different loop structure than other run modes
   cider_loop();
   
-#elif defined(PERCLOS_TRACKING)
+#elif defined(COLUMNS_TRACKING)
     while(1) {
-  // Begin Soha's code
-  
-    perclos_sample();
-  
-  // End Soha's code
+      Collect_4col_PIX();
+    }
+#elif defined(PERCLOS_TRACKING)
+   
+    while(1) {
+      run_perclos();
     }
 #else
   

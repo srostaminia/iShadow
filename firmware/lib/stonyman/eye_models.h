@@ -37,6 +37,11 @@
  #define MASK_MAJOR			MASK_ROW
  #define MASK_MINOR			MASK_COL
 #endif // COLUMN_MAJOR
+   
+// PERCLOS parameters
+#define SPECULAR_THRESH     250
+#define UPPER_EYELID_THRESH        20
+#define pupil_diameter  25
 
 // CIDER parameters
 #define SPEC_THRESH     150

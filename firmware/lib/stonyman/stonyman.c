@@ -2,6 +2,10 @@
 #include "stm32l1xx.h"
 #include "math.h"
 #include "stdlib.h"
+#include "stdio.h"
+
+//Defining Global Variables
+int8_t prev_eyelid = -1;
 
 // TODO: Remove this, it's just to make the stupid delay_us warnings go away...
 #include "main.h"
@@ -36,6 +40,13 @@ static uint8_t frame_data[USB_PACKET_SIZE];
 extern uint16_t model_data[];
 #endif
 
+#ifdef USE_4col_MASK
+// This is declared extern because it is referencing an external binary file
+// that must be provided in the project settings (see readme)
+extern uint16_t mask_4col[];
+
+#endif
+
 extern uint32_t time_elapsed;
 
 // TODO: Make these static and make sure everything still works
@@ -63,7 +74,6 @@ static void finish_tx(uint8_t *pixel_buffer, bool save_pixels, bool is_dual);
 static void stony_pin_config();
 static void adc_dma_init();
 static void dac_init();
-
 
 // TODO: Figure out how to make these properly inlined
 // ----------------Small helper functions, not to be exported-------------------
@@ -550,6 +560,7 @@ static void dac_init() {
   
   DAC_DeInit();
   
+  DAC_StructInit(&DAC_InitStructure);
   DAC_InitStructure.DAC_Trigger = DAC_Trigger_None;
   DAC_InitStructure.DAC_WaveGeneration = DAC_WaveGeneration_None;
   DAC_InitStructure.DAC_OutputBuffer = DAC_OutputBuffer_Enable;
@@ -594,41 +605,50 @@ void config_adc_default()
 // ----------------Standard image capture functions-----------------------------
 // -----------------------------------------------------------------------------
 
-void perclos_sample()
+void Collect_4col_PIX()
 {
   // TODO: LED code
-
+#ifdef USB_SEND
   // Double-buffered (2-dim array), two bytes per pixel
   uint8_t base_buffers[2][TX_PIXELS * 2];
+#elif defined(SD_SEND)
+  // Double-buffered (2-dim array), two bytes per pixel_for SD card
+  uint8_t SD_buffers[2][512 * 2];
+#endif
 
   uint8_t buf_idx = 0;
   uint8_t Col_Init = 49;
   uint16_t this_pixel;
 
 #ifdef DO_8BIT_CONV
-    uint8_t *active_buffer = (uint8_t *)base_buffers[0];
-
-    for (int i = 0; i < 2; i++) {
-      for (int j = 0; j < USB_PIXELS * 2; j++) {
+  
+   uint8_t *active_buffer = (uint8_t *)base_buffers[0];
+   for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < TX_PIXELS * 2; j++) {
         base_buffers[i][j] = 0;
       }
     }
+ 
 #else
+#ifdef USB_SEND
     uint16_t *active_buffer = (uint16_t *)base_buffers[0];
+#elif defined(SD_SEND)
+   uint16_t *active_buffer = (uint16_t *)SD_buffers[0];
+#endif
 #endif
   
   ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
   ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
   
-  set_pointer_value(MAJOR_REG, 0, PRIMARY_CAM);
+  set_pointer_value(MAJOR_REG, Col_Init, PRIMARY_CAM);
 
   int data_cycle = 0;
-  for (int i_major = 0; i_major < 112; i_major++) {
-    set_pointer_value(MINOR_REG, Col_Init, PRIMARY_CAM);
+  for (int i_major = 0; i_major < 4; i_major++) {
+    set_pointer_value(MINOR_REG, 0, PRIMARY_CAM);
 
     delay_us(1);
     
-    for (int j_minor = 0; j_minor < 4; j_minor++, data_cycle++) {      
+    for (int j_minor = 0; j_minor < 112; j_minor++, data_cycle++) {      
       PRIMARY_PARAM(INPH_BANK)->ODR |= PRIMARY_PARAM(INPH_PIN);
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
@@ -646,15 +666,16 @@ void perclos_sample()
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
       asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
-      this_pixel = adc_values[adc_idx] - FPN_PRI(i_major, j_minor);
+      this_pixel = adc_values[adc_idx] - FPN_PRI(i_major, j_minor) - mask(i_major, j_minor);
       
       active_buffer[data_cycle] = RESIZE_PIXEL(this_pixel);
-      //active_buffer[data_cycle] = i_major;
-      
+      //active_buffer[data_cycle] = j_minor;
+      //active_buffer[data_cycle] = 45499;
+      //active_buffer[data_cycle] = 10;
 
 #ifdef USB_SEND
       // instead of 4, USB_PIXELS = 112
-      if (data_cycle == 4 - 1) {
+      if (data_cycle == 112 - 1) {
         while (packet_sending == 1);
         
         data_cycle = -1;
@@ -666,52 +687,228 @@ void perclos_sample()
         active_buffer = CAST_TX_BUFFER(base_buffers[buf_idx]);
       }
       
-      
 #endif // USB_SEND
       
       adc_idx = !adc_idx;
 
-      if (j_minor < 111) {
+      if (j_minor < 112) {
         PRIMARY_PARAM(INCV_BANK)->ODR |= PRIMARY_PARAM(INCV_PIN);
         PRIMARY_PARAM(INCV_BANK)->ODR &= ~PRIMARY_PARAM(INCV_PIN);
       }
     } // for (j_minor)
 
-    if (i_major < 111)
+    if (i_major < 4)
       inc_pointer_value(MAJOR_REG, 1, PRIMARY_CAM);
 
-#ifdef SD_SEND
+/* #ifdef SD_SEND
     if (data_cycle / 112 == SD_ROWS) {
       if (i_major > SD_ROWS - 1) {
         f_finish_write();
       }
       
-      if (disk_write_fast(0, (uint8_t *)base_buffers[buf_idx], sd_ptr, SD_BLOCKS_SING) != RES_OK)      return -1;
+      disk_write_fast(0, (uint8_t *)base_buffers[buf_idx], sd_ptr, 2);
       
       buf_idx = !buf_idx;
 
       active_buffer = CAST_TX_BUFFER(base_buffers[buf_idx]);
       
-      sd_ptr += SD_BLOCKS_SING;
+      sd_ptr += 2;
       data_cycle = 0;
     }
 #endif // SD_SEND
+*/
+ #ifdef SD_SEND
+    if (data_cycle == 448){
+      // 2 * 512 - 2 * 448 = 128
+      // 896 -> image, 4 -> data (eyelid location), 124 -> zero = 896 + 4 + 124 = 1024 = 2 * 512
+      for (int n = 0; n < 128; n++){
+         active_buffer[data_cycle + n] = 1;
+      }
+      
+      disk_write_fast(0, (uint8_t *)SD_buffers[buf_idx], sd_ptr, 2);
+      
+      f_finish_write();
+      
+      //printf("%d\n", data_cycle);
+      
+      buf_idx = !buf_idx;
 
+      active_buffer = CAST_TX_BUFFER(SD_buffers[buf_idx]);
+      
+      sd_ptr += 2;
+      
+      data_cycle = 0;
+    }
+      
+ #endif // SD_SEND
+
+    
 #ifndef SEND_DATA
     data_cycle = -1;
 #endif
   } // for (i_major)
+  
 
 #ifdef SEND_DATA
-//  finish_tx(base_buffers[buf_idx], true, false);
-  uint8_t ones[184];
-  for (uint8_t index=0; index<184; index++){
-    ones[index] = 1;
-  }
-  send_packet(ones, USB_PACKET_SIZE);
+  
+  #ifdef USB_SEND
+  while (packet_sending == 1);
+  
+    uint8_t ones[184];
+    for (uint8_t index=0; index<184; index++){
+      ones[index] = 1;
+    }
+    send_packet(ones, USB_PACKET_SIZE);
+    packet_sending = 1;
+      
+  #endif // USB_SEND
+  //finish_tx(base_buffers[buf_idx], true, false);
+    
+  #ifdef SD_SEND
+/*
+    uint8_t ones[512];
+    for (uint16_t index=0; index<512; index++){
+      ones[index] = 1;
+    }
+    printf("%s\n", "salam");
+    disk_write_fast(0, ones, sd_ptr, 1);
+    
+    sd_ptr += 1;
+ */   
+  #endif //SD_SEND
+
 #endif
 
-  //return 0;
+}
+
+void Eyelid_Location()
+{
+  // TODO: LED code
+  
+  // Double-buffered (2-dim array), two bytes per pixel
+  uint8_t base_buffers[512 * 2];
+  uint8_t LEyelid;
+  
+  bool pupil_index = false;
+  uint8_t Col_Init = 49;
+  uint16_t this_pixel;
+
+#ifdef DO_8BIT_CONV
+  
+   uint8_t *active_buffer = (uint8_t *)base_buffers;
+      for (int j = 0; j < 512 * 2; j++) {
+        base_buffers[j] = 0;
+      }
+ 
+#else
+    uint16_t *active_buffer = (uint16_t *)base_buffers;
+#endif
+  
+  ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 1, ADC_SampleTime_4Cycles);
+  ADC_RegularChannelConfig(ADC1, PRIMARY_PARAM(ADC_CHAN), 2, ADC_SampleTime_4Cycles);
+  
+  set_pointer_value(MAJOR_REG, Col_Init, PRIMARY_CAM);
+
+  int data_cycle = 0;
+  for (int i_major = 0; i_major < 4; i_major++) {
+    set_pointer_value(MINOR_REG, 0, PRIMARY_CAM);
+
+    delay_us(1);
+    
+    for (int j_minor = 0; j_minor < 112; j_minor++, data_cycle++) {      
+      PRIMARY_PARAM(INPH_BANK)->ODR |= PRIMARY_PARAM(INPH_PIN);
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      PRIMARY_PARAM(INPH_BANK)->ODR &= ~PRIMARY_PARAM(INPH_PIN);
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      
+      // Do ADC conversion
+      ADC_SoftwareStartConv(ADC1);
+      
+      // TODO: there has *got* to be a way to test for a flag or something to check for ADC completion
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      asm volatile ("nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n" "nop\n");
+      this_pixel = adc_values[adc_idx] - FPN_PRI(i_major, j_minor) - mask(i_major, j_minor);
+      
+      active_buffer[data_cycle] = RESIZE_PIXEL(this_pixel);
+      //active_buffer[data_cycle] = j_minor;
+      //active_buffer[data_cycle] = 45499;
+
+      adc_idx = !adc_idx;
+
+      if (j_minor < 112) {
+        PRIMARY_PARAM(INCV_BANK)->ODR |= PRIMARY_PARAM(INCV_PIN);
+        PRIMARY_PARAM(INCV_BANK)->ODR &= ~PRIMARY_PARAM(INCV_PIN);
+      }
+    } // for (j_minor)
+
+    if (i_major < 4)
+      inc_pointer_value(MAJOR_REG, 1, PRIMARY_CAM);
+    
+    if (data_cycle == 448){
+
+      eyelid_detector((uint8_t *)base_buffers, &pupil_index, &LEyelid, &prev_eyelid);
+      prev_eyelid = LEyelid;
+      active_buffer[data_cycle] = 55;
+      //printf("%d\n", LEyelid);
+
+      
+#ifdef SD_SEND
+      
+      // 896 -> image, 4 -> data (eyelid location), 124 -> zero = 896 + 4 + 124 = 1024 = 2 * 512 --> (124 + 4) / 2 = 64
+      for (int n = 1; n < 64; n++){
+         active_buffer[data_cycle + n] = 1;
+      }
+      
+      disk_write_fast(0, (uint8_t *)base_buffers, sd_ptr, 2);
+      
+      f_finish_write();
+      
+      sd_ptr += 2;
+      
+      data_cycle = 0;
+
+      
+#elif defined(USB_SEND)    
+
+      data_cycle = -1;
+      for (int i = 0; i < 5; i++){
+        while (packet_sending == 1);
+        send_packet((uint8_t *)(base_buffers + (112 * i)), USB_PACKET_SIZE);
+        packet_sending = 1;
+      }
+      
+#endif
+    
+      
+    } // if (data_cycle == 448)
+
+#ifndef SEND_DATA
+    data_cycle = -1;
+#endif
+    
+  } // for (i_major)
+  
+
+#ifdef SEND_DATA 
+  #ifdef USB_SEND
+  while (packet_sending == 1);
+  
+    uint8_t ones[184];
+    for (uint8_t index=0; index<184; index++){
+      ones[index] = 1;
+    }
+    send_packet(ones, USB_PACKET_SIZE);
+    packet_sending = 1;
+      
+  #endif // USB_SEND
+#endif
+
 }
 
 
@@ -790,7 +987,7 @@ int stony_single()
       
       this_pixel = adc_values[adc_idx] - FPN_PRI(i_major, j_minor);
       active_buffer[data_cycle] = RESIZE_PIXEL(this_pixel);
-
+      //active_buffer[data_cycle] = i_major;
 #ifdef IMPLICIT_EYE_TRACKING
       if (do_tracking &&
           MASK(current_subsample, MASK_MAJOR) == i_major &&
@@ -971,7 +1168,7 @@ for (int i_major = 0; i_major < 112; i_major++) {
       
       this_pixel = adc_values[0] - FPN_PRI(i_major, j_minor);
       active_buffer[data_cycle] = RESIZE_PIXEL(this_pixel);
-
+      //active_buffer[data_cycle] = i_major;
 #ifdef IMPLICIT_EYE_TRACKING
       if (do_tracking &&
           MASK(current_subsample, MASK_MAJOR) == i_major &&

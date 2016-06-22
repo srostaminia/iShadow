@@ -5,6 +5,8 @@
 #include "ishadow_conf.h"
 #include "stdbool.h"
 
+
+
 // #if defined(CIDER_TRACKING) && defined(OUTDOOR_SWITCH)
 // 	#error ERROR: CANNOT USE CIDER_TRACKING AND OUTDOOR_SWITCH SIMULTANEOUSLY (STONYMAN.H)
 // #endif
@@ -101,8 +103,8 @@
 //#define LED_HIGH        0        
 // #define LED_HIGH          0x59E       // 1.15V
 // #define LED_HIGH        0x5D1         // 1.25V
-#define LED_HIGH        0x64D
-//#define LED_HIGH        0x746
+//#define LED_HIGH        0x64D           // old prototype
+#define LED_HIGH        0xFFF           // new prototype
 
 #ifdef SD_SEND
 
@@ -289,6 +291,15 @@
 #define FD_CIDER_LENGTH		10
 #define FD_MAX_LENGTH			10
 
+#ifdef USE_4col_MASK
+
+	#define mask(X, Y)		((uint16_t*)(mask_4col))[((X) + ((Y) * 4))]
+#else
+
+	#define mask(X, Y)		0
+
+#endif // USE_4col_MASK
+
 #ifdef USE_PARAM_FILE
 
 	#define EYE_FPN_START		0
@@ -318,6 +329,8 @@
 	#define FPN_T_OUT(X, Y)	0
 
 #endif // USE_PARAM_FILE
+
+
 
 #define PARAM_NOMODEL			0
 #define PARAM_CIDER_HIT		1

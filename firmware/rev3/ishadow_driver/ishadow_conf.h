@@ -11,7 +11,9 @@
 
 // Do eye tracking with ANN or CIDER model (mutually exclusive)
 //#define ANN_TRACKING
-//#define CIDER_TRACKING
+#define CIDER_TRACKING
+//#define PERCLOS_TRACKING
+//#define COLUMNS_TRACKING 
 
 // Choose USB or SD transmission
 // Note: USB can only handle one video stream, defaults to eye if both are on
@@ -22,8 +24,10 @@
 //#define ROW_MAJOR
 #define COLUMN_MAJOR
 
+
 // Enables use of an uploaded binary file for FPN masks and eye model parameters
-//#define USE_PARAM_FILE
+#define USE_PARAM_FILE
+//#define USE_4col_MASK
 
 // OUTMODE CURRENTLY NOT IMPLEMENTED!!
 // Uncomment to use outdoor settings
