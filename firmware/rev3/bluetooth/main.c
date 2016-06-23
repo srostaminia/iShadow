@@ -26,32 +26,36 @@
   */
 
 /* Includes ------------------------------------------------------------------*/
-#include "stm32l1xx.h"
-#include "stdio.h"
 #include "main.h"
 
 /* Private variables ---------------------------------------------------------*/
-char TxBuffer[] = "AT+AB LocalName hullo there";
+uint8_t TxBuffer[] = "hello world";
 uint8_t RxBuffer [RXBUFFERSIZE];
-__IO uint8_t TxIndex = 0x00;
 __IO uint8_t RxIndex = 0x00;
+__IO uint8_t TxIndex = 0x00;
+
 __IO uint8_t UsartMode = USART_MODE_TRANSMITTER;
-__IO uint8_t UsartTransactionType = USART_TRANSACTIONTYPE_DATA;
-int debugIt = -1;
+__IO uint8_t UsartTransactionType = USART_TRANSACTIONTYPE_CMD;
 
 uint8_t CmdBuffer [0x02] = {0x00, 0x00}; /* {Transaction Command, 
 Number of byte to receive or to transmit} */
 uint8_t AckBuffer [0x02] = {0x00, 0x00};  /* {Transaction Command, ACK command} */
 
-__IO uint32_t TimeOut = 0x00;
-
+__IO uint32_t TimeOut = 0x00;  
 /* Private function prototypes -----------------------------------------------*/
 static void USART_Config(void);
-
-
+static void SysTickConfig(void);
+void SendCharUSART1(char ch);
+char GetCharUSART1(void);
+void USART_Communication(void);
+static void Fill_Buffer(uint8_t *pBuffer, uint16_t BufferLength);
 /* Private functions ---------------------------------------------------------*/
 
-
+/**
+  * @brief  Main program
+  * @param  None
+  * @retval None
+  */
 int main(void)
 {
   /*!< At this stage the microcontroller clock setting is already configured, 
@@ -63,55 +67,57 @@ int main(void)
   
   /* USART configuration -----------------------------------------------------*/
   USART_Config();
-   
-    
-/* Here I try to send the AT command to the module */
-  debugIt = USART_GetITStatus(USARTx, USART_IT_TXE);
-      if (USART_GetITStatus(USARTx, USART_IT_TXE) == SET) //should say == SET
-  {   /* Send the data */
-    while (TxIndex < TXBUFFERSIZE) {
-        USART_SendData(USARTx, TxBuffer[TxIndex]);
-        TxIndex++; 
-        while ((USART_GetFlagStatus(USARTx, USART_FLAG_TC) == RESET)&&(TimeOut != 0x00))
-        {
-        }
-    }
-        if (TxIndex == GetVar_NbrOfData())
-        {
-          /* Disable the USARTx transmit data register empty interrupt */
-          USART_ITConfig(USARTx, USART_IT_TXE, DISABLE);
-        }
-      }
-    /*If Data Received send the ACK*/
-    else
-    {
-    }
-      /* USART in mode Receiver --------------------------------------------------*/
-  if (USART_GetITStatus(USARTx, USART_IT_RXNE) == SET)
-  {
-    if (UsartMode == USART_MODE_TRANSMITTER)
-    {
-      AckBuffer[RxIndex++] = USART_ReceiveData(USARTx);
-    }
-    else
-    {
-      /* Receive the command */
-      if (UsartTransactionType == USART_TRANSACTIONTYPE_CMD)
-      {
-        CmdBuffer[RxIndex++] = USART_ReceiveData(USARTx);
-      }
-      /* Receive the USART data */
-      else
-      {
-        RxBuffer[RxIndex++] = USART_ReceiveData(USARTx);
-      }
-    }
-  }  
-    
-   
-  RxBuffer[RxIndex++] = USART_ReceiveData(USARTx);            
+  
+  /* SysTick configuration ---------------------------------------------------*/
+  SysTickConfig();
+  
+/*Trying to send data here, with helper functions */
+USART_Communication();
+
 }
 
+void USART_Communication(void){
+	char ch;
+	while(1) {
+		SendCharUSART1(0x0D);
+		SendCharUSART1(0x0A);
+		SendCharUSART1('U');
+		SendCharUSART1('S');
+		SendCharUSART1('A');
+		SendCharUSART1('R');
+		SendCharUSART1('T');
+		SendCharUSART1('1');
+		SendCharUSART1('>');
+// Get and echo USART1
+		ch = GetCharUSART1();
+		while (ch != 0x0D) {
+			SendCharUSART1(ch);
+			ch = GetCharUSART1();
+		}
+	}
+}
+
+void SendCharUSART1(char ch){
+// Wait until TXE is set
+	while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET)
+	{
+	}
+	USART_SendData(USART1, ch);
+// Wait until the end of transmit
+	while(USART_GetFlagStatus(USART1, USART_FLAG_TC) == RESET)
+	{
+	}
+}
+char GetCharUSART1(void){
+	char ch;
+// Wait until the USART1 Receive Data Register is not empty
+//        Fill_Buffer(USARTx->DR, 
+	while(USART_GetFlagStatus(USART1, USART_FLAG_RXNE) == RESET)
+	{
+	}
+	ch = (USART_ReceiveData(USART1) & 0xFF);
+	return ch;
+}
 
 /**
   * @brief  Configures the USART Peripheral.
@@ -179,10 +185,90 @@ static void USART_Config(void)
   USART_Cmd(USARTx, ENABLE);
 }
 
+/**
+  * @brief  Configure a SysTick Base time to 10 ms.
+  * @param  None
+  * @retval None
+  */
+static void SysTickConfig(void)
+{
+  /* Setup SysTick Timer for 10ms interrupts  */
+  if (SysTick_Config(SystemCoreClock / 100))
+  {
+    /* Capture error */
+    while (1);
+  }
+  /* Configure the SysTick handler priority */
+  NVIC_SetPriority(SysTick_IRQn, 0x0);
+}
+
+/**
+  * @brief  Reads key from evaluationboard.
+  * @param  None
+  * @retval Return JOY_RIGHT, JOY_LEFT, JOY_SEL, JOY_UP, JOY_DOWN or JOY_NONE
+  */
+
+/**
+  * @brief  Compares two buffers.
+  * @param  pBuffer1, pBuffer2: buffers to be compared.
+  * @param  BufferLength: buffer's length
+  * @retval PASSED: pBuffer1 identical to pBuffer2
+  *         FAILED: pBuffer1 differs from pBuffer2
+  */
+
+/**
+  * @brief  Returns NbrOfData value.
+  * @param  None
+  * @retval Tx Buffer Size (NbrOfDataToTransfer).
+  */
 uint8_t GetVar_NbrOfData(void)
 {
   return CmdBuffer[0x01];
 }
+/**
+  * @brief  Fills buffer.
+  * @param  pBuffer: pointer on the Buffer to fill
+  * @param  BufferLength: size of the buffer to fill
+  * @retval None
+  */
+static void Fill_Buffer(uint8_t *pBuffer, uint16_t BufferLength)
+{
+  uint16_t index = 0;
+  
+  /* Put in global buffer same values */
+  for (index = 0; index < BufferLength; index++ )
+  {
+    pBuffer[index] = 0x00;
+  }
+}
 
+
+#ifdef  USE_FULL_ASSERT
+
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t* file, uint32_t line)
+{
+  /* User can add his own implementation to report the file name and line number,
+  ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+  
+  /* Infinite loop */
+  while (1)
+  {}
+}
+#endif
+
+/**
+  * @}
+  */
+
+/**
+  * @}
+  */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
