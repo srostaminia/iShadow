@@ -49,6 +49,7 @@ void SendCharUSART1(char ch);
 char GetCharUSART1(void);
 void USART_Communication(void);
 static void Fill_Buffer(uint8_t *pBuffer, uint16_t BufferLength);
+void SendStringUSART1(void);
 /* Private functions ---------------------------------------------------------*/
 
 /**
@@ -72,11 +73,13 @@ int main(void)
   SysTickConfig();
   
 /*Trying to send data here, with helper functions */
-USART_Communication();
+//USART_Communication();
+  SendStringUSART1();
 
 }
 
 void USART_Communication(void){
+  
 	char ch;
 	while(1) {
 		SendCharUSART1(0x0D);
@@ -88,12 +91,13 @@ void USART_Communication(void){
 		SendCharUSART1('T');
 		SendCharUSART1('1');
 		SendCharUSART1('>');
+                break;
 // Get and echo USART1
-		ch = GetCharUSART1();
-		while (ch != 0x0D) {
-			SendCharUSART1(ch);
-			ch = GetCharUSART1();
-		}
+//		ch = GetCharUSART1();
+//		while (ch != 0x0D) {
+//			SendCharUSART1(ch);
+//			ch = GetCharUSART1();
+//		}
 	}
 }
 
@@ -111,12 +115,23 @@ void SendCharUSART1(char ch){
 char GetCharUSART1(void){
 	char ch;
 // Wait until the USART1 Receive Data Register is not empty
-//        Fill_Buffer(USARTx->DR, 
+//        Fill_Buffer(USARTx->DR,  0x02);
 	while(USART_GetFlagStatus(USART1, USART_FLAG_RXNE) == RESET)
 	{
 	}
 	ch = (USART_ReceiveData(USART1) & 0xFF);
 	return ch;
+}
+
+void SendStringUSART1(void) {
+char str[] = "hello"; //put string here
+char *s;
+s = str;
+while(*s)
+{
+// while(USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET);
+ USART_SendData(USART2, *s++);
+}
 }
 
 /**
