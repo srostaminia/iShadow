@@ -73,14 +73,15 @@ int main(void)
   SysTickConfig();
   
 /*Trying to send data here, with helper functions */
-//USART_Communication();
-  SendStringUSART1();
+USART_Communication();
+//  SendStringUSART1();
 
 }
 
 void USART_Communication(void){
   
 	char ch;
+        USARTx->DR = (ch & 0xFF);
 	while(1) {
 		SendCharUSART1(0x0D);
 		SendCharUSART1(0x0A);
@@ -91,9 +92,9 @@ void USART_Communication(void){
 		SendCharUSART1('T');
 		SendCharUSART1('1');
 		SendCharUSART1('>');
-                break;
+//                break;
 // Get and echo USART1
-//		ch = GetCharUSART1();
+		ch = GetCharUSART1();
 //		while (ch != 0x0D) {
 //			SendCharUSART1(ch);
 //			ch = GetCharUSART1();
@@ -129,8 +130,8 @@ char *s;
 s = str;
 while(*s)
 {
-// while(USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET);
- USART_SendData(USART2, *s++);
+ while(USART_GetFlagStatus(USARTx, USART_FLAG_TXE) == RESET); //I was checking the wrong USART!!!
+ USART_SendData(USARTx, *s++); //wrong USART again!! Don't copy code from the internet dude
 }
 }
 
@@ -187,14 +188,14 @@ static void USART_Config(void)
   
   /* NVIC configuration */
   /* Configure the Priority Group to 2 bits */
-  NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
+//  NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
   
   /* Enable the USARTx Interrupt */
-  NVIC_InitStructure.NVIC_IRQChannel = USARTx_IRQn;
-  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-  NVIC_Init(&NVIC_InitStructure);
+//  NVIC_InitStructure.NVIC_IRQChannel = USARTx_IRQn;
+//  NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
+//  NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
+//  NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
+//  NVIC_Init(&NVIC_InitStructure);
   
   /* Enable USART */
   USART_Cmd(USARTx, ENABLE);
