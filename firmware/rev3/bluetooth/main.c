@@ -29,27 +29,15 @@
 #include "main.h"
 
 /* Private variables ---------------------------------------------------------*/
-uint8_t TxBuffer[] = "hello world";
-uint8_t RxBuffer [RXBUFFERSIZE];
-__IO uint8_t RxIndex = 0x00;
-__IO uint8_t TxIndex = 0x00;
-
-__IO uint8_t UsartMode = USART_MODE_TRANSMITTER;
-__IO uint8_t UsartTransactionType = USART_TRANSACTIONTYPE_CMD;
-
-uint8_t CmdBuffer [0x02] = {0x00, 0x00}; /* {Transaction Command, 
-Number of byte to receive or to transmit} */
-uint8_t AckBuffer [0x02] = {0x00, 0x00};  /* {Transaction Command, ACK command} */
-
-__IO uint32_t TimeOut = 0x00;  
+static __IO uint32_t TimingDelay;
 /* Private function prototypes -----------------------------------------------*/
 static void USART_Config(void);
 static void SysTickConfig(void);
 void SendCharUSART1(char ch);
 char GetCharUSART1(void);
 void USART_Communication(void);
-static void Fill_Buffer(uint8_t *pBuffer, uint16_t BufferLength);
 void SendStringUSART1(void);
+void Delay(__IO uint32_t nTime);
 /* Private functions ---------------------------------------------------------*/
 
 /**
@@ -65,7 +53,6 @@ int main(void)
        To reconfigure the default setting of SystemInit() function, refer to
        system_stm32l1xx.c file
      */
-  
   /* USART configuration -----------------------------------------------------*/
   USART_Config();
   
@@ -73,28 +60,42 @@ int main(void)
   SysTickConfig();
   
 /*Trying to send data here, with helper functions */
-USART_Communication();
-//  SendStringUSART1();
-
+//USART_Communication();
+  while(1){
+SendStringUSART1();
+//Delay(50);
+int j=0;
+while(j<30){
+  j++;
+int i=0;
+while(i<1000000) i++;
+}
+  }
 }
 
 void USART_Communication(void){
   
-	char ch;
-        USARTx->DR = (ch & 0xFF);
+//	char ch;
 	while(1) {
-		SendCharUSART1(0x0D);
-		SendCharUSART1(0x0A);
-		SendCharUSART1('U');
-		SendCharUSART1('S');
-		SendCharUSART1('A');
-		SendCharUSART1('R');
-		SendCharUSART1('T');
-		SendCharUSART1('1');
-		SendCharUSART1('>');
+                SendCharUSART1('0');
+//                SendCharUSART1('1');
+//		SendCharUSART1(0x0D);
+//		SendCharUSART1(0x0A);
+//		SendCharUSART1('U');
+//		SendCharUSART1('S');
+//		SendCharUSART1('A');
+//		SendCharUSART1('R');
+//		SendCharUSART1('T');
+//		SendCharUSART1('1');
+//		SendCharUSART1('>');
+//		ch = GetCharUSART1();
+                int i = 0;
+                while (i<30000){
+                i++;
+                }
 //                break;
 // Get and echo USART1
-		ch = GetCharUSART1();
+//		ch = GetCharUSART1();
 //		while (ch != 0x0D) {
 //			SendCharUSART1(ch);
 //			ch = GetCharUSART1();
@@ -107,6 +108,8 @@ void SendCharUSART1(char ch){
 	while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET)
 	{
 	}
+//        USARTx->DR = (ch & (uint16_t)0x01FF);
+//        int test = (ch & (uint16_t)0x01FF);
 	USART_SendData(USART1, ch);
 // Wait until the end of transmit
 	while(USART_GetFlagStatus(USART1, USART_FLAG_TC) == RESET)
@@ -125,13 +128,15 @@ char GetCharUSART1(void){
 }
 
 void SendStringUSART1(void) {
-char str[] = "hello"; //put string here
+char str[] = "AT+AB IAPConnect d02598417ea1 \r\n"; //put string here////////////////////////////////////////
 char *s;
 s = str;
 while(*s)
 {
- while(USART_GetFlagStatus(USARTx, USART_FLAG_TXE) == RESET); //I was checking the wrong USART!!!
- USART_SendData(USARTx, *s++); //wrong USART again!! Don't copy code from the internet dude
+ while(USART_GetFlagStatus(USARTx, USART_FLAG_TXE) == RESET); 
+ USART_SendData(USARTx, *s++); 
+ /*Check that transmission has finished*/
+ while (USART_GetFlagStatus(USARTx, USART_FLAG_TC) == RESET);
 }
 }
 
@@ -143,7 +148,7 @@ while(*s)
 static void USART_Config(void)
 {
   USART_InitTypeDef USART_InitStructure;
-  NVIC_InitTypeDef NVIC_InitStructure;
+//  NVIC_InitTypeDef NVIC_InitStructure;
   GPIO_InitTypeDef GPIO_InitStructure;
   
   /* Enable GPIO clock */
@@ -156,7 +161,7 @@ static void USART_Config(void)
   GPIO_PinAFConfig(USARTx_TX_GPIO_PORT, USARTx_TX_SOURCE, USARTx_TX_AF);
   
   /* Connect PXx to USARTx_Rx */
-  GPIO_PinAFConfig(USARTx_RX_GPIO_PORT, USARTx_RX_SOURCE, USARTx_RX_AF);
+  //GPIO_PinAFConfig(USARTx_RX_GPIO_PORT, USARTx_RX_SOURCE, USARTx_RX_AF);
   
   /* Configure USART Tx and Rx as alternate function push-pull */
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
@@ -166,8 +171,8 @@ static void USART_Config(void)
   GPIO_InitStructure.GPIO_Pin = USARTx_TX_PIN;
   GPIO_Init(USARTx_TX_GPIO_PORT, &GPIO_InitStructure);
   
-  GPIO_InitStructure.GPIO_Pin = USARTx_RX_PIN;
-  GPIO_Init(USARTx_RX_GPIO_PORT, &GPIO_InitStructure);
+  //GPIO_InitStructure.GPIO_Pin = USARTx_RX_PIN;
+  //GPIO_Init(USARTx_RX_GPIO_PORT, &GPIO_InitStructure);
 
   /* USARTx configuration ----------------------------------------------------*/
   /* USARTx configured as follow:
@@ -178,7 +183,7 @@ static void USART_Config(void)
   - Hardware flow control disabled (RTS and CTS signals)
   - Receive and transmit enabled
   */
-  USART_InitStructure.USART_BaudRate = 115200;
+  USART_InitStructure.USART_BaudRate = 115200*3;
   USART_InitStructure.USART_WordLength = USART_WordLength_8b;
   USART_InitStructure.USART_StopBits = USART_StopBits_1;
   USART_InitStructure.USART_Parity = USART_Parity_No;
@@ -215,49 +220,20 @@ static void SysTickConfig(void)
     while (1);
   }
   /* Configure the SysTick handler priority */
-  NVIC_SetPriority(SysTick_IRQn, 0x0);
+//  NVIC_SetPriority(SysTick_IRQn, 0x0);
 }
 
 /**
-  * @brief  Reads key from evaluationboard.
-  * @param  None
-  * @retval Return JOY_RIGHT, JOY_LEFT, JOY_SEL, JOY_UP, JOY_DOWN or JOY_NONE
-  */
-
-/**
-  * @brief  Compares two buffers.
-  * @param  pBuffer1, pBuffer2: buffers to be compared.
-  * @param  BufferLength: buffer's length
-  * @retval PASSED: pBuffer1 identical to pBuffer2
-  *         FAILED: pBuffer1 differs from pBuffer2
-  */
-
-/**
-  * @brief  Returns NbrOfData value.
-  * @param  None
-  * @retval Tx Buffer Size (NbrOfDataToTransfer).
-  */
-uint8_t GetVar_NbrOfData(void)
-{
-  return CmdBuffer[0x01];
-}
-/**
-  * @brief  Fills buffer.
-  * @param  pBuffer: pointer on the Buffer to fill
-  * @param  BufferLength: size of the buffer to fill
+  * @brief  Inserts a delay time.
+  * @param  nTime: specifies the delay time length, in milliseconds.
   * @retval None
   */
-static void Fill_Buffer(uint8_t *pBuffer, uint16_t BufferLength)
-{
-  uint16_t index = 0;
-  
-  /* Put in global buffer same values */
-  for (index = 0; index < BufferLength; index++ )
-  {
-    pBuffer[index] = 0x00;
-  }
-}
+void Delay(__IO uint32_t nTime)
+{ 
+  TimingDelay = nTime;
 
+  while(TimingDelay != 0);
+}
 
 #ifdef  USE_FULL_ASSERT
 
