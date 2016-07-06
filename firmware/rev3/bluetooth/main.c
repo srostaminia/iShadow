@@ -24,9 +24,11 @@
   *
   ******************************************************************************
   */
-
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 /* Private variables ---------------------------------------------------------*/
 static __IO uint32_t TimingDelay;
@@ -38,6 +40,8 @@ char GetCharUSART1(void);
 void USART_Communication(void);
 void SendStringUSART1(void);
 void Delay(__IO uint32_t nTime);
+int SendImgData(void);
+void ReadFile(char *name);
 /* Private functions ---------------------------------------------------------*/
 
 /**
@@ -61,17 +65,45 @@ int main(void)
   
 /*Trying to send data here, with helper functions */
 //USART_Communication();
-  while(1){
-SendStringUSART1();
-//Delay(50);
-int j=0;
-while(j<30){
-  j++;
-int i=0;
-while(i<1000000) i++;
+//  SendStringUSART1();
+
+ReadFile("img.png");
+  
+//  while(1){
+//SendStringUSART1();
+////Delay(50);
+//int j=0;
+//while(j<20){
+//  j++;
+//int i=0;
+//while(i<1000000) i++;
+//}
+//  }
 }
-  }
+
+void SendStringUSART1(void) {
+char str[] = "AT+AB SPPDisconnect \r\n"; //put string here////////////////////////////////////////
+char *s;
+s = str;
+while(*s)
+{
+ while(USART_GetFlagStatus(USARTx, USART_FLAG_TXE) == RESET); 
+ USART_SendData(USARTx, *s++); 
+ /*Check that transmission has finished*/
+ while (USART_GetFlagStatus(USARTx, USART_FLAG_TC) == RESET);
 }
+}
+
+int SendImgData()
+{
+  ReadFile("img.png");
+  return 0;
+/*
+open file
+increment byte by byte through the buffer and send each byte
+close file  
+*/
+}  
 
 void USART_Communication(void){
   
@@ -125,19 +157,6 @@ char GetCharUSART1(void){
 	}
 	ch = (USART_ReceiveData(USART1) & 0xFF);
 	return ch;
-}
-
-void SendStringUSART1(void) {
-char str[] = "AT+AB IAPConnect d02598417ea1 \r\n"; //put string here////////////////////////////////////////
-char *s;
-s = str;
-while(*s)
-{
- while(USART_GetFlagStatus(USARTx, USART_FLAG_TXE) == RESET); 
- USART_SendData(USARTx, *s++); 
- /*Check that transmission has finished*/
- while (USART_GetFlagStatus(USARTx, USART_FLAG_TC) == RESET);
-}
 }
 
 /**
@@ -263,4 +282,173 @@ void assert_failed(uint8_t* file, uint32_t line)
   * @}
   */
 
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
+/************************ (C) COPYRIGHT STMicroelectronics *****END OF ORIGINAL FILE****/
+
+
+
+//Function protypes
+//void ReadFile(char *name);
+void dump_buffer(void *buffer, int buffer_size);
+void dump_buffer_hex(void *buffer, int bufferSize);
+void saveFile();
+void writeBuffer(void *buffer, int bufferSize);
+
+
+//int main() 
+//{
+//	ReadFile("img.png");
+//	// printf("Johnny boy in da haus\n");
+//	return 0;
+//}
+
+
+void ReadFile(char *name)
+{
+	FILE *file;
+	char *buffer;
+	unsigned long fileLen;
+
+	//Open file
+	file = fopen(name, "rb");
+	if (!file)
+	{
+		fprintf(stderr, "Unable to open file %s", name);
+		return;
+	}
+	
+	//Get file length
+	fseek(file, 0, SEEK_END);
+	fileLen=ftell(file);
+	fseek(file, 0, SEEK_SET);
+
+	//Allocate memory
+	buffer=(char *)malloc(fileLen+1);
+	if (!buffer)
+	{
+		fprintf(stderr, "Memory error!");
+                                fclose(file);
+		return;
+	}
+
+	//Read file contents into buffer
+	fread(buffer, fileLen, 1, file);
+	fclose(file);
+
+	//Do what ever with buffer
+
+	/*My stuff here*/
+	// printf("%i", fileLen);
+	// dump_buffer_hex(buffer, 1000);
+//        saveFile(buffer, fileLen);
+//	writeBuffer(buffer, fileLen);
+        char *s;
+        s = buffer;
+        while(*s)
+        {
+         while(USART_GetFlagStatus(USARTx, USART_FLAG_TXE) == RESET); 
+         USART_SendData(USARTx, *s++); 
+         /*Check that transmission has finished*/
+         while (USART_GetFlagStatus(USARTx, USART_FLAG_TC) == RESET);
+        }
+	/*My stuff ends here*/
+
+	free(buffer);
+
+
+}
+
+void dump_buffer(void *buffer, int buffer_size)
+{
+  int i;
+
+  for(i = 0;i < buffer_size;++i)
+     printf("%c", ((char *)buffer)[i]);
+}
+
+void dump_buffer_hex(void *buffer, int bufferSize)
+{
+	int c;
+	for (c=0;c<bufferSize;++c)
+{
+     printf("%.2X ", ((char *)buffer)	[c]);
+
+     // put an extra space between every 4 bytes
+     if (c % 4 == 3)
+     {
+         printf(" ");
+     }
+
+     // Display 16 bytes per line
+     if (c % 16 == 15)
+     {
+         printf("\n");
+     }
+}
+// Add an extra line feed for good measure
+printf("\n");
+}
+
+void saveFile(void *buffer, int bufferSize)
+/*avoid this function, it formats the output incorrectly*/
+{
+FILE *f = fopen("output.txt", "w");
+if (f == NULL)
+{
+    printf("Error opening file!\n");
+    exit(1);
+}
+/* my stuff */
+fprintf(f, "%s\n", (char *)buffer);
+
+	int c;
+	for (c=0;c<bufferSize;++c)
+{
+     fprintf(f, "%.2X ", ((char *)buffer)	[c]);
+
+     // put an extra space between every 4 bytes
+     if (c % 4 == 3)
+     {
+         fprintf(f, " ");
+     }
+
+     // Display 16 bytes per line
+     if (c % 16 == 15)
+     {
+         fprintf(f, "\n");
+     }
+}
+// Add an extra line feed for good measure
+fprintf(f, "\n");
+/*end my stuff*/
+
+// /* print some text */
+// const char *text = "Write this to the file";
+// fprintf(f, "Some text: %s\n", text);
+
+// /* print integers and floats */
+// int i = 1;
+// float py = 3.1415927;
+// fprintf(f, "Integer: %d, float: %f\n", i, py);
+
+// /* printing single chatacters */
+// char c = 'A';
+// fprintf(f, "A character: %c\n", c);
+
+fclose(f);
+}
+
+void writeBuffer(void *buffer, int bufferSize)
+{
+FILE* pFile;
+pFile = fopen("output.txt","wb");
+
+if (pFile){
+    fwrite(buffer, bufferSize, 1, pFile);
+    puts("Wrote to file!");
+}
+else{
+    puts("Something wrong writing to File.");
+}
+
+fclose(pFile);
+}
