@@ -38,9 +38,10 @@ static void SysTickConfig(void);
 void SendCharUSART1(char ch);
 char GetCharUSART1(void);
 void USART_Communication(void);
-void SendStringUSART1(void);
+void SendStringUSART1(char *message);
 void Delay(__IO uint32_t nTime);
 int SendImgData(void);
+void PairAndroid(char *bdaddress);
 /* Private functions ---------------------------------------------------------*/
 
 /**
@@ -57,32 +58,33 @@ int main(void)
        system_stm32l1xx.c file
      */
   /* USART configuration -----------------------------------------------------*/
-  USART_Config();
+//  USART_Config();
   
   /* SysTick configuration ---------------------------------------------------*/
-  SysTickConfig();
+//  SysTickConfig();
   
 /*Trying to send data here, with helper functions */
 //USART_Communication();
-//  SendStringUSART1();
+//  SendStringUSART1("AT+AB LocalName fishsticks  \r\n");
+  PairAndroid("94659c578789");
 
   
-  while(1){
-SendStringUSART1();
-//Delay(50);
-int j=0;
-while(j<20){
-  j++;
-int i=0;
-while(i<1000000) i++;
-}
-  }
+//  while(1){
+//SendStringUSART1();
+////Delay(50);
+//int j=0;
+//while(j<20){
+//  j++;
+//int i=0;
+//while(i<1000000) i++;
+//}
+//  }
 }
 
-void SendStringUSART1(void) {
-char str[] = "AT+AB LocalName fishsticks burgers \r\n"; //put string here////////////////////////////////////////
+void SendStringUSART1(char *message) {
+//char str[] = message;
 char *s;
-s = str;
+s = message;
 while(*s)
 {
  while(USART_GetFlagStatus(USARTx, USART_FLAG_TXE) == RESET); 
@@ -91,6 +93,33 @@ while(*s)
  while (USART_GetFlagStatus(USARTx, USART_FLAG_TC) == RESET);
 }
 } 
+
+void PairAndroid(char *bdaddress) 
+{
+  /* USART configuration -----------------------------------------------------*/
+  USART_Config();
+  
+  /* SysTick configuration ---------------------------------------------------*/
+  SysTickConfig();
+  
+  /* Allow Android to pair ---------------------------------------------------*/
+  char bondConcat[80];
+  strcpy(bondConcat, "AT+AB EnableBond ");
+  strcat(bondConcat, bdaddress);
+  strcat(bondConcat, "1234");
+  strcat(bondConcat, " \r\n");
+  SendStringUSART1(bondConcat);
+  
+  /* Initiate bond -----------------------------------------------------------*/
+  SendStringUSART1("AT+AB Bypass \r\n");
+  
+  char connectConcat[80];
+  strcpy(connectConcat, "AT+AB SPPConnect ");
+  strcat(connectConcat, bdaddress);
+  strcat(connectConcat, " \r\n");
+  SendStringUSART1(connectConcat);
+  //concatenate the above strings
+}
 
 void USART_Communication(void){
   
