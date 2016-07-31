@@ -35,13 +35,11 @@ static __IO uint32_t TimingDelay;
 /* Private function prototypes -----------------------------------------------*/
 static void USART_Config(void);
 static void SysTickConfig(void);
-void SendCharUSART1(char ch);
 char GetCharUSART1(void);
-void USART_Communication(void);
 void SendStringUSART1(char *message);
 void Delay(__IO uint32_t nTime);
-int SendImgData(void);
-void PairAndroid(char *bdaddress);
+int SendData(char *data);
+void ConnectAndroid(char *bdaddress);
 /* Private functions ---------------------------------------------------------*/
 
 /**
@@ -57,44 +55,19 @@ int main(void)
        To reconfigure the default setting of SystemInit() function, refer to
        system_stm32l1xx.c file
      */
-  /* USART configuration -----------------------------------------------------*/
-//  USART_Config();
   
-  /* SysTick configuration ---------------------------------------------------*/
-//  SysTickConfig();
+ 
+  ConnectAndroid("94659c578789"); //This is the address of our android device
   
-/*Trying to send data here, with helper functions */
-//USART_Communication();
-//  SendStringUSART1("AT+AB LocalName fishsticks  \r\n");
-  PairAndroid("94659c578789");
-
-  
-//  while(1){
-//SendStringUSART1();
-////Delay(50);
-//int j=0;
-//while(j<20){
-//  j++;
-//int i=0;
-//while(i<1000000) i++;
-//}
-//  }
+  SendData("What hath God wrought");
 }
 
-void SendStringUSART1(char *message) {
-//char str[] = message;
-char *s;
-s = message;
-while(*s)
-{
- while(USART_GetFlagStatus(USARTx, USART_FLAG_TXE) == RESET); 
- USART_SendData(USARTx, *s++); 
- /*Check that transmission has finished*/
- while (USART_GetFlagStatus(USARTx, USART_FLAG_TC) == RESET);
-}
-} 
 
-void PairAndroid(char *bdaddress) 
+/**
+Connects the microcontroller to the android device with the specified address.
+@param bdaddress The address of device to connect to
+*/
+void ConnectAndroid(char *bdaddress)
 {
   /* USART configuration -----------------------------------------------------*/
   USART_Config();
@@ -102,68 +75,59 @@ void PairAndroid(char *bdaddress)
   /* SysTick configuration ---------------------------------------------------*/
   SysTickConfig();
   
-  /* Allow Android to pair ---------------------------------------------------*/
+  /* Change name -------------------------------------------------------------*/
+  SendStringUSART1("AT+AB LocalName btserver  \r\n");
+  
+  /* Enable bond -------------------------------------------------------------*/
   char bondConcat[80];
   strcpy(bondConcat, "AT+AB EnableBond ");
   strcat(bondConcat, bdaddress);
-  strcat(bondConcat, "1234");
   strcat(bondConcat, " \r\n");
   SendStringUSART1(bondConcat);
   
-  /* Initiate bond -----------------------------------------------------------*/
-  SendStringUSART1("AT+AB Bypass \r\n");
+  /* Initiate bond -----------------------------------------------------------*/  
+  char initConcat[80];
+  strcpy(initConcat, "AT+AB Bond ");
+  strcat(initConcat, "bdaddress");
+  strcat(initConcat, " 1234");
+  strcat(initConcat, " \r\n");
+  SendStringUSART1(initConcat);  
   
+  /* Connect -----------------------------------------------------------------*/  
   char connectConcat[80];
   strcpy(connectConcat, "AT+AB SPPConnect ");
   strcat(connectConcat, bdaddress);
   strcat(connectConcat, " \r\n");
   SendStringUSART1(connectConcat);
-  //concatenate the above strings
 }
 
-void USART_Communication(void){
-  
-//	char ch;
-	while(1) {
-                SendCharUSART1('0');
-//                SendCharUSART1('1');
-//		SendCharUSART1(0x0D);
-//		SendCharUSART1(0x0A);
-//		SendCharUSART1('U');
-//		SendCharUSART1('S');
-//		SendCharUSART1('A');
-//		SendCharUSART1('R');
-//		SendCharUSART1('T');
-//		SendCharUSART1('1');
-//		SendCharUSART1('>');
-//		ch = GetCharUSART1();
-                int i = 0;
-                while (i<30000){
-                i++;
-                }
-//                break;
-// Get and echo USART1
-//		ch = GetCharUSART1();
-//		while (ch != 0x0D) {
-//			SendCharUSART1(ch);
-//			ch = GetCharUSART1();
-//		}
-	}
+/**
+Sends data to a connected device. This device must be connected to the android
+when this method is called, or else the data will not be sent.
+@param data The data to be sent.
+*/
+int SendData(char *data)
+{
+  SendStringUSART1(data);
+  return 0;
 }
 
-void SendCharUSART1(char ch){
-// Wait until TXE is set
-	while(USART_GetFlagStatus(USART1, USART_FLAG_TXE) == RESET)
-	{
-	}
-//        USARTx->DR = (ch & (uint16_t)0x01FF);
-//        int test = (ch & (uint16_t)0x01FF);
-	USART_SendData(USART1, ch);
-// Wait until the end of transmit
-	while(USART_GetFlagStatus(USART1, USART_FLAG_TC) == RESET)
-	{
-	}
+/**
+Writes a string to the Tx pin of the bluetooth module, one character at a time.
+@param message The message to be sent.
+*/
+void SendStringUSART1(char *message) {
+char *s;
+s = message;
+while(*s)
+  {
+     while(USART_GetFlagStatus(USARTx, USART_FLAG_TXE) == RESET); 
+     USART_SendData(USARTx, *s++); 
+     /*Check that transmission has finished*/
+     while (USART_GetFlagStatus(USARTx, USART_FLAG_TC) == RESET);
+  }
 }
+
 char GetCharUSART1(void){
 	char ch;
 // Wait until the USART1 Receive Data Register is not empty
