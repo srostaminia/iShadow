@@ -32,6 +32,7 @@
 
 /* Private variables ---------------------------------------------------------*/
 static __IO uint32_t TimingDelay;
+char *bdaddress = "CCFA0071AF72"; //The address of the device to connect to
 /* Private function prototypes -----------------------------------------------*/
 static void USART_Config(void);
 static void SysTickConfig(void);
@@ -39,7 +40,7 @@ char GetCharUSART1(void);
 void SendStringUSART1(char *message);
 void Delay(__IO uint32_t nTime);
 int SendData(char *data);
-void ConnectAndroid(char *bdaddress);
+void ConnectAndroid(void);
 /* Private functions ---------------------------------------------------------*/
 
 /**
@@ -57,9 +58,25 @@ int main(void)
      */
   
  
-  ConnectAndroid("94659c578789"); //This is the address of our android device
+//  ConnectAndroid(); //This is the address of our android device
+//  
+//  SendData("What hath God wrought");
   
-  SendData("What hath God wrought");
+   /* USART configuration -----------------------------------------------------*/
+  USART_Config();
+  
+  /* SysTick configuration ---------------------------------------------------*/
+  SysTickConfig();
+  
+  /* Change name -------------------------------------------------------------*/
+//  SendStringUSART1("AT+AB LocalName btserver  \r\n");
+  
+//  SendStringUSART1("AT+AB SPPConnect CCFA0071AF72 ");
+  while(1) {
+    int i = 0;
+    while (i < 1000000) i++;
+            SendData("What hath God wrought\n");
+  }
 }
 
 
@@ -67,7 +84,7 @@ int main(void)
 Connects the microcontroller to the android device with the specified address.
 @param bdaddress The address of device to connect to
 */
-void ConnectAndroid(char *bdaddress)
+void ConnectAndroid()
 {
   /* USART configuration -----------------------------------------------------*/
   USART_Config();
@@ -79,19 +96,19 @@ void ConnectAndroid(char *bdaddress)
   SendStringUSART1("AT+AB LocalName btserver  \r\n");
   
   /* Enable bond -------------------------------------------------------------*/
-  char bondConcat[80];
-  strcpy(bondConcat, "AT+AB EnableBond ");
-  strcat(bondConcat, bdaddress);
-  strcat(bondConcat, " \r\n");
-  SendStringUSART1(bondConcat);
+//  char bondConcat[80];
+//  strcpy(bondConcat, "AT+AB EnableBond ");
+//  strcat(bondConcat, bdaddress);
+//  strcat(bondConcat, " \r\n");
+//  SendStringUSART1(bondConcat);
   
   /* Initiate bond -----------------------------------------------------------*/  
-  char initConcat[80];
-  strcpy(initConcat, "AT+AB Bond ");
-  strcat(initConcat, "bdaddress");
-  strcat(initConcat, " 1234");
-  strcat(initConcat, " \r\n");
-  SendStringUSART1(initConcat);  
+//  char initConcat[80];
+//  strcpy(initConcat, "AT+AB Bond ");
+//  strcat(initConcat, bdaddress);
+////  strcat(initConcat, " 1234");
+//  strcat(initConcat, " \r\n");
+//  SendStringUSART1(initConcat); 
   
   /* Connect -----------------------------------------------------------------*/  
   char connectConcat[80];
