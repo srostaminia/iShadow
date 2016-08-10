@@ -29,6 +29,7 @@ int SendData(char *data);
 void ConnectAndroid(void);
 void SendAsPackets(char *message);
 unsigned int getChecksum(char *data);
+char *nStrcat(char *dest, const char *src, int n);
 /* Private functions ---------------------------------------------------------*/
 
 /**
@@ -60,15 +61,17 @@ int main(void)
 //  SendStringUSART1("AT+AB LocalName btserver  \r\n");
   
 //  SendStringUSART1("AT+AB SPPConnect CCFA0071AF72 ");
-  while(1) {
+  while(1) { 
     int i = 0;
     while (i < 1000000) i++;
-    SendData("What hath God wrought\n");
+    SendData("\n\n\n");
+    
+    i = 0;
+    while (i < 1000000) i++;
+//    SendAsPackets("What hath God wrought");
+    SendAsPackets("In the beginning God created the heaven and the earth. 2 And the earth was without form, and void; and darkness was upon the face of the deep. And the Spirit of God moved upon the face of the waters. 3 And God said, Let there be light: and there was light. 4 And God saw the light, that it was good: and God divided the light from the darkness. 5 And God called the light Day, and the darkness he called Night. And the evening and the morning were the first day. 6 And God said, Let there be a firmament in the midst of the waters, and let it divide the waters from the waters. 7 And God made the firmament, and divided the waters which were under the firmament from the waters which were above the firmament: and it was so. 8 And God called the firmament Heaven. And the evening and the morning were the second day. 9 And God said, Let the waters under the heaven be gathered together unto one place, and let the dry land appear: and it was so. 10 And God called the dry land Earth; and the gathering together of the waters called he Seas: and God saw that it was good. 11 And God said, Let the earth bring forth grass, the herb yielding seed, and the fruit tree yielding fruit after his kind, whose seed is in itself, upon the earth: and it was so. 12 And the earth brought forth grass, and herb yielding seed after his kind, and the tree yielding fruit, whose seed was in itself, after his kind: and God saw that it was good. 13 And the evening and the morning were the third day. 14 And God said, Let there be lights in the firmament of the heaven to divide the day from the night; and let them be for signs, and for seasons, and for days, and years: 15 And let them be for lights in the firmament of the heaven to give light upon the earth: and it was so. 16 And God made two great lights; the greater light to rule the day, and the lesser light to rule the night: he made the stars also. 17 And God set them in the firmament of the heaven to give light upon the earth, 18 And to rule over the day and over the night, and to divide the light from the darkness: and God saw that it was good. 19 And the evening and the morning were the fourth day. 20 And God said, Let the waters bring forth abundantly the moving creature that hath life, and fowl that may fly above the earth in the open firmament of heaven. 21 And God created great whales, and every living creature that moveth, which the waters brought forth abundantly, after their kind, and every winged fowl after his kind: and God saw that it was good. 22 And God blessed them, saying, Be fruitful, and multiply, and fill the waters in the seas, and let fowl multiply in the earth. 23 And the evening and the morning were the fifth day. 24 And God said, Let the earth bring forth the living creature after his kind, cattle, and creeping thing, and beast of the earth after his kind: and it was so. 25 And God made the beast of the earth after his kind, and cattle after their kind, and every thing that creepeth upon the earth after his kind: and God saw that it was good. 26 And God said, Let us make man in our image, after our likeness: and let them have dominion over the fish of the sea, and over the fowl of the air, and over the cattle, and over all the earth, and over every creeping thing that creepeth upon the earth. 27 So God created man in his own image, in the image of God created he him; male and female created he them. 28 And God blessed them, and God said unto them, Be fruitful, and multiply, and replenish the earth, and subdue it: and have dominion over the fish of the sea, and over the fowl of the air, and over every living thing that moveth upon the earth. 29 And God said, Behold, I have given you every herb bearing seed, which is upon the face of all the earth, and every tree, in the which is the fruit of a tree yielding seed; to you it shall be for meat. 30 And to every beast of the earth, and to every fowl of the air, and to every thing that creepeth upon the earth, wherein there is life, I have given every green herb for meat: and it was so. 31 And God saw every thing that he had made, and, behold, it was very good. And the evening and the morning were the sixth day.");
   }
 }
-
-
-
 
 /**
 Connects the microcontroller to the android device with the specified address.
@@ -116,40 +119,49 @@ hash of each piece (packet), and sends the packet.
 void SendAsPackets(char *message)
 {
 int packetNum = 0;
-char *s;
-s = message;
-while(*s)
+int messageLen = strlen(message);
+int k = 0;
+int bytesForward; //how many bytes did we send in this loop?
+while (k < messageLen)
   {
     char tempPacket[1024]; //arbitrary size
-    int i;
     strcpy(tempPacket, "|"); //initial character for data, this is what should be split on
-    for (i = 0; i < 512; i ++) 
-    {
-    strcat(tempPacket, s++); //append data - not sure why s++ works and not *s++
-    }
-    strcat(tempPacket, "|"); //end character for data
     
-    char packet[1024]; //we'll send this one
+      nStrcat(tempPacket, &message[k], 256); //append data
+      bytesForward = 256;
+      
+    strcat(tempPacket, "$"); //end character for data
+    
+    char packet[1024]; //we'll send this char array
     strcpy(packet, "|"); //initial character for the whole packet
     char num[16];
     sprintf(num, "%i", packetNum);
     strcat(packet, num); //packet number
     strcat(packet, "|"); //separator between packet number and hash
     
-    unsigned int hash = getChecksum(tempPacket);
+    unsigned int hash = getChecksum(tempPacket); //NOTE: checksum includes starting '|' and ending '$'
     char temp[16];
     sprintf(temp, "%i", hash);
-    strcat(packet, num); //data hash
+    strcat(packet, temp); //data hash added
     strcat(packet, tempPacket); //data added
     
-    sendData(packet);
+    SendData(packet);
     
     char OK = 'O'; //this is what the app will send as OK
-    char ack = getCharUSART1();
+    char RETRANSMIT = 'R';
+    char ack = OK;//GetCharUSART1();
       if (ack == OK)
+      {
+        k += bytesForward; //k is the index in the message to read from
+        packetNum++;
+        int z = 0;
+        while (z < 5000000) z++; //Give android some time to proces
         continue;
+      }
       else
-        *s -= 512; //go back and retransmit the packet again
+      { //go back and retransmit the packet; if OK isn't received the index doesn't move forward,
+        //so we return to the top of the loop and transmit the same data again
+      }
   }
 }
 
@@ -164,6 +176,22 @@ unsigned int getChecksum(char *data)
     checksum %= MAX_INT;
   }
   return checksum;
+}
+
+/**
+This method copies the source string into the destination char array, stopping
+either after coying n entries or at the end of the string, whichever is first.
+@param n The maximum number of characters to copy from the src char array.
+*/
+char *nStrcat(char *dest, const char *src, int n)
+{
+    size_t i,j;
+    for (i = 0; dest[i] != '\0'; i++)
+        ;
+    for (j = 0; src[j] != '\0' && j < n; j++)
+        dest[i+j] = src[j];
+    dest[i+j] = '\0';
+    return dest;
 }
 
 
