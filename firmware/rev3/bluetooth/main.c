@@ -1,26 +1,11 @@
 /**
   ******************************************************************************
-  * @file    USART/Printf/main.c 
-  * @author  MCD Application Team
-  * @version V1.2.1
-  * @date    20-April-2015
-  * @brief   Main program body
+  * @file    bluetooth/main.c 
+  * @author  Colin Stern
+  * @version V1.0.0
+  * @date    8-August-2016
+  * @brief   Main program body - referred to as the btserver script
   ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; COPYRIGHT 2015 STMicroelectronics</center></h2>
-  *
-  * Licensed under MCD-ST Liberty SW License Agreement V2, (the "License");
-  * You may not use this file except in compliance with the License.
-  * You may obtain a copy of the License at:
-  *
-  *        http://www.st.com/software_license_agreement_liberty_v2
-  *
-  * Unless required by applicable law or agreed to in writing, software 
-  * distributed under the License is distributed on an "AS IS" BASIS, 
-  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  * See the License for the specific language governing permissions and
-  * limitations under the License.
   *
   ******************************************************************************
   */
@@ -33,6 +18,7 @@
 /* Private variables ---------------------------------------------------------*/
 static __IO uint32_t TimingDelay;
 char *bdaddress = "CCFA0071AF72"; //The address of the device to connect to
+uint32_t MAX_INT = 2147483647;
 /* Private function prototypes -----------------------------------------------*/
 static void USART_Config(void);
 static void SysTickConfig(void);
@@ -41,6 +27,8 @@ void SendStringUSART1(char *message);
 void Delay(__IO uint32_t nTime);
 int SendData(char *data);
 void ConnectAndroid(void);
+void SendAsPackets(char *message);
+unsigned int getChecksum(char *data);
 /* Private functions ---------------------------------------------------------*/
 
 /**
@@ -75,9 +63,11 @@ int main(void)
   while(1) {
     int i = 0;
     while (i < 1000000) i++;
-            SendData("What hath God wrought\n");
+    SendData("What hath God wrought\n");
   }
 }
+
+
 
 
 /**
@@ -119,6 +109,65 @@ void ConnectAndroid()
 }
 
 /**
+Breaks a character array into pieces of 512 bytes, adds a header containing the number and
+hash of each piece (packet), and sends the packet.
+@param message The message to be sent.
+*/
+void SendAsPackets(char *message)
+{
+int packetNum = 0;
+char *s;
+s = message;
+while(*s)
+  {
+    char tempPacket[1024]; //arbitrary size
+    int i;
+    strcpy(tempPacket, "|"); //initial character for data, this is what should be split on
+    for (i = 0; i < 512; i ++) 
+    {
+    strcat(tempPacket, s++); //append data - not sure why s++ works and not *s++
+    }
+    strcat(tempPacket, "|"); //end character for data
+    
+    char packet[1024]; //we'll send this one
+    strcpy(packet, "|"); //initial character for the whole packet
+    char num[16];
+    sprintf(num, "%i", packetNum);
+    strcat(packet, num); //packet number
+    strcat(packet, "|"); //separator between packet number and hash
+    
+    unsigned int hash = getChecksum(tempPacket);
+    char temp[16];
+    sprintf(temp, "%i", hash);
+    strcat(packet, num); //data hash
+    strcat(packet, tempPacket); //data added
+    
+    sendData(packet);
+    
+    char OK = 'O'; //this is what the app will send as OK
+    char ack = getCharUSART1();
+      if (ack == OK)
+        continue;
+      else
+        *s -= 512; //go back and retransmit the packet again
+  }
+}
+
+unsigned int getChecksum(char *data)
+{
+  unsigned int checksum = 0;
+  int sizeOfData = strlen(data);
+  int i;
+  for (i = 0; i < sizeOfData; i++)
+  {
+    checksum += data[i];
+    checksum %= MAX_INT;
+  }
+  return checksum;
+}
+
+
+/**
 Sends data to a connected device. This device must be connected to the android
 when this method is called, or else the data will not be sent.
 @param data The data to be sent.
@@ -148,11 +197,8 @@ while(*s)
 char GetCharUSART1(void){
 	char ch;
 // Wait until the USART1 Receive Data Register is not empty
-//        Fill_Buffer(USARTx->DR,  0x02);
-	while(USART_GetFlagStatus(USART1, USART_FLAG_RXNE) == RESET)
-	{
-	}
-	ch = (USART_ReceiveData(USART1) & 0xFF);
+	while(USART_GetFlagStatus(USARTx, USART_FLAG_RXNE) == RESET);
+	ch = (USART_ReceiveData(USARTx) & 0xFF);
 	return ch;
 }
 
