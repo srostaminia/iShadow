@@ -153,7 +153,7 @@ while (k < messageLen)
     
     char OK = 'O'; //this is what the app will send as OK
     char RETRANSMIT = 'R';
-    char ack = OK;//GetCharUSART1();
+    char ack = GetCharUSART1();
       if (ack == OK)
       {
         k += bytesForward; //k is the index in the message to read from
@@ -164,7 +164,7 @@ while (k < messageLen)
       else
       { //go back and retransmit the packet; if OK isn't received the index doesn't move forward,
         //so we return to the top of the loop and transmit the same data again
-        nSecondDelay(10); //Give android some time to proces
+        nSecondDelay(1); //Give android some time to proces
       }
   }
 }
@@ -291,7 +291,7 @@ static void USART_Config(void)
   GPIO_PinAFConfig(USARTx_TX_GPIO_PORT, USARTx_TX_SOURCE, USARTx_TX_AF);
   
   /* Connect PXx to USARTx_Rx */
-  //GPIO_PinAFConfig(USARTx_RX_GPIO_PORT, USARTx_RX_SOURCE, USARTx_RX_AF);
+  GPIO_PinAFConfig(USARTx_RX_GPIO_PORT, USARTx_RX_SOURCE, USARTx_RX_AF);
   
   /* Configure USART Tx and Rx as alternate function push-pull */
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF;
@@ -301,8 +301,8 @@ static void USART_Config(void)
   GPIO_InitStructure.GPIO_Pin = USARTx_TX_PIN;
   GPIO_Init(USARTx_TX_GPIO_PORT, &GPIO_InitStructure);
   
-  //GPIO_InitStructure.GPIO_Pin = USARTx_RX_PIN;
-  //GPIO_Init(USARTx_RX_GPIO_PORT, &GPIO_InitStructure);
+  GPIO_InitStructure.GPIO_Pin = USARTx_RX_PIN;
+  GPIO_Init(USARTx_RX_GPIO_PORT, &GPIO_InitStructure);
 
   /* USARTx configuration ----------------------------------------------------*/
   /* USARTx configured as follow:
